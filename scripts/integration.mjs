@@ -170,7 +170,7 @@ async function test(){
  await schoolPost(admin,school,`/invoices/${invoice.id}/manual-payments`,paymentBody,{headers:{'If-Match':'"v2"'},expected:409});
  await schoolPost(admin,school,`/invoices/${invoice.id}/manual-payments`,{...paymentBody,amountMinor:300000,method:'BANK',reference:'BANK-'+key()},{headers:{'If-Match':'"v2"'}});
  const paid=(await request(`/api/v1/schools/${school}/invoices/${invoice.id}`,{token:parent.accessToken})).body;assert.equal(paid.invoice.status,'PAID');assert.equal(paid.confirmedPayments.length,2);passed('cash/bank part payments reconcile once and duplicate references cannot allocate twice');
- await schoolPost(admin,school,'/invoices/payment-settings',{subaccount:'ACCT_SYNTHETIC_TEST'});
+ await schoolPost(admin,school,'/invoices/payment-settings',{subaccount:'ACCT_SYNTHETICTEST'});
  const online=(await schoolPost(admin,school,'/invoices',{studentId:student.id,termId:term.id,description:'Synthetic second invoice',lines:[{description:'School charge',amountMinor:500000,quantity:1}],dueOn:day(30),partialAllowed:true})).invoice;
  const intent=await schoolPost(parent,school,`/invoices/${online.id}/checkout`,{amountMinor:350000,email:'synthetic-payer@example.invalid'},{expected:202});assert.equal(intent.state,'PENDING');
  await request('/api/v1/webhooks/paystack',{method:'POST',body:{event:'charge.success',data:{reference:intent.reference}},headers:{'x-paystack-signature':'0'.repeat(128)},expected:401});
