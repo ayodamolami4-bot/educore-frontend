@@ -1,9 +1,9 @@
-# EduCore coding boundaries
+# EduCore backend boundaries
 
-The user/lead is @ayodamolami4-bot. MVP means Model-View-Presenter. This is one Expo React Native TypeScript app; microservices belong to the Java backend outside this repository.
+Java Spring Boot microservices with PostgreSQL, behind a single /api/v1 gateway. MVP means Model–View–Presenter in the separate React Native frontend, not a backend architecture.
 
-Role contributors must work inside their assigned src/features/admin/, teacher/, student/ or parent/ folder. Follow team-ownership.json and CONTRIBUTING.md. Shared components, navigation, core/session, API transport, theme, configuration, dependencies, root files, workflows and ownership rules are lead-owned. Request a lead change rather than editing them in a role task. Explicit lead instructions can authorise shared work.
+Each business service owns its SQL database and migrations. Never join another service's tables or share mutable JPA entities. Platform contains transport/security/transaction helpers, not school business entities. Authenticate every protected request and validate current school/role/child permissions server-side. Never trust client-supplied identity headers. Do not log passwords, activation/recovery codes, access/refresh tokens, provider secrets or message bodies.
 
-Implement only the requested scope. The initial scaffold intentionally contains no role business pages. Keep Views presentational, Presenters testable without React Native, Models/API adapters typed. Reuse the shared client/components and register role entry through the role index.ts. Keep official permissions/calculations on Java. Never introduce self-granted roles, arbitrary child access, secret logging or direct SQL from the app.
+Read docs/IMPLEMENTATION_STATUS.md before claiming a capability is implemented. The final administrator decisions and current shared frontend wire types override the older proposed blueprint. Keep commands idempotent and versioned, histories append-only and all official calculations on Java. School changes must not reset a global parent's identity.
 
-Run npm run check for substantive changes, use npm run export:web for a UI integration change, and explain any checks that could not run. Do not claim a demo is a live backend integration. Do not use force pushes, rewrite other contributors' work or change permissions to bypass ownership review.
+Run ./mvnw verify, integration tests against actual PostgreSQL and scripts/integration.mjs for cross-service changes. Never report skipped integration tests as passing. No live payment, deployment, invitations or production-data mutation is implied by local tests.
