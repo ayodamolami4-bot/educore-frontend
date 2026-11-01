@@ -55,3 +55,19 @@ jobs:
         env:
           EDUCORE_TEST_CONFIG: .dev/local-runtime.json
         run: node scripts/integration.mjs
+      - name: Validate and build all five container images
+        run: |
+          docker compose config --quiet
+          docker compose --parallel 1 build
+      - name: Start containers and bootstrap a school
+        env:
+          POSTGRES_PORT: '55432'
+        run: |
+          docker compose up -d --wait --wait-timeout 180
+          node scripts/bootstrap.mjs CONTAINER "EduCore Container Test School" "Demo Principal" "08012345678"
+      - name: Container diagnostics on failure
+        if: failure()
+        run: docker compose logs --tail 70
+      - name: Stop test containers
+        if: always()
+        run: docker compose down
