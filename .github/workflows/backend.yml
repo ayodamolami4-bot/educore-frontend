@@ -62,12 +62,15 @@ jobs:
       - name: Start containers and bootstrap a school
         env:
           POSTGRES_PORT: '55432'
+          EDUCORE_MAIL_DELAY_MS: '1000'
+          EDUCORE_CONTAINER_TEST: 'true'
         run: |
           docker compose up -d --wait --wait-timeout 180
           node scripts/bootstrap.mjs CONTAINER "EduCore Container Test School" "Demo Principal" "08012345678"
+          node scripts/container-check.mjs
       - name: Container diagnostics on failure
         if: failure()
-        run: docker compose logs --tail 70
+        run: docker compose logs --tail 250
       - name: Stop test containers
         if: always()
         run: docker compose down
