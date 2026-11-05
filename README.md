@@ -1,6 +1,6 @@
 # EduCore frontend
 
-React Native + JavaScript + JSX + Expo. Model-View-Presenter. Secondary schools, JSS1–SSS3.
+React Native + TypeScript + Expo. Model-View-Presenter. Secondary schools, JSS1–SSS3.
 
 **Lead: [@ayodamolami4-bot](https://github.com/ayodamolami4-bot).** This repository contains the shared foundation and four separate role work areas. The role business pages and Java backend have not been implemented here.
 
@@ -35,7 +35,7 @@ The app defaults to **clearly labelled demo mode** with fictional records. On th
 | SH08 Email verification    | Single-use link confirmation/resend; retain old email until success                                       |
 | SH09 Access help           | Approved school/platform instructions; no school-controlled global reset                                  |
 
-Shared components include buttons, password/text fields, dropdowns, cards, banners, toggles, confirmation dialogs, empty/loading states, a school-items background and design tokens. The shared request client has structured errors, version headers, caller-supplied idempotency keys, single-flight refresh and scope cancellation. Native refresh credentials use SecureStore; browser/demo credentials stay in memory.
+Shared components include buttons, password/text fields, dropdowns, cards, banners, toggles, confirmation dialogs, empty/loading states, a school-items background and design tokens. The shared request client has typed errors, version headers, caller-supplied idempotency keys, single-flight refresh and scope cancellation. Native refresh credentials use SecureStore; browser/demo credentials stay in memory.
 
 ## Who edits what
 
@@ -47,7 +47,7 @@ Shared components include buttons, password/text fields, dropdowns, cards, banne
 | `src/features/parent/`                                                                                                    | Parent developer, PA01–PA19        |
 | `src/features/shared/`, components, navigation, api/client, core, theme, configuration, tests/scripts/docs and root files | Lead: @ayodamolami4-bot            |
 
-Keep your Views, Presenters, Models and role API functions in your role folder. Each role already has an `index.js` entry. Export your home screen or role navigator there; the shared navigation loads it automatically. See your role README and [the developer guide](docs/DEVELOPER_GUIDE.md).
+Keep your Views, Presenters, Models and role API functions in your role folder. Each role already has an `index.ts` entry. Export your home screen or role navigator there; the shared navigation loads it automatically. See your role README and [the developer guide](docs/DEVELOPER_GUIDE.md).
 
 Ask the lead to add your GitHub username to `team-ownership.json` before your first pull request. Do not change that mapping yourself. Lead then runs `npm run team:owners` to refresh CODEOWNERS. Until assignments are entered, only the lead passes the ownership check.
 
@@ -77,7 +77,7 @@ Use the shared client from `useServices()` or inject it into your role Model. Bu
 ## Checks
 
 ```sh
-npm run check          # lint and meaningful Node tests
+npm run check          # TypeScript, lint, meaningful Node tests
 npm run format:check
 npm run export:web     # Builds the web preview; does not deploy
 ```

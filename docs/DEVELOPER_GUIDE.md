@@ -6,25 +6,26 @@ There is one React Native application. Four developers own different feature fol
 
 Inside your role folder keep `views/`, `presenters/`, `models/` and `api/`:
 
-| File example                        | Responsibility                                                                    |
-| ----------------------------------- | --------------------------------------------------------------------------------- |
-| `views/AttendanceScreen.jsx`        | Draw fields/buttons, subscribe to the Presenter and forward user actions          |
-| `presenters/AttendancePresenter.js` | Manage editable/loading/error state and the use case; no React Native UI imports  |
-| `models/AttendanceModel.js`         | Use the role API adapter and API records; no permanent grade/balance calculations |
-| `api/attendanceApi.js`              | Call the agreed Java endpoint through the shared client                           |
+| File example                        | Responsibility                                                                      |
+| ----------------------------------- | ----------------------------------------------------------------------------------- |
+| `views/AttendanceScreen.tsx`        | Draw fields/buttons, subscribe to the Presenter and forward user actions            |
+| `presenters/AttendancePresenter.ts` | Manage editable/loading/error state and the use case; no React Native UI imports    |
+| `models/AttendanceModel.ts`         | Use the role API adapter and typed records; no permanent grade/balance calculations |
+| `api/attendanceApi.ts`              | Call the agreed Java endpoint through the shared client                             |
 
 Follow the working shared examples under `src/features/shared`. Reuse `Screen`, `Button`, `Field`, `Select`, `Card`, `Notice` and `ui` from components. Use the shared theme instead of inventing slightly different buttons or colours. A scrolling section, dialog or file picker is not a separate page ID.
 
 ## Register your role home without editing shared navigation
 
-Your role `index.js` already exports `<role>Module`. Import your own component there and replace `HomeScreen: null` with that component. It receives `context` and `openShared` props:
+Your role `index.ts` already exports `<role>Module`. Import your own component there and replace `HomeScreen: null` with that component. It receives `RoleScreenProps`:
 
-```jsx
+```tsx
 import React from 'react';
+import type { RoleScreenProps } from '../../../navigation/types';
 import { Screen } from '../../../components/Screen';
 import { Button } from '../../../components/Controls';
 
-export function TeacherHome({ context, openShared }) {
+export function TeacherHome({ context, openShared }: RoleScreenProps) {
   return (
     <Screen title="Teacher home" subtitle={context.schoolName}>
       <Button title="Notifications" onPress={() => openShared('Notifications')} />

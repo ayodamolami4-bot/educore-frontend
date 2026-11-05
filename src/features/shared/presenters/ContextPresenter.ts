@@ -1,0 +1,43 @@
+import { Store } from '../../../core/Store';
+import type { SessionStore } from '../../../core/SessionStore';
+import type { SchoolContext } from '../../../api/contracts';
+import { errorMessage } from '../../../api/errors';
+
+interface ContextState {
+  selected: SchoolContext | null;
+  busy: boolean;
+  error: string;
+}
+export class ContextPresenter extends Store<ContextState> {
+  constructor(private session: SessionStore) {
+    super({ selected: session.getSnapshot().context, busy: false, error: '' });
+  }
+  choose(context: SchoolContext): void {
+    this.patch({ selected: context, error: '' });
+  }
+  async refresh(): Promise<void> {
+    this.patch({ busy: true, error: '' });
+    try {
+      await this.session.reloadContexts();
+    } catch (error) {
+      this.patch({ error: errorMessage(error) });
+    } finally {
+      this.patch({ busy: false });
+    }
+  }
+  async continue(): Promise<void> {
+    if (this.state.busy) return;
+    if (!this.state.selected) {
+      this.patch({ error: 'Choose an available school and role.' });
+      return;
+    }
+    this.patch({ busy: true, error: '' });
+    try {
+      await this.session.selectContext(this.state.selected);
+    } catch (error) {
+      this.patch({ error: errorMessage(error) });
+    } finally {
+      this.patch({ busy: false });
+    }
+  }
+}
