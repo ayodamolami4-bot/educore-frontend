@@ -44,7 +44,7 @@ export function createParentApi(client, context) {
     reportPdf: (id) => client.download(path(report(id) + '/pdf')),
     documents: (filters = {}) => client.request(path('/documents', { studentId, ...filters })),
     document: (id) => client.request(path(document(id))),
-    documentHistory: (id) => client.request(path(document(id) + '/history')),,
+    documentHistory: (id) => client.request(path(document(id) + '/history')),
 
     contacts: () => client.request(path('/threads/contacts', { studentId })),
     threads: (cursor) => client.request(path('/threads', { cursor })),
