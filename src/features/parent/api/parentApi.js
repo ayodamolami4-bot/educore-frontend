@@ -5,6 +5,10 @@ export function createParentApi(client, context) {
   const studentId = context.childId;
   const invoice = (id) => '/invoices/' + encodeURIComponent(id);
   const intent = (id) => '/payment-intents/' + encodeURIComponent(id);
+  const student = (id = studentId) => '/students/' + encodeURIComponent(id);
+  const assignment = (id) => '/assignments/' + encodeURIComponent(id);
+  const report = (id) => '/reports/' + encodeURIComponent(id);
+  const document = (id) => '/documents/' + encodeURIComponent(id);
 
   return {
     classes: () => client.request(path('/my-classes')),
@@ -20,5 +24,26 @@ export function createParentApi(client, context) {
     refunds: (id) => client.request(path('/fee-adjustments', { invoiceId: id })),
     invoicePdf: (id) => client.download(path(invoice(id) + '/pdf')),
     receipt: (id) => client.download(path('/payments/' + encodeURIComponent(id) + '/receipt')),
+
+    student: () => client.request(path(student())),
+    academicHistory: () => client.request(path(student() + '/academic-history')),
+    externalResults: () => client.request(path(student() + '/external-results')),
+    timetable: (classId, on) => client.request(path('/timetable', { classId, on })),
+    calendar: (from, to) => client.request(path('/calendar', { from, to })),
+    examinations: (termId) => client.request(path('/examinations', { termId })),
+    classWorkspace: (classId) => client.request(path('/classes/' + encodeURIComponent(classId) + '/workspace')),
+    materials: (filters = {}) => client.request(path('/materials', filters)),
+    material: (id) => client.request(path('/materials/' + encodeURIComponent(id))),
+    assignments: (filters = {}) => client.request(path('/assignments', filters)),
+    assignment: (id) => client.request(path(assignment(id))),
+    submissionHistory: (assignmentId) =>
+      client.request(path(assignment(assignmentId) + '/submissions/' + encodeURIComponent(studentId) + '/history')),
+    attendance: (from, to) => client.request(path(student() + '/attendance', { from, to })),
+    reports: () => client.request(path(student() + '/reports')),
+    report: (id) => client.request(path(report(id))),
+    reportPdf: (id) => client.download(path(report(id) + '/pdf')),
+    documents: (filters = {}) => client.request(path('/documents', { studentId, ...filters })),
+    document: (id) => client.request(path(document(id))),
+    documentHistory: (id) => client.request(path(document(id) + '/history')),
   };
 }
