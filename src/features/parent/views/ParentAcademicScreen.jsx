@@ -103,15 +103,11 @@ export function ParentAcademicScreen({ screenId, context, model, navigation, rou
   const load = useCallback(async () => {
     switch (screenId) {
       case 'PA03':
-        return documentId
-          ? model.documentDetail(documentId)
-          : model.studentOverview();
+        return documentId ? model.documentDetail(documentId) : model.studentOverview();
       case 'PA04':
         return model.calendarWorkspace();
       case 'PA05':
-        return materialId
-          ? model.materialDetail(materialId)
-          : model.learningWorkspace();
+        return materialId ? model.materialDetail(materialId) : model.learningWorkspace();
       case 'PA06':
         return recordId ? model.assignmentDetail(recordId) : null;
       case 'PA07': {
