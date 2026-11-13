@@ -29,7 +29,7 @@ export function createParentApi(client, context) {
     academicHistory: () => client.request(path(student() + '/academic-history')),
     externalResults: () => client.request(path(student() + '/external-results')),
     timetable: (classId, on) => client.request(path('/timetable', { classId, on })),
-    calendar: (from, to) => client.request(path('/calendar', { from, to })),
+    calendar: (sessionId) => client.request(path('/calendar', { sessionId })),
     examinations: (termId) => client.request(path('/examinations', { termId })),
     classWorkspace: (classId) => client.request(path('/classes/' + encodeURIComponent(classId) + '/workspace')),
     materials: (filters = {}) => client.request(path('/materials', filters)),
