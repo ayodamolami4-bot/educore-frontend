@@ -336,7 +336,7 @@ export class ParentModel {
       this.api.contacts(),
     ]);
     this.#checkSelectedChildPage(attendance);
-    const records = Array.isArray(attendance) ? attendance : attendance.items ?? [];
+    const records = Array.isArray(attendance) ? attendance : (attendance.items ?? []);
     const registerIds = [...new Set(records.map((item) => item.registerId).filter(Boolean))];
     const corrections = await Promise.all(
       registerIds.map(async (registerId) => ({
