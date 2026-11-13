@@ -39,6 +39,8 @@ export function createParentApi(client, context) {
       client.request(path('/classes/' + encodeURIComponent(classId) + '/workspace')),
     materials: (filters = {}) => client.request(path('/materials', filters)),
     material: (id) => client.request(path('/materials/' + encodeURIComponent(id))),
+    materialHistory: (id) =>
+      client.request(path('/materials/' + encodeURIComponent(id) + '/history')),
     assignments: (filters = {}) => client.request(path('/assignments', filters)),
     assignment: (id) => client.request(path(assignment(id))),
     submissionHistory: (assignmentId) =>
