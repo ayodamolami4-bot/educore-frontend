@@ -1,6 +1,6 @@
 # Parent work area
 
-The Parent / Guardian workspace covers PA01–PA19. The parent account is global across schools; the selected school/child context is revalidated by the backend on every request. Parents can read only linked children, published academic material/results, submitted attendance and their own permitted communications/cases. Keep these route identifiers stable for shared notification deep links. Keep all parent data requests within the selected school and child context.
+The Parent / Guardian workspace covers PA01–PA19. The parent account is global across schools; the selected school/child context is revalidated by the backend on every request. Parents can read only linked children, published academic material/results, submitted attendance and their own permitted communications/cases. Keep these route identifiers stable for shared notification deep links. The selected child is always resolved from the authenticated school context, never from a locally stored identifier.
 
 ## Screen map
 
