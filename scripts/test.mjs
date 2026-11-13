@@ -5,13 +5,13 @@ function collect(folder) {
   return readdirSync(folder, { withFileTypes: true }).flatMap((entry) =>
     entry.isDirectory()
       ? collect(join(folder, entry.name))
-      : entry.name.endsWith('.test.ts')
+      : entry.name.endsWith('.test.js') || entry.name.endsWith('.test.mjs')
         ? [join(folder, entry.name)]
         : [],
   );
 }
 const files = [...collect('tests'), ...collect('src/features')];
-const result = spawnSync(process.execPath, ['--import', 'tsx', '--test', ...files], {
+const result = spawnSync(process.execPath, ['--test', ...files], {
   stdio: 'inherit',
 });
 process.exitCode = result.status ?? 1;

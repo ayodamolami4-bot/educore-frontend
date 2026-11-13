@@ -1,6 +1,6 @@
 # Shared API mapping
 
-Base: `EXPO_PUBLIC_API_BASE_URL`, ending `/api/v1`. Actual Java service implementations are required in real mode. Shared wire types are in `src/api/contracts.ts`; calls are in `features/shared/models/SharedModel.ts`.
+Base: `EXPO_PUBLIC_API_BASE_URL`, ending `/api/v1`. Actual Java service implementations are required in real mode. See [shared API payloads](../src/api/contracts.js) and [shared API calls](../src/features/shared/models/SharedModel.js).
 
 | Page              | Relative method/path                                                                                                                                                                |
 | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

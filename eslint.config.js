@@ -1,15 +1,13 @@
-const { defineConfig } = require('eslint/config');
-const expo = require('eslint-config-expo/flat');
-module.exports = defineConfig([
+import { defineConfig } from 'eslint/config';
+import expo from 'eslint-config-expo/flat.js';
+
+export default defineConfig([
   expo,
   { ignores: ['dist/**', '.expo/**', 'coverage/**'] },
   {
-    files: ['**/*.ts', '**/*.tsx'],
+    files: ['**/*.js', '**/*.jsx', '**/*.mjs'],
     rules: {
-      '@typescript-eslint/no-unused-vars': [
-        'error',
-        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
-      ],
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
     },
   },
 ]);
