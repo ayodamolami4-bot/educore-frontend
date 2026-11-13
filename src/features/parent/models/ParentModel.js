@@ -223,4 +223,106 @@ export class ParentModel {
     this.#requirePayer();
     return this.api.receipt(paymentId);
   }
+
+  #requireLearning() {
+    if (!this.context.childId || !canReadLearning(this.context))
+      throw localError('Learning records are unavailable for the selected child.');
+  }
+
+  #checkSelectedChild(record) {
+    if (record?.studentId && record.studentId !== this.context.childId)
+      throw localError('This record is unavailable for the selected child.');
+    return record;
+  }
+
+  #checkSelectedChildPage(result) {
+    const items = Array.isArray(result) ? result : result?.items;
+    if (Array.isArray(items)) items.forEach((item) => this.#checkSelectedChild(item));
+    return result;
+  }
+
+  async studentOverview() {
+    this.#requireLearning();
+    const [student, classes, history, externalResults, documents] = await Promise.all([
+      this.api.student(),
+      this.api.classes(),
+      this.api.academicHistory(),
+      this.api.externalResults(),
+      this.api.documents(),
+    ]);
+    this.#checkSelectedChild(student.student ?? student);
+    this.#checkSelectedChildPage(history);
+    this.#checkSelectedChildPage(externalResults);
+    this.#checkSelectedChildPage(documents);
+    return { student, classes, history, externalResults, documents };
+  }
+
+  async calendarWorkspace() {
+    this.#requireLearning();
+    const classes = await this.api.classes();
+    const classItems = classes.items ?? [];
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos' }).format(new Date());
+    const [timetable, calendar, terms] = await Promise.all([
+      this.api.timetable(classItems[0]?.classId ?? classItems[0]?.id, today),
+      this.api.calendar(),
+      this.terms(),
+    ]);
+    return { timetable, calendar, terms, classes: classItems };
+  }
+
+  async learningWorkspace() {
+    this.#requireLearning();
+    const classes = await this.api.classes();
+    const classItems = classes.items ?? [];
+    const ids = [...new Set(classItems.map((item) => item.classId ?? item.id).filter(Boolean))];
+    const [workspaces, materials, assignments] = await Promise.all([
+      Promise.all(ids.map((id) => this.api.classWorkspace(id))),
+      Promise.all(ids.map((classId) => this.api.materials({ classId }))),
+      Promise.all(ids.map((classId) => this.api.assignments({ classId }))),
+    ]);
+    return {
+      classes: classItems,
+      workspaces,
+      materials: materials.flatMap((page) => page.items ?? []),
+      assignments: assignments.flatMap((page) => page.items ?? []),
+    };
+  }
+
+  async assignmentDetail(assignmentId) {
+    this.#requireLearning();
+    const [assignment, history] = await Promise.all([
+      this.api.assignment(assignmentId),
+      this.api.submissionHistory(assignmentId),
+    ]);
+    this.#checkSelectedChild(assignment.assignment ?? assignment);
+    this.#checkSelectedChildPage(history);
+    return { assignment, history };
+  }
+
+  async attendanceRecords(from, to) {
+    this.#requireLearning();
+    const result = await this.api.attendance(from, to);
+    this.#checkSelectedChildPage(result);
+    return result;
+  }
+
+  async reportList() {
+    this.#requireLearning();
+    const result = await this.api.reports();
+    this.#checkSelectedChildPage(result);
+    return result;
+  }
+
+  async reportDetail(reportId) {
+    this.#requireLearning();
+    const result = await this.api.report(reportId);
+    this.#checkSelectedChild(result.report ?? result);
+    return result;
+  }
+
+  async reportPdf(reportId) {
+    this.#requireLearning();
+    return this.api.reportPdf(reportId);
+  }
+
 }
