@@ -223,4 +223,289 @@ export class ParentModel {
     this.#requirePayer();
     return this.api.receipt(paymentId);
   }
+
+  #requireLearning() {
+    if (!this.context.childId || !canReadLearning(this.context))
+      throw localError('Learning records are unavailable for the selected child.');
+  }
+
+  #checkSelectedChild(record) {
+    if (record?.studentId && record.studentId !== this.context.childId)
+      throw localError('This record is unavailable for the selected child.');
+    return record;
+  }
+
+  #checkSelectedChildPage(result) {
+    const items = Array.isArray(result) ? result : result?.items;
+    if (Array.isArray(items)) items.forEach((item) => this.#checkSelectedChild(item));
+    return result;
+  }
+
+  async studentOverview() {
+    this.#requireLearning();
+    const [student, classes, history, externalResults, documents] = await Promise.all([
+      this.api.student(),
+      this.api.classes(),
+      this.api.academicHistory(),
+      this.api.externalResults(),
+      this.api.documents(),
+    ]);
+    this.#checkSelectedChild(student.student ?? student);
+    this.#checkSelectedChildPage(history);
+    this.#checkSelectedChildPage(externalResults);
+    this.#checkSelectedChildPage(documents);
+    return { student, classes, history, externalResults, documents };
+  }
+
+  async calendarWorkspace() {
+    this.#requireLearning();
+    const classes = await this.api.classes();
+    const classItems = classes.items ?? [];
+    const today = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Africa/Lagos',
+    }).format(new Date());
+    const terms = await this.terms();
+    const sessionIds = [...new Set(classItems.map((item) => item.sessionId).filter(Boolean))];
+    const [timetable, calendars, examinations] = await Promise.all([
+      this.api.timetable(classItems[0]?.classId ?? classItems[0]?.id, today),
+      Promise.all(sessionIds.map((sessionId) => this.api.calendar(sessionId))),
+      Promise.all(terms.map((term) => this.api.examinations(term.id))),
+    ]);
+    return {
+      timetable,
+      calendar: calendars.flatMap((page) => page.items ?? []),
+      terms,
+      examinations: examinations.flatMap((page) => page.items ?? []),
+      classes: classItems,
+    };
+  }
+
+  async materialDetail(materialId) {
+    this.#requireLearning();
+    const [material, history] = await Promise.all([
+      this.api.material(materialId),
+      this.api.materialHistory(materialId),
+    ]);
+    return { material, history };
+  }
+
+  async documentDetail(documentId) {
+    this.#requireLearning();
+    const [document, history] = await Promise.all([
+      this.api.document(documentId),
+      this.api.documentHistory(documentId),
+    ]);
+    this.#checkSelectedChild(document.document ?? document);
+    this.#checkSelectedChildPage(history);
+    return { document, history };
+  }
+
+  async learningWorkspace() {
+    this.#requireLearning();
+    const classes = await this.api.classes();
+    const classItems = classes.items ?? [];
+    const ids = [...new Set(classItems.map((item) => item.classId ?? item.id).filter(Boolean))];
+    const [workspaces, materials, assignments] = await Promise.all([
+      Promise.all(ids.map((id) => this.api.classWorkspace(id))),
+      Promise.all(ids.map((classId) => this.api.materials({ classId }))),
+      Promise.all(ids.map((classId) => this.api.assignments({ classId }))),
+    ]);
+    return {
+      classes: classItems,
+      workspaces,
+      materials: materials.flatMap((page) => page.items ?? []),
+      assignments: assignments.flatMap((page) => page.items ?? []),
+    };
+  }
+
+  async assignmentDetail(assignmentId) {
+    this.#requireLearning();
+    const [assignment, history] = await Promise.all([
+      this.api.assignment(assignmentId),
+      this.api.submissionHistory(assignmentId),
+    ]);
+    this.#checkSelectedChild(assignment.assignment ?? assignment);
+    this.#checkSelectedChildPage(history);
+    return { assignment, history };
+  }
+
+  async attendanceRecords(from, to) {
+    this.#requireLearning();
+    const [attendance, contacts] = await Promise.all([
+      this.api.attendance(from, to),
+      this.api.contacts(),
+    ]);
+    this.#checkSelectedChildPage(attendance);
+    const records = Array.isArray(attendance) ? attendance : (attendance.items ?? []);
+    const registerIds = [...new Set(records.map((item) => item.registerId).filter(Boolean))];
+    const corrections = await Promise.all(
+      registerIds.map(async (registerId) => ({
+        registerId,
+        history: await this.api.attendanceCorrectionHistory(registerId),
+      })),
+    );
+    return { attendance, contacts, corrections };
+  }
+
+  async reportList() {
+    this.#requireLearning();
+    const result = await this.api.reports();
+    this.#checkSelectedChildPage(result);
+    return result;
+  }
+
+  async reportDetail(reportId) {
+    this.#requireLearning();
+    const result = await this.api.report(reportId);
+    this.#checkSelectedChild(result.report ?? result);
+    return result;
+  }
+
+  async reportPdf(reportId) {
+    this.#requireLearning();
+    return this.api.reportPdf(reportId);
+  }
+
+  #requireParentWorkspace() {
+    if (this.context.role !== 'PARENT' || !this.context.childId)
+      throw localError('This workspace is only available to an approved parent-child link.');
+  }
+
+  async communicationOverview() {
+    this.#requireParentWorkspace();
+    const [contacts, threads, notices, complaints] = await Promise.all([
+      this.api.contacts(),
+      this.api.threads(),
+      this.api.notices(),
+      this.api.complaints(),
+    ]);
+    this.#checkSelectedChildPage(threads);
+    this.#checkSelectedChildPage(complaints);
+    return { contacts, threads, notices, complaints };
+  }
+
+  async contacts() {
+    this.#requireParentWorkspace();
+    return this.api.contacts();
+  }
+
+  async threadDetail(id) {
+    this.#requireParentWorkspace();
+    const result = await this.api.thread(id);
+    const thread = result.thread ?? result;
+    if (thread.studentId && thread.studentId !== this.context.childId)
+      throw localError('This conversation is unavailable for the selected child.');
+    await this.api.readThread(id);
+    return result;
+  }
+
+  async startConversation(contact, subject, body) {
+    this.#requireParentWorkspace();
+    if (!['CLASS_TEACHER', 'OFFICE'].includes(contact?.target))
+      throw localError('Choose a class teacher or the school office from the approved contacts.');
+    if (!subject.trim() || !body.trim()) throw localError('Enter a subject and a first message.');
+    const payload = {
+      studentId: this.context.childId,
+      target: contact.target,
+      subject: subject.trim(),
+      body: body.trim(),
+      ...(contact.guardianId ? { guardianId: contact.guardianId } : {}),
+    };
+    return this.api.createThread(payload, this.uuid());
+  }
+
+  async sendConversationMessage(thread, body) {
+    this.#requireParentWorkspace();
+    if (thread.studentId && thread.studentId !== this.context.childId)
+      throw localError('This conversation is unavailable for the selected child.');
+    if (!body.trim()) throw localError('Write a message before sending.');
+    return this.api.sendMessage(thread.id, { body: body.trim() }, this.uuid(), thread.version);
+  }
+
+  async closeConversation(thread, reason) {
+    this.#requireParentWorkspace();
+    if (!reason.trim()) throw localError('Enter a reason before closing this conversation.');
+    return this.api.closeThread(thread.id, { reason: reason.trim() }, this.uuid(), thread.version);
+  }
+
+  async notices() {
+    this.#requireParentWorkspace();
+    return this.api.notices();
+  }
+
+  async noticeDetail(id) {
+    this.#requireParentWorkspace();
+    return this.api.notice(id);
+  }
+
+  async complaints() {
+    this.#requireParentWorkspace();
+    const result = await this.api.complaints();
+    this.#checkSelectedChildPage(result);
+    return result;
+  }
+
+  async complaintDetail(id) {
+    this.#requireParentWorkspace();
+    const [complaint, history] = await Promise.all([
+      this.api.complaint(id),
+      this.api.complaintHistory(id),
+    ]);
+    this.#checkSelectedChild(complaint.complaint ?? complaint);
+    this.#checkSelectedChildPage(history);
+    return { complaint, history };
+  }
+
+  async complaintMetadata() {
+    this.#requireParentWorkspace();
+    return this.api.metadata();
+  }
+
+  async submitComplaint(category, subject, body) {
+    this.#requireParentWorkspace();
+    if (!category || !subject.trim() || !body.trim())
+      throw localError('Choose a category and enter a subject and description.');
+    return this.api.createComplaint(
+      {
+        studentId: this.context.childId,
+        category,
+        subject: subject.trim(),
+        body: body.trim(),
+      },
+      this.uuid(),
+    );
+  }
+
+  async replyToComplaint(complaint, body) {
+    this.#requireParentWorkspace();
+    if (!body.trim()) throw localError('Write a reply before sending.');
+    return this.api.replyComplaint(
+      complaint.id,
+      { body: body.trim(), internal: false },
+      this.uuid(),
+      complaint.version,
+    );
+  }
+
+  async respondToResolution(complaint, action, reason) {
+    this.#requireParentWorkspace();
+    if (!['ACCEPT', 'REQUEST_REVIEW'].includes(action))
+      throw localError('Choose an available parent response.');
+    if (!reason.trim()) throw localError('A reason is required for this response.');
+    return this.api.changeComplaintStatus(
+      complaint.id,
+      { action, reason: reason.trim() },
+      this.uuid(),
+      complaint.version,
+    );
+  }
+
+  async parentProfile() {
+    this.#requireParentWorkspace();
+    const [profile, contexts] = await Promise.all([this.api.profile(), this.api.contexts()]);
+    return {
+      profile,
+      contexts: (contexts.items ?? []).filter((item) => item.role === 'PARENT' && item.childId),
+    };
+  }
 }

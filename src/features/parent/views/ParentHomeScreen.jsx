@@ -113,6 +113,52 @@ export function ParentHomeScreen({ context, model, navigation, openShared }) {
           onPress={() => void presenter.loadHome()}
         />
       )}
+      {canReadLearning(context) && (
+        <Card title="Your child's learning">
+          <Text style={ui.muted}>
+            Academic records published by the school for the selected child.
+          </Text>
+          <Button
+            title="Child overview"
+            variant="secondary"
+            onPress={() => navigation.navigate('PA03')}
+          />
+          <Button
+            title="Timetable and calendar"
+            variant="secondary"
+            onPress={() => navigation.navigate('PA04')}
+          />
+          <Button
+            title="Learning materials and assignments"
+            variant="secondary"
+            onPress={() => navigation.navigate('PA05')}
+          />
+          <Button
+            title="Attendance"
+            variant="secondary"
+            onPress={() => navigation.navigate('PA07')}
+          />
+          <Button title="Academic results" onPress={() => navigation.navigate('PA08')} />
+        </Card>
+      )}
+      <Card title="Communication with school">
+        <Button title="Messages" variant="secondary" onPress={() => navigation.navigate('PA13')} />
+        <Button
+          title="School notices"
+          variant="secondary"
+          onPress={() => navigation.navigate('PA15')}
+        />
+        <Button
+          title="My complaints"
+          variant="secondary"
+          onPress={() => navigation.navigate('PA16')}
+        />
+        <Button
+          title="Profile and relationships"
+          variant="quiet"
+          onPress={() => navigation.navigate('PA19')}
+        />
+      </Card>
       <Card title="School updates">
         {state.home?.notifications.map((item) => (
           <View key={item.id}>
