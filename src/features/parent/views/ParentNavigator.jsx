@@ -1,0 +1,46 @@
+import React, { useMemo } from 'react';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useServices } from '../../../core/ServicesContext.jsx';
+import { createParentApi } from '../api/parentApi.js';
+import { ParentModel } from '../models/ParentModel.js';
+import { ChildrenScreen } from './ChildrenScreen.jsx';
+import { FeesScreen } from './FeesScreen.jsx';
+import { InvoiceScreen } from './InvoiceScreen.jsx';
+import { ParentHomeScreen } from './ParentHomeScreen.jsx';
+import { PaymentScreen } from './PaymentScreen.jsx';
+
+const Stack = createNativeStackNavigator();
+
+export function ParentNavigator({ context, openShared, target }) {
+  const { client, shared, uuid, config } = useServices();
+  const model = useMemo(
+    () => new ParentModel(createParentApi(client, context), shared, context, uuid, config.demo),
+    [client, context, shared, uuid, config.demo],
+  );
+  const paymentId = target?.screenId === 'PA12' ? target.resourceId : undefined;
+  return (
+    <Stack.Navigator
+      key={paymentId ?? 'parent'}
+      initialRouteName={paymentId ? 'PA12' : 'PA01'}
+      screenOptions={{ headerShown: false }}
+    >
+      <Stack.Screen name="PA01">
+        {(props) => (
+          <ParentHomeScreen {...props} context={context} model={model} openShared={openShared} />
+        )}
+      </Stack.Screen>
+      <Stack.Screen name="PA02">
+        {(props) => <ChildrenScreen {...props} context={context} model={model} />}
+      </Stack.Screen>
+      <Stack.Screen name="PA10">
+        {(props) => <FeesScreen {...props} context={context} model={model} />}
+      </Stack.Screen>
+      <Stack.Screen name="PA11">
+        {(props) => <InvoiceScreen {...props} context={context} model={model} />}
+      </Stack.Screen>
+      <Stack.Screen name="PA12" initialParams={paymentId ? { paymentId } : undefined}>
+        {(props) => <PaymentScreen {...props} context={context} model={model} />}
+      </Stack.Screen>
+    </Stack.Navigator>
+  );
+}

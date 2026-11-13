@@ -1,3 +1,5 @@
+import { parentDemoPayload } from '../features/parent/api/parentDemo.js';
+
 export const DEMO = {
   loginId: 'EC-DEMO-001',
   password: 'EduCore learning demo 2026!',
@@ -68,7 +70,7 @@ export function createDemoTransport() {
       childId: 'stu_zainab_001',
       childName: 'Zainab Bello',
       homeScreenId: 'PA01',
-      capabilities: { actions: ['shared.read'] },
+      capabilities: { actions: ['child.learning.read', 'fees.pay'] },
     },
     {
       schoolId: 'sch_brightfield',
@@ -77,7 +79,7 @@ export function createDemoTransport() {
       childId: 'stu_mariam_001',
       childName: 'Mariam Bello',
       homeScreenId: 'PA01',
-      capabilities: { actions: ['shared.read'] },
+      capabilities: { actions: ['child.learning.read', 'fees.pay'] },
     },
   ];
 
@@ -412,6 +414,10 @@ export function createDemoTransport() {
         nextCursor: null,
         hasMore: false,
       });
+    if (method === 'GET') {
+      const parent = parentDemoPayload(path, url.searchParams, account.lastContext);
+      if (parent !== undefined) return response(parent);
+    }
     return fail(
       'This endpoint belongs to a role feature or integration that is not built in the shared starter.',
       404,
