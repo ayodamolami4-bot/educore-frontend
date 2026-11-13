@@ -4,27 +4,27 @@ The Parent / Guardian workspace covers PA01–PA19. The parent account is global
 
 ## Screen map
 
-| Screen | Purpose | Backend operations |
-| --- | --- | --- |
-| PA01 Parent home | Select linked child, see today's schedule and safe school updates | GET /me/contexts, PUT /me/context, GET /my-classes, GET /schedule/day, GET /me/notifications |
-| PA02 My children | Filter and select verified child links across schools | GET /me/contexts, PUT /me/context |
-| PA03 Child overview | View current pupil record, academic history, verified external results and family-visible documents | GET /students/{studentId}, GET /my-classes, GET /students/{studentId}/academic-history, GET /students/{studentId}/external-results, GET /documents |
-| PA04 Timetable and calendar | View the child's dated timetable, school calendar and published examinations | GET /timetable, GET /calendar, GET /examinations |
-| PA05 Learning | Read class workspace, published subject materials and eligible assignments | GET /classes/{classId}/workspace, GET /materials, GET /assignments |
-| PA06 Assignment and feedback | Read assignment details and accepted submission/released feedback history | GET /assignments/{assignmentId}, GET /assignments/{assignmentId}/submissions/{studentId}/history |
-| PA07 Attendance | View submitted attendance, missing-register coverage and official corrections for the selected pupil | GET /students/{studentId}/attendance, GET /threads/contacts, GET /attendance/registers/{register}/correction-history |
-| PA08 Results | List published report cards grouped by the server's session/term snapshots | GET /students/{studentId}/reports |
-| PA09 Report card | View an issued report revision and download its server-generated PDF | GET /reports/{reportId}, GET /reports/{reportId}/pdf |
-| PA10 Fees and payment history | View child-scoped invoices and confirmed payments, only when payer permission exists | GET /invoices, GET /payments |
-| PA11 Invoice and payment | View invoice lines/balance and start full or permitted partial Paystack test checkout | GET /invoices/{invoiceId}, POST /invoices/{invoiceId}/checkout, GET /invoices/{invoiceId}/pdf |
-| PA12 Payment status and receipt | Verify provider state and download only the confirmed payment receipt | GET /payment-intents/{intentId}, POST /payment-intents/{intentId}/verify, GET /invoices/{invoiceId}, GET /payments/{paymentId}/receipt |
-| PA13 Messages | Start a private thread with the child's class teacher or school office; list own threads | GET /threads/contacts, GET /threads, POST /threads |
-| PA14 Private conversation | Read/send messages, acknowledge read state and close a completed conversation | GET /threads/{threadId}, POST /threads/{threadId}/messages, PUT /threads/{threadId}/read, POST /threads/{threadId}/close |
-| PA15 School notices | Read published school notices | GET /notices, GET /notices/{id} |
-| PA16 My complaints | List only this parent's permitted child-linked cases | GET /complaints |
-| PA17 Submit a complaint | Submit a child-linked complaint using the school's published category metadata | POST /complaints, GET /metadata |
-| PA18 Complaint and resolution | Read case history, reply, accept a resolution or request review with a reason | GET /complaints/{caseId}, POST /complaints/{caseId}/replies, POST /complaints/{caseId}/status, GET /complaints/{caseId}/history |
-| PA19 Profile and relationships | View personal account details and school-managed guardian/child links | GET /me, GET /me/contexts |
+| Screen                          | Purpose                                                                                              | Backend operations                                                                                                                                 |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PA01 Parent home                | Select linked child, see today's schedule and safe school updates                                    | GET /me/contexts, PUT /me/context, GET /my-classes, GET /schedule/day, GET /me/notifications                                                       |
+| PA02 My children                | Filter and select verified child links across schools                                                | GET /me/contexts, PUT /me/context                                                                                                                  |
+| PA03 Child overview             | View current pupil record, academic history, verified external results and family-visible documents  | GET /students/{studentId}, GET /my-classes, GET /students/{studentId}/academic-history, GET /students/{studentId}/external-results, GET /documents |
+| PA04 Timetable and calendar     | View the child's dated timetable, school calendar and published examinations                         | GET /timetable, GET /calendar, GET /examinations                                                                                                   |
+| PA05 Learning                   | Read class workspace, published subject materials and eligible assignments                           | GET /classes/{classId}/workspace, GET /materials, GET /assignments                                                                                 |
+| PA06 Assignment and feedback    | Read assignment details and accepted submission/released feedback history                            | GET /assignments/{assignmentId}, GET /assignments/{assignmentId}/submissions/{studentId}/history                                                   |
+| PA07 Attendance                 | View submitted attendance, missing-register coverage and official corrections for the selected pupil | GET /students/{studentId}/attendance, GET /threads/contacts, GET /attendance/registers/{register}/correction-history                               |
+| PA08 Results                    | List published report cards grouped by the server's session/term snapshots                           | GET /students/{studentId}/reports                                                                                                                  |
+| PA09 Report card                | View an issued report revision and download its server-generated PDF                                 | GET /reports/{reportId}, GET /reports/{reportId}/pdf                                                                                               |
+| PA10 Fees and payment history   | View child-scoped invoices and confirmed payments, only when payer permission exists                 | GET /invoices, GET /payments                                                                                                                       |
+| PA11 Invoice and payment        | View invoice lines/balance and start full or permitted partial Paystack test checkout                | GET /invoices/{invoiceId}, POST /invoices/{invoiceId}/checkout, GET /invoices/{invoiceId}/pdf                                                      |
+| PA12 Payment status and receipt | Verify provider state and download only the confirmed payment receipt                                | GET /payment-intents/{intentId}, POST /payment-intents/{intentId}/verify, GET /invoices/{invoiceId}, GET /payments/{paymentId}/receipt             |
+| PA13 Messages                   | Start a private thread with the child's class teacher or school office; list own threads             | GET /threads/contacts, GET /threads, POST /threads                                                                                                 |
+| PA14 Private conversation       | Read/send messages, acknowledge read state and close a completed conversation                        | GET /threads/{threadId}, POST /threads/{threadId}/messages, PUT /threads/{threadId}/read, POST /threads/{threadId}/close                           |
+| PA15 School notices             | Read published school notices                                                                        | GET /notices, GET /notices/{id}                                                                                                                    |
+| PA16 My complaints              | List only this parent's permitted child-linked cases                                                 | GET /complaints                                                                                                                                    |
+| PA17 Submit a complaint         | Submit a child-linked complaint using the school's published category metadata                       | POST /complaints, GET /metadata                                                                                                                    |
+| PA18 Complaint and resolution   | Read case history, reply, accept a resolution or request review with a reason                        | GET /complaints/{caseId}, POST /complaints/{caseId}/replies, POST /complaints/{caseId}/status, GET /complaints/{caseId}/history                    |
+| PA19 Profile and relationships  | View personal account details and school-managed guardian/child links                                | GET /me, GET /me/contexts                                                                                                                          |
 
 ## Access and workflow boundaries
 

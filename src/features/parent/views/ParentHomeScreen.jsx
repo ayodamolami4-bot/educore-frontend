@@ -142,11 +142,7 @@ export function ParentHomeScreen({ context, model, navigation, openShared }) {
         </Card>
       )}
       <Card title="Communication with school">
-        <Button
-          title="Messages"
-          variant="secondary"
-          onPress={() => navigation.navigate('PA13')}
-        />
+        <Button title="Messages" variant="secondary" onPress={() => navigation.navigate('PA13')} />
         <Button
           title="School notices"
           variant="secondary"

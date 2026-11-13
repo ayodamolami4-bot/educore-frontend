@@ -1,8 +1,7 @@
 import { queryString, schoolPath } from '../../../api/client.js';
 
 export function createParentApi(client, context) {
-  const path = (route, query = {}) =>
-    schoolPath(context.schoolId, route) + queryString(query);
+  const path = (route, query = {}) => schoolPath(context.schoolId, route) + queryString(query);
   const studentId = context.childId;
   const invoice = (id) => '/invoices/' + encodeURIComponent(id);
   const intent = (id) => '/payment-intents/' + encodeURIComponent(id);
@@ -28,8 +27,7 @@ export function createParentApi(client, context) {
     verify: (id) => client.request(path(intent(id) + '/verify'), { method: 'POST' }),
     refunds: (id) => client.request(path('/fee-adjustments', { invoiceId: id })),
     invoicePdf: (id) => client.download(path(invoice(id) + '/pdf')),
-    receipt: (id) =>
-      client.download(path('/payments/' + encodeURIComponent(id) + '/receipt')),
+    receipt: (id) => client.download(path('/payments/' + encodeURIComponent(id) + '/receipt')),
 
     student: () => client.request(path(student())),
     academicHistory: () => client.request(path(student() + '/academic-history')),
@@ -46,22 +44,16 @@ export function createParentApi(client, context) {
     submissionHistory: (assignmentId) =>
       client.request(
         path(
-          assignment(assignmentId) +
-            '/submissions/' +
-            encodeURIComponent(studentId) +
-            '/history',
+          assignment(assignmentId) + '/submissions/' + encodeURIComponent(studentId) + '/history',
         ),
       ),
-    attendance: (from, to) =>
-      client.request(path(student() + '/attendance', { from, to })),
+    attendance: (from, to) => client.request(path(student() + '/attendance', { from, to })),
     reports: () => client.request(path(student() + '/reports')),
     report: (id) => client.request(path(report(id))),
     reportPdf: (id) => client.download(path(report(id) + '/pdf')),
-    documents: (filters = {}) =>
-      client.request(path('/documents', { studentId, ...filters })),
+    documents: (filters = {}) => client.request(path('/documents', { studentId, ...filters })),
     document: (id) => client.request(path(document(id))),
-    documentHistory: (id) =>
-      client.request(path(document(id) + '/history')),
+    documentHistory: (id) => client.request(path(document(id) + '/history')),
 
     contacts: () => client.request(path('/threads/contacts', { studentId })),
     threads: (cursor) => client.request(path('/threads', { cursor })),

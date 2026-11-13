@@ -372,8 +372,7 @@ export class ParentModel {
     this.#requireParentWorkspace();
     if (!['CLASS_TEACHER', 'OFFICE'].includes(contact?.target))
       throw localError('Choose a class teacher or the school office from the approved contacts.');
-    if (!subject.trim() || !body.trim())
-      throw localError('Enter a subject and a first message.');
+    if (!subject.trim() || !body.trim()) throw localError('Enter a subject and a first message.');
     const payload = {
       studentId: this.context.childId,
       target: contact.target,
@@ -475,9 +474,7 @@ export class ParentModel {
     const [profile, contexts] = await Promise.all([this.api.profile(), this.api.contexts()]);
     return {
       profile,
-      contexts: (contexts.items ?? []).filter(
-        (item) => item.role === 'PARENT' && item.childId,
-      ),
+      contexts: (contexts.items ?? []).filter((item) => item.role === 'PARENT' && item.childId),
     };
   }
 }

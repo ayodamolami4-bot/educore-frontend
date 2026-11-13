@@ -36,142 +36,72 @@ export function ParentNavigator({ context, openShared, target }) {
       </Stack.Screen>
       <Stack.Screen name="PA03">
         {(props) => (
-          <ParentAcademicScreen
-            {...props}
-            screenId="PA03"
-            context={context}
-            model={model}
-          />
+          <ParentAcademicScreen {...props} screenId="PA03" context={context} model={model} />
         )}
       </Stack.Screen>
       <Stack.Screen name="PA04">
         {(props) => (
-          <ParentAcademicScreen
-            {...props}
-            screenId="PA04"
-            context={context}
-            model={model}
-          />
+          <ParentAcademicScreen {...props} screenId="PA04" context={context} model={model} />
         )}
       </Stack.Screen>
       <Stack.Screen name="PA05">
         {(props) => (
-          <ParentAcademicScreen
-            {...props}
-            screenId="PA05"
-            context={context}
-            model={model}
-          />
+          <ParentAcademicScreen {...props} screenId="PA05" context={context} model={model} />
         )}
       </Stack.Screen>
       <Stack.Screen name="PA06">
         {(props) => (
-          <ParentAcademicScreen
-            {...props}
-            screenId="PA06"
-            context={context}
-            model={model}
-          />
+          <ParentAcademicScreen {...props} screenId="PA06" context={context} model={model} />
         )}
       </Stack.Screen>
       <Stack.Screen name="PA07">
         {(props) => (
-          <ParentAcademicScreen
-            {...props}
-            screenId="PA07"
-            context={context}
-            model={model}
-          />
+          <ParentAcademicScreen {...props} screenId="PA07" context={context} model={model} />
         )}
       </Stack.Screen>
       <Stack.Screen name="PA08">
         {(props) => (
-          <ParentAcademicScreen
-            {...props}
-            screenId="PA08"
-            context={context}
-            model={model}
-          />
+          <ParentAcademicScreen {...props} screenId="PA08" context={context} model={model} />
         )}
       </Stack.Screen>
       <Stack.Screen name="PA09">
         {(props) => (
-          <ParentAcademicScreen
-            {...props}
-            screenId="PA09"
-            context={context}
-            model={model}
-          />
+          <ParentAcademicScreen {...props} screenId="PA09" context={context} model={model} />
         )}
       </Stack.Screen>
       <Stack.Screen name="PA13">
         {(props) => (
-          <ParentCommunicationScreen
-            {...props}
-            screenId="PA13"
-            context={context}
-            model={model}
-          />
+          <ParentCommunicationScreen {...props} screenId="PA13" context={context} model={model} />
         )}
       </Stack.Screen>
       <Stack.Screen name="PA14">
         {(props) => (
-          <ParentCommunicationScreen
-            {...props}
-            screenId="PA14"
-            context={context}
-            model={model}
-          />
+          <ParentCommunicationScreen {...props} screenId="PA14" context={context} model={model} />
         )}
       </Stack.Screen>
       <Stack.Screen name="PA15">
         {(props) => (
-          <ParentCommunicationScreen
-            {...props}
-            screenId="PA15"
-            context={context}
-            model={model}
-          />
+          <ParentCommunicationScreen {...props} screenId="PA15" context={context} model={model} />
         )}
       </Stack.Screen>
       <Stack.Screen name="PA16">
         {(props) => (
-          <ParentCommunicationScreen
-            {...props}
-            screenId="PA16"
-            context={context}
-            model={model}
-          />
+          <ParentCommunicationScreen {...props} screenId="PA16" context={context} model={model} />
         )}
       </Stack.Screen>
       <Stack.Screen name="PA17">
         {(props) => (
-          <ParentCommunicationScreen
-            {...props}
-            screenId="PA17"
-            context={context}
-            model={model}
-          />
+          <ParentCommunicationScreen {...props} screenId="PA17" context={context} model={model} />
         )}
       </Stack.Screen>
       <Stack.Screen name="PA18">
         {(props) => (
-          <ParentCommunicationScreen
-            {...props}
-            screenId="PA18"
-            context={context}
-            model={model}
-          />
+          <ParentCommunicationScreen {...props} screenId="PA18" context={context} model={model} />
         )}
       </Stack.Screen>
       <Stack.Screen name="PA19">
         {(props) => (
-          <ParentCommunicationScreen
-            {...props}
-            screenId="PA19"
-            context={context}
-            model={model}
-          />
+          <ParentCommunicationScreen {...props} screenId="PA19" context={context} model={model} />
         )}
       </Stack.Screen>
       <Stack.Screen name="PA10">

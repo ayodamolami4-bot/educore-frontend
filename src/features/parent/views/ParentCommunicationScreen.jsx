@@ -1,7 +1,15 @@
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Button, Card, EmptyState, Field, Notice, Select, ui } from '../../../components/Controls.jsx';
+import {
+  Button,
+  Card,
+  EmptyState,
+  Field,
+  Notice,
+  Select,
+  ui,
+} from '../../../components/Controls.jsx';
 import { Screen } from '../../../components/Screen.jsx';
 
 const TITLES = {
@@ -17,7 +25,15 @@ const TITLES = {
 function rows(value) {
   if (Array.isArray(value)) return value;
   if (!value || typeof value !== 'object') return [];
-  for (const key of ['items', 'messages', 'entries', 'history', 'notices', 'complaints', 'contacts']) {
+  for (const key of [
+    'items',
+    'messages',
+    'entries',
+    'history',
+    'notices',
+    'complaints',
+    'contacts',
+  ]) {
     if (Array.isArray(value[key])) return value[key];
   }
   return [];
@@ -42,27 +58,46 @@ export function ParentCommunicationScreen({ screenId, context, model, navigation
 
   const load = useCallback(async () => {
     switch (screenId) {
-      case 'PA13': return model.communicationOverview();
-      case 'PA14': return id ? model.threadDetail(id) : null;
-      case 'PA15': return id ? model.noticeDetail(id) : model.notices();
-      case 'PA16': return model.complaints();
-      case 'PA17': return model.complaintMetadata();
-      case 'PA18': return id ? model.complaintDetail(id) : null;
-      case 'PA19': return model.parentProfile();
-      default: return null;
+      case 'PA13':
+        return model.communicationOverview();
+      case 'PA14':
+        return id ? model.threadDetail(id) : null;
+      case 'PA15':
+        return id ? model.noticeDetail(id) : model.notices();
+      case 'PA16':
+        return model.complaints();
+      case 'PA17':
+        return model.complaintMetadata();
+      case 'PA18':
+        return id ? model.complaintDetail(id) : null;
+      case 'PA19':
+        return model.parentProfile();
+      default:
+        return null;
     }
   }, [id, model, screenId]);
 
-  useFocusEffect(useCallback(() => {
-    let active = true;
-    setState({ busy: true, error: '', data: null });
-    load().then((data) => {
-      if (active) setState({ busy: false, error: '', data });
-    }).catch((error) => {
-      if (active) setState({ busy: false, error: error?.message || 'This school information could not be loaded.', data: null });
-    });
-    return () => { active = false; };
-  }, [load]));
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      setState({ busy: true, error: '', data: null });
+      load()
+        .then((data) => {
+          if (active) setState({ busy: false, error: '', data });
+        })
+        .catch((error) => {
+          if (active)
+            setState({
+              busy: false,
+              error: error?.message || 'This school information could not be loaded.',
+              data: null,
+            });
+        });
+      return () => {
+        active = false;
+      };
+    }, [load]),
+  );
 
   async function run(operation, success) {
     setState((current) => ({ ...current, busy: true, error: '' }));
@@ -72,7 +107,11 @@ export function ParentCommunicationScreen({ screenId, context, model, navigation
       const data = await load();
       setState({ busy: false, error: '', data });
     } catch (error) {
-      setState((current) => ({ ...current, busy: false, error: error?.message || 'The request could not be completed.' }));
+      setState((current) => ({
+        ...current,
+        busy: false,
+        error: error?.message || 'The request could not be completed.',
+      }));
     }
   }
 
@@ -83,13 +122,29 @@ export function ParentCommunicationScreen({ screenId, context, model, navigation
   const complaint = data?.complaint?.complaint ?? data?.complaint ?? {};
   const profile = data?.profile?.account ?? data?.profile ?? {};
   const contacts = rows(data?.contacts);
-  const categories = rows(data?.categories ?? data?.metadata?.complaintCategories ?? data?.complaintCategories);
-  const categoryOptions = categories.map((item) => ({
-    value: textOf(item, 'code', 'value', 'id'),
-    label: textOf(item, 'label', 'name', 'title', 'code'),
-  })).filter((item) => item.value && item.label);
-  const contactOptions = [...new Map(contacts.filter((item) => ['CLASS_TEACHER', 'OFFICE'].includes(item.target))
-    .map((item) => [item.target, { value: item.target, label: item.displayName || (item.target === 'OFFICE' ? 'School office' : 'Class teacher') }])).values()];
+  const categories = rows(
+    data?.categories ?? data?.metadata?.complaintCategories ?? data?.complaintCategories,
+  );
+  const categoryOptions = categories
+    .map((item) => ({
+      value: textOf(item, 'code', 'value', 'id'),
+      label: textOf(item, 'label', 'name', 'title', 'code'),
+    }))
+    .filter((item) => item.value && item.label);
+  const contactOptions = [
+    ...new Map(
+      contacts
+        .filter((item) => ['CLASS_TEACHER', 'OFFICE'].includes(item.target))
+        .map((item) => [
+          item.target,
+          {
+            value: item.target,
+            label:
+              item.displayName || (item.target === 'OFFICE' ? 'School office' : 'Class teacher'),
+          },
+        ]),
+    ).values(),
+  ];
 
   return (
     <Screen title={TITLES[screenId]} subtitle={childLabel} code={screenId} back={back}>
@@ -100,39 +155,79 @@ export function ParentCommunicationScreen({ screenId, context, model, navigation
           <Card title="Start a private conversation">
             {contactOptions.length ? (
               <>
-                <Select label="Send to" value={contact} options={contactOptions} onChange={setContact} />
+                <Select
+                  label="Send to"
+                  value={contact}
+                  options={contactOptions}
+                  onChange={setContact}
+                />
                 <Field label="Subject" value={subject} onChangeText={setSubject} maxLength={120} />
-                <Field label="First message" value={body} onChangeText={setBody} multiline numberOfLines={4} />
-                <Button title="Start conversation" loading={state.busy} disabled={!contact || !subject.trim() || !body.trim()} onPress={() => {
-                  const selected = contacts.find((item) => item.target === contact);
-                  void run(() => model.startConversation(selected, subject, body), (result) => {
-                    const created = result?.thread ?? result;
-                    if (created?.id) navigation.navigate('PA14', { threadId: created.id });
-                    setSubject(''); setBody('');
-                  });
-                }} />
+                <Field
+                  label="First message"
+                  value={body}
+                  onChangeText={setBody}
+                  multiline
+                  numberOfLines={4}
+                />
+                <Button
+                  title="Start conversation"
+                  loading={state.busy}
+                  disabled={!contact || !subject.trim() || !body.trim()}
+                  onPress={() => {
+                    const selected = contacts.find((item) => item.target === contact);
+                    void run(
+                      () => model.startConversation(selected, subject, body),
+                      (result) => {
+                        const created = result?.thread ?? result;
+                        if (created?.id) navigation.navigate('PA14', { threadId: created.id });
+                        setSubject('');
+                        setBody('');
+                      },
+                    );
+                  }}
+                />
               </>
-            ) : <EmptyState title="No approved contacts returned" description="Messages can only go to the child's class teacher or the school office." />}
+            ) : (
+              <EmptyState
+                title="No approved contacts returned"
+                description="Messages can only go to the child's class teacher or the school office."
+              />
+            )}
           </Card>
           <Card title="Private conversations">
-            {rows(data.threads).length ? rows(data.threads).map((item, index) => (
-              <View key={textOf(item, 'id') || String(index)} style={ui.gap}>
-                <Text style={ui.text}>{textOf(item, 'subject', 'title') || 'Conversation'}</Text>
-                <Text style={ui.muted}>{textOf(item, 'target', 'status', 'updatedAt')}</Text>
-                <Button title="Open conversation" variant="secondary" onPress={() => navigation.navigate('PA14', { threadId: textOf(item, 'id', 'threadId') })} />
-                <View style={ui.divider} />
-              </View>
-            )) : <EmptyState title="No conversations yet" />}
+            {rows(data.threads).length ? (
+              rows(data.threads).map((item, index) => (
+                <View key={textOf(item, 'id') || String(index)} style={ui.gap}>
+                  <Text style={ui.text}>{textOf(item, 'subject', 'title') || 'Conversation'}</Text>
+                  <Text style={ui.muted}>{textOf(item, 'target', 'status', 'updatedAt')}</Text>
+                  <Button
+                    title="Open conversation"
+                    variant="secondary"
+                    onPress={() =>
+                      navigation.navigate('PA14', { threadId: textOf(item, 'id', 'threadId') })
+                    }
+                  />
+                  <View style={ui.divider} />
+                </View>
+              ))
+            ) : (
+              <EmptyState title="No conversations yet" />
+            )}
           </Card>
         </>
       ) : null}
 
       {screenId === 'PA14' && data ? (
         <>
-          <Card title={textOf(thread, 'subject', 'title') || 'Conversation'} subtitle={textOf(thread, 'status', 'target')}>
+          <Card
+            title={textOf(thread, 'subject', 'title') || 'Conversation'}
+            subtitle={textOf(thread, 'status', 'target')}
+          >
             {rows(thread.messages ?? data.messages).map((item, index) => (
               <View key={textOf(item, 'id') || String(index)} style={ui.gap}>
-                <Text style={ui.text}>{textOf(item, 'senderName', 'authorName', 'senderRole') || 'Participant'}</Text>
+                <Text style={ui.text}>
+                  {textOf(item, 'senderName', 'authorName', 'senderRole') || 'Participant'}
+                </Text>
                 <Text style={ui.text}>{textOf(item, 'body', 'message')}</Text>
                 <Text style={ui.muted}>{textOf(item, 'createdAt', 'sentAt')}</Text>
                 <View style={ui.divider} />
@@ -140,12 +235,41 @@ export function ParentCommunicationScreen({ screenId, context, model, navigation
             ))}
             {textOf(thread, 'status') !== 'CLOSED' ? (
               <>
-                <Field label="Your message" value={body} onChangeText={setBody} multiline numberOfLines={4} />
-                <Button title="Send message" loading={state.busy} disabled={!body.trim()} onPress={() => void run(() => model.sendConversationMessage(thread, body), () => setBody(''))} />
+                <Field
+                  label="Your message"
+                  value={body}
+                  onChangeText={setBody}
+                  multiline
+                  numberOfLines={4}
+                />
+                <Button
+                  title="Send message"
+                  loading={state.busy}
+                  disabled={!body.trim()}
+                  onPress={() =>
+                    void run(
+                      () => model.sendConversationMessage(thread, body),
+                      () => setBody(''),
+                    )
+                  }
+                />
                 <Field label="Reason for closing" value={reason} onChangeText={setReason} />
-                <Button title="Close conversation" variant="secondary" loading={state.busy} disabled={!reason.trim()} onPress={() => void run(() => model.closeConversation(thread, reason), () => setReason(''))} />
+                <Button
+                  title="Close conversation"
+                  variant="secondary"
+                  loading={state.busy}
+                  disabled={!reason.trim()}
+                  onPress={() =>
+                    void run(
+                      () => model.closeConversation(thread, reason),
+                      () => setReason(''),
+                    )
+                  }
+                />
               </>
-            ) : <Notice text="This conversation is closed. Start a new conversation if you need further help." />}
+            ) : (
+              <Notice text="This conversation is closed. Start a new conversation if you need further help." />
+            )}
           </Card>
         </>
       ) : null}
@@ -154,15 +278,25 @@ export function ParentCommunicationScreen({ screenId, context, model, navigation
         <Card title={id ? textOf(data.notice ?? data, 'title') : 'Published school notices'}>
           {id ? (
             <Text style={ui.text}>{textOf(data.notice ?? data, 'body', 'content')}</Text>
-          ) : rows(data).length ? rows(data).map((item, index) => (
-            <View key={textOf(item, 'id') || String(index)} style={ui.gap}>
-              <Text style={ui.text}>{textOf(item, 'title') || 'School notice'}</Text>
-              <Text style={ui.muted}>{textOf(item, 'publishedAt', 'createdAt')}</Text>
-              <Text style={ui.text}>{textOf(item, 'body', 'safePreview')}</Text>
-              <Button title="Open notice" variant="secondary" onPress={() => navigation.navigate('PA15', { noticeId: textOf(item, 'id', 'noticeId') })} />
-              <View style={ui.divider} />
-            </View>
-          )) : <EmptyState title="No published notices" />}
+          ) : rows(data).length ? (
+            rows(data).map((item, index) => (
+              <View key={textOf(item, 'id') || String(index)} style={ui.gap}>
+                <Text style={ui.text}>{textOf(item, 'title') || 'School notice'}</Text>
+                <Text style={ui.muted}>{textOf(item, 'publishedAt', 'createdAt')}</Text>
+                <Text style={ui.text}>{textOf(item, 'body', 'safePreview')}</Text>
+                <Button
+                  title="Open notice"
+                  variant="secondary"
+                  onPress={() =>
+                    navigation.navigate('PA15', { noticeId: textOf(item, 'id', 'noticeId') })
+                  }
+                />
+                <View style={ui.divider} />
+              </View>
+            ))
+          ) : (
+            <EmptyState title="No published notices" />
+          )}
         </Card>
       ) : null}
 
@@ -170,14 +304,24 @@ export function ParentCommunicationScreen({ screenId, context, model, navigation
         <>
           <Button title="Submit a new complaint" onPress={() => navigation.navigate('PA17')} />
           <Card title="Your child-linked cases">
-            {rows(data).length ? rows(data).map((item, index) => (
-              <View key={textOf(item, 'id', 'caseId') || String(index)} style={ui.gap}>
-                <Text style={ui.text}>{textOf(item, 'subject', 'title') || 'Complaint'}</Text>
-                <Text style={ui.muted}>{textOf(item, 'state', 'status', 'category')}</Text>
-                <Button title="View case and resolution" variant="secondary" onPress={() => navigation.navigate('PA18', { complaintId: textOf(item, 'id', 'caseId') })} />
-                <View style={ui.divider} />
-              </View>
-            )) : <EmptyState title="No complaints submitted" />}
+            {rows(data).length ? (
+              rows(data).map((item, index) => (
+                <View key={textOf(item, 'id', 'caseId') || String(index)} style={ui.gap}>
+                  <Text style={ui.text}>{textOf(item, 'subject', 'title') || 'Complaint'}</Text>
+                  <Text style={ui.muted}>{textOf(item, 'state', 'status', 'category')}</Text>
+                  <Button
+                    title="View case and resolution"
+                    variant="secondary"
+                    onPress={() =>
+                      navigation.navigate('PA18', { complaintId: textOf(item, 'id', 'caseId') })
+                    }
+                  />
+                  <View style={ui.divider} />
+                </View>
+              ))
+            ) : (
+              <EmptyState title="No complaints submitted" />
+            )}
           </Card>
         </>
       ) : null}
@@ -186,34 +330,110 @@ export function ParentCommunicationScreen({ screenId, context, model, navigation
         <Card title="Tell the school what happened">
           {categoryOptions.length ? (
             <>
-              <Select label="Complaint category" value={category} options={categoryOptions} onChange={setCategory} />
+              <Select
+                label="Complaint category"
+                value={category}
+                options={categoryOptions}
+                onChange={setCategory}
+              />
               <Field label="Subject" value={subject} onChangeText={setSubject} maxLength={120} />
-              <Field label="Description" value={body} onChangeText={setBody} multiline numberOfLines={5} />
+              <Field
+                label="Description"
+                value={body}
+                onChangeText={setBody}
+                multiline
+                numberOfLines={5}
+              />
               <Notice text="Your complaint is linked to the currently selected child. Do not include passwords, bank details or unrelated children's information." />
-              <Button title="Submit complaint" loading={state.busy} disabled={!category || !subject.trim() || !body.trim()} onPress={() => void run(() => model.submitComplaint(category, subject, body), () => { setCategory(''); setSubject(''); setBody(''); navigation.navigate('PA16'); })} />
+              <Button
+                title="Submit complaint"
+                loading={state.busy}
+                disabled={!category || !subject.trim() || !body.trim()}
+                onPress={() =>
+                  void run(
+                    () => model.submitComplaint(category, subject, body),
+                    () => {
+                      setCategory('');
+                      setSubject('');
+                      setBody('');
+                      navigation.navigate('PA16');
+                    },
+                  )
+                }
+              />
             </>
-          ) : <EmptyState title="Complaint categories unavailable" description="The school has not returned the allowed categories. You cannot submit an uncategorised complaint." />}
+          ) : (
+            <EmptyState
+              title="Complaint categories unavailable"
+              description="The school has not returned the allowed categories. You cannot submit an uncategorised complaint."
+            />
+          )}
         </Card>
       ) : null}
 
       {screenId === 'PA18' && data ? (
         <>
-          <Card title={textOf(complaint, 'subject', 'title') || 'Complaint'} subtitle={[textOf(complaint, 'state', 'status'), textOf(complaint, 'category')].filter(Boolean).join(' · ')}>
+          <Card
+            title={textOf(complaint, 'subject', 'title') || 'Complaint'}
+            subtitle={[textOf(complaint, 'state', 'status'), textOf(complaint, 'category')]
+              .filter(Boolean)
+              .join(' · ')}
+          >
             <Text style={ui.text}>{textOf(complaint, 'body', 'description')}</Text>
             <Text style={ui.muted}>Created: {textOf(complaint, 'createdAt')}</Text>
             <RecordHistory records={rows(data.history)} />
           </Card>
           {textOf(complaint, 'state', 'status') === 'RESOLVED' ? (
             <Card title="Respond to the resolution">
-              <Select label="Your response" value={action} options={[{ value: 'ACCEPT', label: 'Accept resolution' }, { value: 'REQUEST_REVIEW', label: 'Request a review' }]} onChange={setAction} />
-              <Field label="Reason (required)" value={reason} onChangeText={setReason} multiline numberOfLines={3} />
-              <Button title={action === 'ACCEPT' ? 'Accept resolution' : 'Request review'} loading={state.busy} disabled={!reason.trim()} onPress={() => void run(() => model.respondToResolution(complaint, action, reason), () => setReason(''))} />
+              <Select
+                label="Your response"
+                value={action}
+                options={[
+                  { value: 'ACCEPT', label: 'Accept resolution' },
+                  { value: 'REQUEST_REVIEW', label: 'Request a review' },
+                ]}
+                onChange={setAction}
+              />
+              <Field
+                label="Reason (required)"
+                value={reason}
+                onChangeText={setReason}
+                multiline
+                numberOfLines={3}
+              />
+              <Button
+                title={action === 'ACCEPT' ? 'Accept resolution' : 'Request review'}
+                loading={state.busy}
+                disabled={!reason.trim()}
+                onPress={() =>
+                  void run(
+                    () => model.respondToResolution(complaint, action, reason),
+                    () => setReason(''),
+                  )
+                }
+              />
             </Card>
           ) : null}
           {!['CLOSED', 'RESOLVED'].includes(textOf(complaint, 'state', 'status')) ? (
             <Card title="Reply to the school">
-              <Field label="Your reply" value={body} onChangeText={setBody} multiline numberOfLines={4} />
-              <Button title="Send reply" loading={state.busy} disabled={!body.trim()} onPress={() => void run(() => model.replyToComplaint(complaint, body), () => setBody(''))} />
+              <Field
+                label="Your reply"
+                value={body}
+                onChangeText={setBody}
+                multiline
+                numberOfLines={4}
+              />
+              <Button
+                title="Send reply"
+                loading={state.busy}
+                disabled={!body.trim()}
+                onPress={() =>
+                  void run(
+                    () => model.replyToComplaint(complaint, body),
+                    () => setBody(''),
+                  )
+                }
+              />
             </Card>
           ) : null}
         </>
@@ -222,9 +442,13 @@ export function ParentCommunicationScreen({ screenId, context, model, navigation
       {screenId === 'PA19' && data ? (
         <>
           <Card title="Your account">
-            <Text style={ui.text}>{textOf(profile, 'displayName', 'name') || 'Parent account'}</Text>
+            <Text style={ui.text}>
+              {textOf(profile, 'displayName', 'name') || 'Parent account'}
+            </Text>
             <Text style={ui.text}>Login ID: {textOf(profile, 'loginId')}</Text>
-            <Text style={ui.text}>Email: {textOf(profile, 'verifiedEmail', 'email') || 'No verified email'}</Text>
+            <Text style={ui.text}>
+              Email: {textOf(profile, 'verifiedEmail', 'email') || 'No verified email'}
+            </Text>
             <Text style={ui.text}>Phone: {textOf(profile, 'phone') || 'Not provided'}</Text>
           </Card>
           <Card title="School-managed child relationships">
@@ -240,7 +464,10 @@ export function ParentCommunicationScreen({ screenId, context, model, navigation
       ) : null}
 
       {!state.busy && !state.error && data === null && ['PA14', 'PA18'].includes(screenId) ? (
-        <EmptyState title="Select a record first" description="Return to the relevant list and open a specific item." />
+        <EmptyState
+          title="Select a record first"
+          description="Return to the relevant list and open a specific item."
+        />
       ) : null}
     </Screen>
   );
