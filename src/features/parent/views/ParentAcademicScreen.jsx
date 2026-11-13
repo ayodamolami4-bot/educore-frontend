@@ -98,15 +98,24 @@ function RecordRows({ records, empty, onOpen, actionLabel = 'Open details' }) {
 export function ParentAcademicScreen({ screenId, context, model, navigation, route }) {
   const { config } = useServices();
   const [state, setState] = useState({ busy: false, error: '', data: null });
-  const recordId = route.params?.assignmentId ?? route.params?.reportId ?? '';
+  const recordId =
+    route.params?.assignmentId ??
+    route.params?.reportId ??
+    route.params?.materialId ??
+    route.params?.documentId ??
+    '';
   const load = useCallback(async () => {
     switch (screenId) {
       case 'PA03':
-        return model.studentOverview();
+        return route.params?.documentId
+          ? model.documentDetail(route.params.documentId)
+          : model.studentOverview();
       case 'PA04':
         return model.calendarWorkspace();
       case 'PA05':
-        return model.learningWorkspace();
+        return route.params?.materialId
+          ? model.materialDetail(route.params.materialId)
+          : model.learningWorkspace();
       case 'PA06':
         return recordId ? model.assignmentDetail(recordId) : null;
       case 'PA07': {
@@ -120,7 +129,7 @@ export function ParentAcademicScreen({ screenId, context, model, navigation, rou
       default:
         return null;
     }
-  }, [model, screenId, recordId]);
+  }, [model, route.params?.documentId, route.params?.materialId, screenId, recordId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -150,6 +159,8 @@ export function ParentAcademicScreen({ screenId, context, model, navigation, rou
   const student = data?.student?.student ?? data?.student ?? {};
   const report = data?.report?.report ?? data?.report ?? {};
   const assignment = data?.assignment?.assignment ?? data?.assignment ?? {};
+  const document = data?.document?.document ?? data?.document ?? {};
+  const material = data?.material?.material ?? data?.material ?? {};
 
   return (
     <Screen title={TITLES[screenId]} subtitle={childLabel} code={screenId} back={back}>
@@ -174,7 +185,19 @@ export function ParentAcademicScreen({ screenId, context, model, navigation, rou
         />
       ) : null}
 
-      {screenId === 'PA03' && data ? (
+      {screenId === 'PA03' && data && route.params?.documentId ? (
+        <Card title={value(document, 'title', 'name') || 'Verified school document'}>
+          <Text style={ui.text}>Document type: {value(document, 'kind', 'type')}</Text>
+          <Text style={ui.text}>Issued: {value(document, 'issuedOn', 'issueDate')}</Text>
+          <Text style={ui.text}>Issuer: {value(document, 'issuer')}</Text>
+          <RecordRows
+            records={list(data.history)}
+            empty="No additional published document revisions are available."
+          />
+        </Card>
+      ) : null}
+
+      {screenId === 'PA03' && data && !route.params?.documentId ? (
         <>
           <Card
             title={
@@ -220,6 +243,10 @@ export function ParentAcademicScreen({ screenId, context, model, navigation, rou
             <RecordRows
               records={list(data.documents)}
               empty="No family-visible verified documents are available."
+              onOpen={(item) =>
+                navigation.navigate('PA03', { documentId: value(item, 'id', 'documentId') })
+              }
+              actionLabel="View document history"
             />
           </Card>
         </>
@@ -245,7 +272,18 @@ export function ParentAcademicScreen({ screenId, context, model, navigation, rou
         </>
       ) : null}
 
-      {screenId === 'PA05' && data ? (
+      {screenId === 'PA05' && data && route.params?.materialId ? (
+        <Card title={value(material, 'title', 'name') || 'Published learning material'}>
+          <Text style={ui.text}>{value(material, 'body', 'description')}</Text>
+          <Text style={ui.muted}>Subject: {value(material, 'subjectName')}</Text>
+          <RecordRows
+            records={list(data.history)}
+            empty="No additional published material revisions are available."
+          />
+        </Card>
+      ) : null}
+
+      {screenId === 'PA05' && data && !route.params?.materialId ? (
         <>
           <Card title="Current class">
             <RecordRows
@@ -257,6 +295,10 @@ export function ParentAcademicScreen({ screenId, context, model, navigation, rou
             <RecordRows
               records={list(data.materials)}
               empty="No published materials are available."
+              onOpen={(item) =>
+                navigation.navigate('PA05', { materialId: value(item, 'id', 'materialId') })
+              }
+              actionLabel="Read material and revisions"
             />
           </Card>
           <Card title="Published assignments">
@@ -299,10 +341,23 @@ export function ParentAcademicScreen({ screenId, context, model, navigation, rou
         <>
           <Card title="Attendance record" subtitle="Recent 30-day view · Africa/Lagos">
             <RecordRows
-              records={list(data)}
+              records={list(data.attendance)}
               empty="No submitted attendance registers were returned for this period."
             />
           </Card>
+          <Card title="Official attendance corrections">
+            <RecordRows
+              records={(data.corrections ?? []).flatMap(({ registerId, history }) =>
+                list(history).map((item) => ({ ...item, registerId })),
+              )}
+              empty="No approved attendance corrections were returned for this period."
+            />
+          </Card>
+          <Button
+            title="Contact the school about attendance"
+            variant="secondary"
+            onPress={() => navigation.navigate('PA13')}
+          />
           <Notice text="Unsubmitted registers are not counted as absences. Official corrections are shown only after school review." />
         </>
       ) : null}
