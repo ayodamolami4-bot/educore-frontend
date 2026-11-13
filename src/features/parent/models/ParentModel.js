@@ -326,4 +326,133 @@ export class ParentModel {
     return this.api.reportPdf(reportId);
   }
 
+
+  #requireParentWorkspace() {
+    if (this.context.role !== 'PARENT' || !this.context.childId)
+      throw localError('This workspace is only available to an approved parent-child link.');
+  }
+
+  async communicationOverview() {
+    this.#requireParentWorkspace();
+    const [contacts, threads, notices, complaints] = await Promise.all([
+      this.api.contacts(),
+      this.api.threads(),
+      this.api.notices(),
+      this.api.complaints(),
+    ]);
+    this.#checkSelectedChildPage(threads);
+    this.#checkSelectedChildPage(complaints);
+    return { contacts, threads, notices, complaints };
+  }
+
+  async contacts() {
+    this.#requireParentWorkspace();
+    return this.api.contacts();
+  }
+
+  async threadDetail(id) {
+    this.#requireParentWorkspace();
+    const result = await this.api.thread(id);
+    const thread = result.thread ?? result;
+    if (thread.studentId && thread.studentId !== this.context.childId)
+      throw localError('This conversation is unavailable for the selected child.');
+    await this.api.readThread(id);
+    return result;
+  }
+
+  async startConversation(contact, subject, body) {
+    this.#requireParentWorkspace();
+    if (!['CLASS_TEACHER', 'OFFICE'].includes(contact?.target))
+      throw localError('Choose a class teacher or the school office from the approved contacts.');
+    if (!subject.trim() || !body.trim())
+      throw localError('Enter a subject and a first message.');
+    const payload = {
+      studentId: this.context.childId,
+      target: contact.target,
+      subject: subject.trim(),
+      body: body.trim(),
+      ...(contact.guardianId ? { guardianId: contact.guardianId } : {}),
+    };
+    return this.api.createThread(payload, this.uuid());
+  }
+
+  async sendConversationMessage(thread, body) {
+    this.#requireParentWorkspace();
+    if (thread.studentId && thread.studentId !== this.context.childId)
+      throw localError('This conversation is unavailable for the selected child.');
+    if (!body.trim()) throw localError('Write a message before sending.');
+    return this.api.sendMessage(thread.id, { body: body.trim() }, this.uuid(), thread.version);
+  }
+
+  async closeConversation(thread, reason) {
+    this.#requireParentWorkspace();
+    if (!reason.trim()) throw localError('Enter a reason before closing this conversation.');
+    return this.api.closeThread(thread.id, { reason: reason.trim() }, this.uuid(), thread.version);
+  }
+
+  async notices() {
+    this.#requireParentWorkspace();
+    return this.api.notices();
+  }
+
+  async noticeDetail(id) {
+    this.#requireParentWorkspace();
+    return this.api.notice(id);
+  }
+
+  async complaints() {
+    this.#requireParentWorkspace();
+    const result = await this.api.complaints();
+    this.#checkSelectedChildPage(result);
+    return result;
+  }
+
+  async complaintDetail(id) {
+    this.#requireParentWorkspace();
+    const [complaint, history] = await Promise.all([
+      this.api.complaint(id),
+      this.api.complaintHistory(id),
+    ]);
+    this.#checkSelectedChild(complaint.complaint ?? complaint);
+    this.#checkSelectedChildPage(history);
+    return { complaint, history };
+  }
+
+  async complaintMetadata() {
+    this.#requireParentWorkspace();
+    return this.api.metadata();
+  }
+
+  async submitComplaint(category, subject, body) {
+    this.#requireParentWorkspace();
+    if (!category || !subject.trim() || !body.trim())
+      throw localError('Choose a category and enter a subject and description.');
+    return this.api.createComplaint({
+      studentId: this.context.childId,
+      category,
+      subject: subject.trim(),
+      body: body.trim(),
+    }, this.uuid());
+  }
+
+  async replyToComplaint(complaint, body) {
+    this.#requireParentWorkspace();
+    if (!body.trim()) throw localError('Write a reply before sending.');
+    return this.api.replyComplaint(complaint.id, { body: body.trim(), internal: false }, this.uuid(), complaint.version);
+  }
+
+  async respondToResolution(complaint, action, reason) {
+    this.#requireParentWorkspace();
+    if (!['ACCEPT', 'REQUEST_REVIEW'].includes(action))
+      throw localError('Choose an available parent response.');
+    if (!reason.trim()) throw localError('A reason is required for this response.');
+    return this.api.changeComplaintStatus(complaint.id, { action, reason: reason.trim() }, this.uuid(), complaint.version);
+  }
+
+  async parentProfile() {
+    this.#requireParentWorkspace();
+    const [profile, contexts] = await Promise.all([this.api.profile(), this.api.contexts()]);
+    return { profile, contexts: (contexts.items ?? []).filter((item) => item.role === 'PARENT' && item.childId) };
+  }
+
 }
