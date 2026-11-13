@@ -98,23 +98,19 @@ function RecordRows({ records, empty, onOpen, actionLabel = 'Open details' }) {
 export function ParentAcademicScreen({ screenId, context, model, navigation, route }) {
   const { config } = useServices();
   const [state, setState] = useState({ busy: false, error: '', data: null });
-  const recordId =
-    route.params?.assignmentId ??
-    route.params?.reportId ??
-    route.params?.materialId ??
-    route.params?.documentId ??
-    '';
+  const { assignmentId, reportId, materialId, documentId } = route.params ?? {};
+  const recordId = assignmentId ?? reportId ?? materialId ?? documentId ?? '';
   const load = useCallback(async () => {
     switch (screenId) {
       case 'PA03':
-        return route.params?.documentId
-          ? model.documentDetail(route.params.documentId)
+        return documentId
+          ? model.documentDetail(documentId)
           : model.studentOverview();
       case 'PA04':
         return model.calendarWorkspace();
       case 'PA05':
-        return route.params?.materialId
-          ? model.materialDetail(route.params.materialId)
+        return materialId
+          ? model.materialDetail(materialId)
           : model.learningWorkspace();
       case 'PA06':
         return recordId ? model.assignmentDetail(recordId) : null;
@@ -129,7 +125,7 @@ export function ParentAcademicScreen({ screenId, context, model, navigation, rou
       default:
         return null;
     }
-  }, [model, route.params?.documentId, route.params?.materialId, screenId, recordId]);
+  }, [assignmentId, documentId, materialId, model, recordId, reportId, screenId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -185,7 +181,7 @@ export function ParentAcademicScreen({ screenId, context, model, navigation, rou
         />
       ) : null}
 
-      {screenId === 'PA03' && data && route.params?.documentId ? (
+      {screenId === 'PA03' && data && documentId ? (
         <Card title={value(document, 'title', 'name') || 'Verified school document'}>
           <Text style={ui.text}>Document type: {value(document, 'kind', 'type')}</Text>
           <Text style={ui.text}>Issued: {value(document, 'issuedOn', 'issueDate')}</Text>
@@ -197,7 +193,7 @@ export function ParentAcademicScreen({ screenId, context, model, navigation, rou
         </Card>
       ) : null}
 
-      {screenId === 'PA03' && data && !route.params?.documentId ? (
+      {screenId === 'PA03' && data && !documentId ? (
         <>
           <Card
             title={
@@ -272,7 +268,7 @@ export function ParentAcademicScreen({ screenId, context, model, navigation, rou
         </>
       ) : null}
 
-      {screenId === 'PA05' && data && route.params?.materialId ? (
+      {screenId === 'PA05' && data && materialId ? (
         <Card title={value(material, 'title', 'name') || 'Published learning material'}>
           <Text style={ui.text}>{value(material, 'body', 'description')}</Text>
           <Text style={ui.muted}>Subject: {value(material, 'subjectName')}</Text>
@@ -283,7 +279,7 @@ export function ParentAcademicScreen({ screenId, context, model, navigation, rou
         </Card>
       ) : null}
 
-      {screenId === 'PA05' && data && !route.params?.materialId ? (
+      {screenId === 'PA05' && data && !materialId ? (
         <>
           <Card title="Current class">
             <RecordRows
