@@ -280,6 +280,26 @@ export class ParentModel {
     };
   }
 
+  async materialDetail(materialId) {
+    this.#requireLearning();
+    const [material, history] = await Promise.all([
+      this.api.material(materialId),
+      this.api.materialHistory(materialId),
+    ]);
+    return { material, history };
+  }
+
+  async documentDetail(documentId) {
+    this.#requireLearning();
+    const [document, history] = await Promise.all([
+      this.api.document(documentId),
+      this.api.documentHistory(documentId),
+    ]);
+    this.#checkSelectedChild(document.document ?? document);
+    this.#checkSelectedChildPage(history);
+    return { document, history };
+  }
+
   async learningWorkspace() {
     this.#requireLearning();
     const classes = await this.api.classes();
@@ -311,9 +331,20 @@ export class ParentModel {
 
   async attendanceRecords(from, to) {
     this.#requireLearning();
-    const result = await this.api.attendance(from, to);
-    this.#checkSelectedChildPage(result);
-    return result;
+    const [attendance, contacts] = await Promise.all([
+      this.api.attendance(from, to),
+      this.api.contacts(),
+    ]);
+    this.#checkSelectedChildPage(attendance);
+    const records = Array.isArray(attendance) ? attendance : attendance.items ?? [];
+    const registerIds = [...new Set(records.map((item) => item.registerId).filter(Boolean))];
+    const corrections = await Promise.all(
+      registerIds.map(async (registerId) => ({
+        registerId,
+        history: await this.api.attendanceCorrectionHistory(registerId),
+      })),
+    );
+    return { attendance, contacts, corrections };
   }
 
   async reportList() {
