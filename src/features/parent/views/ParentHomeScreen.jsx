@@ -123,6 +123,12 @@ export function ParentHomeScreen({ context, model, navigation, openShared }) {
           <Button title="Academic results" onPress={() => navigation.navigate('PA08')} />
         </Card>
       )}
+      <Card title="Communication with school">
+        <Button title="Messages" variant="secondary" onPress={() => navigation.navigate('PA13')} />
+        <Button title="School notices" variant="secondary" onPress={() => navigation.navigate('PA15')} />
+        <Button title="My complaints" variant="secondary" onPress={() => navigation.navigate('PA16')} />
+        <Button title="Profile and relationships" variant="quiet" onPress={() => navigation.navigate('PA19')} />
+      </Card>
       <Card title="School updates">
         {state.home?.notifications.map((item) => (
           <View key={item.id}>
