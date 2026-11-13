@@ -262,13 +262,20 @@ export class ParentModel {
     const classes = await this.api.classes();
     const classItems = classes.items ?? [];
     const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos' }).format(new Date());
-    const [timetable, calendar, terms] = await Promise.all([
+    const terms = await this.terms();
+    const sessionIds = [...new Set(classItems.map((item) => item.sessionId).filter(Boolean))];
+    const [timetable, calendars, examinations] = await Promise.all([
       this.api.timetable(classItems[0]?.classId ?? classItems[0]?.id, today),
-      this.api.calendar(),
-      this.terms(),
+      Promise.all(sessionIds.map((sessionId) => this.api.calendar(sessionId))),
+      Promise.all(terms.map((term) => this.api.examinations(term.id))),
     ]);
-    const examinations = await Promise.all(terms.map((term) => this.api.examinations(term.id)));
-    return { timetable, calendar, terms, examinations: examinations.flatMap((page) => page.items ?? []), classes: classItems };
+    return {
+      timetable,
+      calendar: calendars.flatMap((page) => page.items ?? []),
+      terms,
+      examinations: examinations.flatMap((page) => page.items ?? []),
+      classes: classItems,
+    };
   }
 
   async learningWorkspace() {
