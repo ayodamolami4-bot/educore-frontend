@@ -2,7 +2,7 @@
 
 React Native + JavaScript + Expo. Model-View-Presenter. Secondary schools, JSS1–SSS3.
 
-**Lead: [@ayodamolami4-bot](https://github.com/ayodamolami4-bot).** This repository contains the shared foundation and four separate role work areas. The role business pages and Java backend have not been implemented here.
+**Lead: [@ayodamolami4-bot](https://github.com/ayodamolami4-bot).** This repository contains the shared foundation and four separate role work areas. The [Parent work area](src/features/parent/README.md) includes the first child and fees screens. The Java backend is in its own repository.
 
 Lead: follow [the initial setup and teammate assignment guide](docs/LEAD_SETUP.md) before handing out role tasks. It also explains how to install this source from a downloaded ZIP into the existing repository.
 
