@@ -261,7 +261,9 @@ export class ParentModel {
     this.#requireLearning();
     const classes = await this.api.classes();
     const classItems = classes.items ?? [];
-    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos' }).format(new Date());
+    const today = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Africa/Lagos',
+    }).format(new Date());
     const terms = await this.terms();
     const sessionIds = [...new Set(classItems.map((item) => item.sessionId).filter(Boolean))];
     const [timetable, calendars, examinations] = await Promise.all([
@@ -332,7 +334,6 @@ export class ParentModel {
     this.#requireLearning();
     return this.api.reportPdf(reportId);
   }
-
 
   #requireParentWorkspace() {
     if (this.context.role !== 'PARENT' || !this.context.childId)
@@ -434,18 +435,26 @@ export class ParentModel {
     this.#requireParentWorkspace();
     if (!category || !subject.trim() || !body.trim())
       throw localError('Choose a category and enter a subject and description.');
-    return this.api.createComplaint({
-      studentId: this.context.childId,
-      category,
-      subject: subject.trim(),
-      body: body.trim(),
-    }, this.uuid());
+    return this.api.createComplaint(
+      {
+        studentId: this.context.childId,
+        category,
+        subject: subject.trim(),
+        body: body.trim(),
+      },
+      this.uuid(),
+    );
   }
 
   async replyToComplaint(complaint, body) {
     this.#requireParentWorkspace();
     if (!body.trim()) throw localError('Write a reply before sending.');
-    return this.api.replyComplaint(complaint.id, { body: body.trim(), internal: false }, this.uuid(), complaint.version);
+    return this.api.replyComplaint(
+      complaint.id,
+      { body: body.trim(), internal: false },
+      this.uuid(),
+      complaint.version,
+    );
   }
 
   async respondToResolution(complaint, action, reason) {
@@ -453,13 +462,22 @@ export class ParentModel {
     if (!['ACCEPT', 'REQUEST_REVIEW'].includes(action))
       throw localError('Choose an available parent response.');
     if (!reason.trim()) throw localError('A reason is required for this response.');
-    return this.api.changeComplaintStatus(complaint.id, { action, reason: reason.trim() }, this.uuid(), complaint.version);
+    return this.api.changeComplaintStatus(
+      complaint.id,
+      { action, reason: reason.trim() },
+      this.uuid(),
+      complaint.version,
+    );
   }
 
   async parentProfile() {
     this.#requireParentWorkspace();
     const [profile, contexts] = await Promise.all([this.api.profile(), this.api.contexts()]);
-    return { profile, contexts: (contexts.items ?? []).filter((item) => item.role === 'PARENT' && item.childId) };
+    return {
+      profile,
+      contexts: (contexts.items ?? []).filter(
+        (item) => item.role === 'PARENT' && item.childId,
+      ),
+    };
   }
-
 }
