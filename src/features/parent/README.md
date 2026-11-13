@@ -28,7 +28,7 @@ The Parent / Guardian workspace covers PA01–PA19. The parent account is global
 
 ## Access and workflow boundaries
 
-- Use the currently selected parent context. Never use a client-supplied child ID as proof of access; the Java backend rechecks school membership, guardian relationship, learning permission and payer permission.
+- Use the currently selected parent context. Never use a client-supplied child ID as proof of access; the Java backend rechecks school membership, guardian relationship, learning permission and payer permission on every protected request.
 - A parent can only open approved linked children. Switching schools/children goes through the shared context flow and invalidates prior school-scoped requests.
 - Families see published learning materials and released feedback only. Parents cannot submit or grade student work.
 - Attendance displays submitted registers. A missing register is incomplete coverage, not an absence. Official corrections are shown only after school review; private teacher requests and office follow-up notes are not exposed.
