@@ -86,7 +86,7 @@ export function ParentAcademicScreen({ screenId, context, model, navigation, rou
   const { config } = useServices();
   const [state, setState] = useState({ busy: false, error: '', data: null });
   const recordId = route.params?.assignmentId ?? route.params?.reportId ?? '';
-  const load = useCallback(async (signal) => {
+  const load = useCallback(async () => {
     switch (screenId) {
       case 'PA03': return model.studentOverview();
       case 'PA04': return model.calendarWorkspace();
