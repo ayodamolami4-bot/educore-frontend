@@ -6,26 +6,28 @@ There is one React Native application. Four developers own different feature fol
 
 Inside your role folder keep `views/`, `presenters/`, `models/` and `api/`:
 
-| File example                        | Responsibility                                                                      |
-| ----------------------------------- | ----------------------------------------------------------------------------------- |
-| `views/AttendanceScreen.tsx`        | Draw fields/buttons, subscribe to the Presenter and forward user actions            |
-| `presenters/AttendancePresenter.ts` | Manage editable/loading/error state and the use case; no React Native UI imports    |
-| `models/AttendanceModel.ts`         | Use the role API adapter and typed records; no permanent grade/balance calculations |
-| `api/attendanceApi.ts`              | Call the agreed Java endpoint through the shared client                             |
+| File example                        | Responsibility                                                                   |
+| ----------------------------------- | -------------------------------------------------------------------------------- |
+| `views/AttendanceScreen.jsx`        | Draw fields/buttons, subscribe to the Presenter and forward user actions         |
+| `presenters/AttendancePresenter.js` | Manage editable/loading/error state and the use case; no React Native UI imports |
+| `models/AttendanceModel.js`         | Use the role API adapter and its response fields                                 |
+| `api/attendanceApi.js`              | Call the agreed Java endpoint through the shared client                          |
 
 Follow the working shared examples under `src/features/shared`. Reuse `Screen`, `Button`, `Field`, `Select`, `Card`, `Notice` and `ui` from components. Use the shared theme instead of inventing slightly different buttons or colours. A scrolling section, dialog or file picker is not a separate page ID.
 
 ## Register your role home without editing shared navigation
 
-Your role `index.ts` already exports `<role>Module`. Import your own component there and replace `HomeScreen: null` with that component. It receives `RoleScreenProps`:
+Use `.jsx` for files that render JSX and `.js` for presenters, models and API adapters.
+Include the extension in relative imports.
 
-```tsx
+Your role `index.js` exports `<role>Module`. Import your screen there and set it as `HomeScreen`. The app passes the active `context` and the `openShared` navigation function.
+
+```jsx
 import React from 'react';
-import type { RoleScreenProps } from '../../../navigation/types';
-import { Screen } from '../../../components/Screen';
-import { Button } from '../../../components/Controls';
+import { Screen } from '../../../components/Screen.jsx';
+import { Button } from '../../../components/Controls.jsx';
 
-export function TeacherHome({ context, openShared }: RoleScreenProps) {
+export function TeacherHome({ context, openShared }) {
   return (
     <Screen title="Teacher home" subtitle={context.schoolName}>
       <Button title="Notifications" onPress={() => openShared('Notifications')} />
@@ -48,6 +50,6 @@ Store official data under account/school/role/child scope. Scope changes remount
 
 ## Shared changes
 
-If you need a new reusable component, endpoint type or dependency, ask the lead. Do not change package.json, lockfile, shared login, API token logic or root navigation in a role pull request. Add role-specific dependencies only after the lead coordinates one shared installation/lockfile update.
+If you need a new reusable component, API payload definition or dependency, ask the lead. Do not change package.json, lockfile, shared login, API token logic or root navigation in a role pull request. Add role-specific dependencies only after the lead coordinates one shared installation/lockfile update.
 
 Before a PR, run the checks and include affected page IDs, endpoints, test notes and a screenshot for a visible UI change. The lead is the integrator. Ownership automation detects folder-scope mistakes but does not replace review.

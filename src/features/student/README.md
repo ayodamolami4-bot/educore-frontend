@@ -2,6 +2,6 @@
 
 Assigned pages: ST01–ST13. These pages are intentionally not implemented in the shared starter.
 
-Work only inside this role folder. Put screens in views, application state/actions in presenters, typed data access in models/api. Reuse the lead-owned shared components/client. Export your home or role navigator from index.ts as HomeScreen. See ../../../docs/DEVELOPER_GUIDE.md from the repository root navigation or open docs/DEVELOPER_GUIDE.md.
+Work only inside this role folder. Put screens in `views/` as `.jsx` files. Use `.js` for state and actions in `presenters/` and data access in `models/` and `api/`. Reuse the shared components and client. Export your home screen or role navigator from `index.js` as `HomeScreen`. See the [developer guide](../../../docs/DEVELOPER_GUIDE.md).
 
 Ask @ayodamolami4-bot for changes to shared login, navigation, theme, dependencies and transport. Do not edit another role folder. Your GitHub username must be assigned in team-ownership.json by the lead.
