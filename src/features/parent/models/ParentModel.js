@@ -267,7 +267,8 @@ export class ParentModel {
       this.api.calendar(),
       this.terms(),
     ]);
-    return { timetable, calendar, terms, classes: classItems };
+    const examinations = await Promise.all(terms.map((term) => this.api.examinations(term.id)));
+    return { timetable, calendar, terms, examinations: examinations.flatMap((page) => page.items ?? []), classes: classItems };
   }
 
   async learningWorkspace() {
