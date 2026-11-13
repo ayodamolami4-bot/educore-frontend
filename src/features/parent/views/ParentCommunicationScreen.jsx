@@ -159,6 +159,7 @@ export function ParentCommunicationScreen({ screenId, context, model, navigation
               <Text style={ui.text}>{textOf(item, 'title') || 'School notice'}</Text>
               <Text style={ui.muted}>{textOf(item, 'publishedAt', 'createdAt')}</Text>
               <Text style={ui.text}>{textOf(item, 'body', 'safePreview')}</Text>
+              <Button title="Open notice" variant="secondary" onPress={() => navigation.navigate('PA15', { noticeId: textOf(item, 'id', 'noticeId') })} />
               <View style={ui.divider} />
             </View>
           )) : <EmptyState title="No published notices" />}
