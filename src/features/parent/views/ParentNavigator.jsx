@@ -7,6 +7,7 @@ import { ChildrenScreen } from './ChildrenScreen.jsx';
 import { FeesScreen } from './FeesScreen.jsx';
 import { InvoiceScreen } from './InvoiceScreen.jsx';
 import { ParentHomeScreen } from './ParentHomeScreen.jsx';
+import { ParentAcademicScreen } from './ParentAcademicScreen.jsx';
 import { PaymentScreen } from './PaymentScreen.jsx';
 
 const Stack = createNativeStackNavigator();
@@ -31,6 +32,27 @@ export function ParentNavigator({ context, openShared, target }) {
       </Stack.Screen>
       <Stack.Screen name="PA02">
         {(props) => <ChildrenScreen {...props} context={context} model={model} />}
+      </Stack.Screen>
+      <Stack.Screen name="PA03">
+        {(props) => <ParentAcademicScreen {...props} screenId="PA03" context={context} model={model} />}
+      </Stack.Screen>
+      <Stack.Screen name="PA04">
+        {(props) => <ParentAcademicScreen {...props} screenId="PA04" context={context} model={model} />}
+      </Stack.Screen>
+      <Stack.Screen name="PA05">
+        {(props) => <ParentAcademicScreen {...props} screenId="PA05" context={context} model={model} />}
+      </Stack.Screen>
+      <Stack.Screen name="PA06">
+        {(props) => <ParentAcademicScreen {...props} screenId="PA06" context={context} model={model} />}
+      </Stack.Screen>
+      <Stack.Screen name="PA07">
+        {(props) => <ParentAcademicScreen {...props} screenId="PA07" context={context} model={model} />}
+      </Stack.Screen>
+      <Stack.Screen name="PA08">
+        {(props) => <ParentAcademicScreen {...props} screenId="PA08" context={context} model={model} />}
+      </Stack.Screen>
+      <Stack.Screen name="PA09">
+        {(props) => <ParentAcademicScreen {...props} screenId="PA09" context={context} model={model} />}
       </Stack.Screen>
       <Stack.Screen name="PA10">
         {(props) => <FeesScreen {...props} context={context} model={model} />}
