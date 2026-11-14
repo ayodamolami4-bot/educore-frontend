@@ -482,13 +482,14 @@ export class ParentModel {
 
   async complaintDetail(id) {
     this.#requireParentWorkspace();
-    const [complaint, history] = await Promise.all([
+    const [complaint, history, profile] = await Promise.all([
       this.api.complaint(id),
       this.api.complaintHistory(id),
+      this.api.profile(),
     ]);
     this.#checkSelectedChild(complaint.complaint ?? complaint);
     this.#checkSelectedChildPage(history);
-    return { complaint, history };
+    return { complaint, history, profile };
   }
 
   async complaintMetadata() {
