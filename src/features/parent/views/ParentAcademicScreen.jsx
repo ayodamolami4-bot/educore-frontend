@@ -59,6 +59,78 @@ function formatDateTime(input) {
   }).format(date);
 }
 
+function assignmentSubmissionLabel(state) {
+  const labels = {
+    NOT_STARTED: 'Not submitted',
+    DRAFT: 'Draft saved · not submitted',
+    SUBMITTED: 'Submitted · awaiting teacher review',
+    GRADED: 'Graded',
+    RETURNED: 'Returned for changes',
+  };
+  return labels[state] || (state ? state.replaceAll('_', ' ').toLowerCase() : 'No submission recorded');
+}
+
+function AssignmentRevisionRows({ records }) {
+  if (!records.length) {
+    return (
+      <EmptyState
+        title="No submission has been recorded."
+        description="Submitted work will appear here after the student sends it to the school."
+      />
+    );
+  }
+  return records.map((revision, index) => {
+    const snapshot = revision.snapshot ?? {};
+    return (
+      <View key={value(revision, 'revision') || String(index)} style={ui.gap}>
+        <Text style={[ui.text, { fontWeight: '700' }]}>
+          Submission revision {value(revision, 'revision') || String(index + 1)}
+        </Text>
+        {value(revision, 'submittedAt') ? (
+          <Text style={ui.muted}>Submitted: {formatDateTime(value(revision, 'submittedAt'))}</Text>
+        ) : null}
+        {value(snapshot, 'responseText') ? (
+          <Text style={ui.text}>{value(snapshot, 'responseText')}</Text>
+        ) : null}
+        {index < records.length - 1 ? <View style={ui.divider} /> : null}
+      </View>
+    );
+  });
+}
+
+function AssignmentReviewRows({ records, maximumScore }) {
+  if (!records.length) {
+    return (
+      <EmptyState
+        title="No teacher feedback has been released yet."
+        description="Released scores and comments will appear here after the teacher reviews submitted work."
+      />
+    );
+  }
+  return records.map((review, index) => {
+    const action = value(review, 'action');
+    const score = value(review, 'score');
+    const feedback = value(review, 'feedback');
+    return (
+      <View key={String(index)} style={ui.gap}>
+        <Text style={[ui.text, { fontWeight: '700' }]}>
+          {action === 'GRADE' ? 'Graded' : action === 'RETURN' ? 'Returned for changes' : 'Teacher review'}
+        </Text>
+        {score !== '' ? (
+          <Text style={ui.text}>
+            Score: {score}{maximumScore ? '/' + maximumScore : ''}
+          </Text>
+        ) : null}
+        {feedback ? <Text style={ui.text}>{feedback}</Text> : null}
+        {value(review, 'createdAt') ? (
+          <Text style={ui.muted}>{formatDateTime(value(review, 'createdAt'))}</Text>
+        ) : null}
+        {index < records.length - 1 ? <View style={ui.divider} /> : null}
+      </View>
+    );
+  });
+}
+
 function ReportSubjectRows({ records, policy }) {
   if (!records.length) return <EmptyState title="The published report has no subject rows." />;
   const totalMaximum =
@@ -367,22 +439,34 @@ export function ParentAcademicScreen({ screenId, context, model, navigation, rou
         <>
           <Card title={value(assignment, 'title', 'name') || 'Assignment'}>
             <Text style={ui.text}>
-              {value(assignment, 'body', 'description') || 'Published assignment details'}
+              {value(assignment, 'instructions', 'body', 'description') ||
+                'The school has not provided assignment instructions.'}
             </Text>
             <Text style={ui.muted}>
-              Due: {value(assignment, 'dueOn', 'dueAt') || 'Not specified'}
+              Due: {formatDateTime(value(assignment, 'dueAt', 'dueOn')) || 'Not specified'}
             </Text>
             <Text style={ui.muted}>
-              Submission mode: {value(assignment, 'submissionMode') || 'See assignment details'}
+              Maximum score: {value(assignment, 'maximumScore') || 'Not specified'}
             </Text>
+            <Text style={ui.muted}>
+              Submission mode: {value(assignment, 'submissionMode') || 'Not specified'}
+            </Text>
+            {assignment.submission ? (
+              <Text style={ui.text}>
+                Submission status: {assignmentSubmissionLabel(value(assignment.submission, 'state'))}
+              </Text>
+            ) : null}
           </Card>
-          <Card title="Accepted submission and teacher feedback">
-            <RecordRows
-              records={list(data.history)}
-              empty="No accepted submission or released feedback is available yet."
+          <Card title="Submission history">
+            <AssignmentRevisionRows records={list(data.history?.revisions)} />
+          </Card>
+          <Card title="Teacher feedback">
+            <AssignmentReviewRows
+              records={list(data.history?.reviews)}
+              maximumScore={value(assignment, 'maximumScore')}
             />
           </Card>
-          <Notice text="Parents can read accepted work and released feedback. Students submit their own work; parents cannot submit or grade it." />
+          <Notice text="Parents can read submitted work and released feedback. Students submit their own work; parents cannot submit or grade it." />
         </>
       ) : null}
 
