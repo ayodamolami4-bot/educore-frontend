@@ -102,7 +102,7 @@ export function createParentApi(client, context) {
       }),
     complaintHistory: (id) =>
       client.request(path('/complaints/' + encodeURIComponent(id) + '/history')),
-    metadata: () => client.request('/metadata'),
+    complaintMetadata: () => client.request(path('/complaints/metadata')),
     profile: () => client.request('/me'),
     contexts: () => client.request('/me/contexts'),
   };
