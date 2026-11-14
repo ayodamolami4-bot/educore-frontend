@@ -48,6 +48,46 @@ test('parent messaging maps the server class-teacher context to a permitted reci
   ]);
 });
 
+test('parent complaint detail includes public conversation entries and account identity', async () => {
+  const profile = { id: randomUUID(), displayName: 'Ada Demo' };
+  const complaint = {
+    id: 'case_demo',
+    studentId: context.childId,
+    entries: [
+      {
+        id: 'entry_parent',
+        authorId: profile.id,
+        visibility: 'PUBLIC',
+        body: 'Please clarify this concern.',
+      },
+      {
+        id: 'entry_school',
+        authorId: randomUUID(),
+        visibility: 'PUBLIC',
+        body: 'The school has reviewed your concern.',
+      },
+    ],
+  };
+  const history = { items: [] };
+  const model = new ParentModel(
+    {
+      complaint: async () => complaint,
+      complaintHistory: async () => history,
+      profile: async () => profile,
+    },
+    null,
+    context,
+    randomUUID,
+    false,
+  );
+
+  assert.deepEqual(await model.complaintDetail(complaint.id), {
+    complaint,
+    history,
+    profile,
+  });
+});
+
 test('parent can view a published assignment when the child has no submission', async () => {
   const assignment = {
     assignment: {
