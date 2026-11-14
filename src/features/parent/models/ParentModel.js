@@ -412,6 +412,10 @@ export class ParentModel {
           'Class teacher',
       });
     }
+    const hasOffice = contacts.some((item) => item.target === 'OFFICE');
+    if (contactContext?.officeName && !hasOffice) {
+      contacts.push({ target: 'OFFICE', displayName: contactContext.officeName });
+    }
     return { contacts, threads, notices, complaints };
   }
 
