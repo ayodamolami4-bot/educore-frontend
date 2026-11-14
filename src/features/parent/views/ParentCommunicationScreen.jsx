@@ -384,6 +384,26 @@ export function ParentCommunicationScreen({ screenId, context, model, navigation
             <Text style={ui.muted}>Created: {textOf(complaint, 'createdAt')}</Text>
             <RecordHistory records={rows(data.history)} />
           </Card>
+          <Card title="Conversation">
+            {complaintEntries.length ? (
+              complaintEntries.map((item, index) => (
+                <View key={textOf(item, 'id') || String(index)} style={ui.gap}>
+                  <Text style={ui.text}>
+                    {textOf(item, 'authorId') === textOf(profile, 'id')
+                      ? 'Your message'
+                      : 'School reply'}
+                  </Text>
+                  <Text style={ui.text}>{textOf(item, 'body')}</Text>
+                  <Text style={ui.muted}>{textOf(item, 'createdAt')}</Text>
+                </View>
+              ))
+            ) : (
+              <EmptyState
+                title="No replies yet"
+                description="School responses and your follow-up messages will appear here."
+              />
+            )}
+          </Card>
           {textOf(complaint, 'state', 'status') === 'RESOLVED' ? (
             <Card title="Respond to the resolution">
               <Select
