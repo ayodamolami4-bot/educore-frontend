@@ -322,7 +322,11 @@ export class ParentModel {
     this.#requireLearning();
     const [assignment, history] = await Promise.all([
       this.api.assignment(assignmentId),
-      this.api.submissionHistory(assignmentId),
+      this.api.submissionHistory(assignmentId).catch((error) => {
+        // No submission is a valid parent-facing state; it must not hide the assignment itself.
+        if (error instanceof ApiError && error.problem?.status === 404) return { items: [] };
+        throw error;
+      }),
     ]);
     this.#checkSelectedChild(assignment.assignment ?? assignment);
     this.#checkSelectedChildPage(history);
