@@ -121,6 +121,7 @@ export function ParentCommunicationScreen({ screenId, context, model, navigation
   const thread = data?.thread?.thread ?? data?.thread ?? data ?? {};
   const complaint = data?.complaint?.complaint ?? data?.complaint ?? {};
   const profile = data?.profile?.account ?? data?.profile ?? {};
+  const complaintEntries = rows(complaint.entries).filter((item) => item.visibility === 'PUBLIC');
   const contacts = rows(data?.contacts);
   const categories = rows(
     data?.categories ?? data?.metadata?.complaintCategories ?? data?.complaintCategories,
