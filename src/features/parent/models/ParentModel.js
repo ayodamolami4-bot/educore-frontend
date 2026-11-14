@@ -342,12 +342,17 @@ export class ParentModel {
     this.#checkSelectedChildPage(attendance);
     const records = Array.isArray(attendance) ? attendance : (attendance.items ?? []);
     const registerIds = [...new Set(records.map((item) => item.registerId).filter(Boolean))];
-    const corrections = await Promise.all(
-      registerIds.map(async (registerId) => ({
-        registerId,
-        history: await this.api.attendanceCorrectionHistory(registerId),
-      })),
-    );
+    // Correction history is supplementary. Older API clients may not expose the
+    // endpoint yet; keep the parent's attendance records available in that case.
+    const corrections =
+      typeof this.api.attendanceCorrectionHistory === 'function'
+        ? await Promise.all(
+            registerIds.map(async (registerId) => ({
+              registerId,
+              history: await this.api.attendanceCorrectionHistory(registerId),
+            })),
+          )
+        : [];
     return { attendance, contacts, corrections };
   }
 
