@@ -24,6 +24,30 @@ const invoice = {
 };
 const intent = { id: 'intent_test', reference: 'EC-test', state: 'PENDING' };
 
+test('parent messaging maps the server class-teacher context to a permitted recipient', async () => {
+  const teacherId = randomUUID();
+  const model = new ParentModel(
+    {
+      contacts: async () => ({
+        classTeacherId: teacherId,
+        classTeacherName: 'Ibrahim Demo',
+      }),
+      threads: async () => ({ items: [] }),
+      notices: async () => ({ items: [] }),
+      complaints: async () => ({ items: [] }),
+    },
+    null,
+    context,
+    randomUUID,
+    false,
+  );
+
+  const result = await model.communicationOverview();
+  assert.deepEqual(result.contacts, [
+    { target: 'CLASS_TEACHER', displayName: 'Ibrahim Demo' },
+  ]);
+});
+
 test('parent can view a published assignment when the child has no submission', async () => {
   const assignment = {
     assignment: {
