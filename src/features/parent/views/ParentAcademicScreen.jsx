@@ -69,9 +69,10 @@ function RecordRows({ records, empty, onOpen, actionLabel = 'Open details' }) {
   if (!records.length) return <EmptyState title={empty} />;
   return records.map((record, index) => {
     const title =
-      value(record, 'title', 'name', 'subjectName', 'description', 'label') || 'School record';
+      value(record, 'title', 'name', 'subjectName', 'description', 'label') ||
+      (value(record, 'status') ? 'Attendance · ' + value(record, 'status') : 'School record');
     const detail = [
-      value(record, 'date', 'on', 'startsOn', 'publishedAt', 'createdAt'),
+      value(record, 'onDate', 'date', 'on', 'startsOn', 'publishedAt', 'createdAt'),
       value(record, 'status', 'state', 'type', 'subjectName'),
       value(record, 'teacherName', 'className', 'termName'),
     ]
@@ -373,7 +374,9 @@ export function ParentAcademicScreen({ screenId, context, model, navigation, rou
             title={value(report, 'title', 'termName', 'sessionName') || 'Published report card'}
           >
             <Text style={ui.text}>Session: {value(report, 'sessionName', 'session')}</Text>
-            <Text style={ui.text}>Term: {value(report, 'termName', 'term')}</Text>
+            <Text style={ui.text}>
+              Term: {value(report, 'termName', 'term') || (report.termNumber ? 'Term ' + report.termNumber : '')}
+            </Text>
             <Text style={ui.text}>Published: {value(report, 'publishedAt', 'issuedAt')}</Text>
             <RecordRows
               records={list(report.subjects ?? report.results)}
