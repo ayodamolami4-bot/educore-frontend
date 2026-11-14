@@ -24,6 +24,63 @@ const invoice = {
 };
 const intent = { id: 'intent_test', reference: 'EC-test', state: 'PENDING' };
 
+test('parent can view a published assignment when the child has no submission', async () => {
+  const assignment = {
+    assignment: {
+      id: 'assignment_demo',
+      studentId: context.childId,
+      title: 'Fractions practice',
+    },
+  };
+  const model = new ParentModel(
+    {
+      assignment: async () => assignment,
+      submissionHistory: async () => {
+        throw new ApiError({
+          status: 404,
+          code: 'SUBMISSION_NOT_FOUND',
+          detail: 'The submission is unavailable.',
+        });
+      },
+    },
+    null,
+    { ...context, capabilities: { actions: ['child.learning.read'] } },
+    randomUUID,
+    false,
+  );
+
+  assert.deepEqual(await model.assignmentDetail('assignment_demo'), {
+    assignment,
+    history: { items: [] },
+  });
+});
+
+test('parent assignment detail still surfaces non-404 submission history failures', async () => {
+  const model = new ParentModel(
+    {
+      assignment: async () => ({
+        assignment: { id: 'assignment_demo', studentId: context.childId },
+      }),
+      submissionHistory: async () => {
+        throw new ApiError({
+          status: 503,
+          code: 'SERVICE_UNAVAILABLE',
+          detail: 'Submission history is temporarily unavailable.',
+        });
+      },
+    },
+    null,
+    { ...context, capabilities: { actions: ['child.learning.read'] } },
+    randomUUID,
+    false,
+  );
+
+  await assert.rejects(
+    model.assignmentDetail('assignment_demo'),
+    /Submission history is temporarily unavailable/,
+  );
+});
+
 test('changing demo children isolates invoices and confirmed receipts by child and school', async () => {
   const vault = memoryVault();
   const client = new ApiClient('https://demo.educore.invalid/api/v1', vault, createDemoTransport());
