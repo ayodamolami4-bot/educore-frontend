@@ -45,6 +45,62 @@ function value(record, ...keys) {
   return '';
 }
 
+function formatDateTime(input) {
+  if (!input) return '';
+  const date = new Date(input);
+  if (!Number.isFinite(date.getTime())) return input;
+  return new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: 'Africa/Lagos',
+  }).format(date);
+}
+
+function ReportSubjectRows({ records, policy }) {
+  if (!records.length) return <EmptyState title="The published report has no subject rows." />;
+  const totalMaximum =
+    Number(policy?.ca1Maximum ?? 0) +
+    Number(policy?.ca2Maximum ?? 0) +
+    Number(policy?.examMaximum ?? 0);
+
+  return records.map((subject, index) => {
+    const assessments = [
+      { label: 'CA 1', score: value(subject, 'ca1'), maximum: policy?.ca1Maximum },
+      { label: 'CA 2', score: value(subject, 'ca2'), maximum: policy?.ca2Maximum },
+      { label: 'Exam', score: value(subject, 'exam'), maximum: policy?.examMaximum },
+    ].filter((item) => item.score !== '');
+
+    const total = value(subject, 'total');
+    const grade = value(subject, 'grade');
+    return (
+      <View key={value(subject, 'subjectId', 'code', 'name') || String(index)} style={ui.gap}>
+        <Text style={[ui.text, { fontWeight: '700' }]}>
+          {value(subject, 'name', 'subjectName') || 'Subject'}
+        </Text>
+        {assessments.length ? (
+          <Text style={ui.muted}>
+            {assessments
+              .map(
+                ({ label, score, maximum }) =>
+                  label + ': ' + score + (maximum ? '/' + maximum : ''),
+              )
+              .join(' · ')}
+          </Text>
+        ) : null}
+        <Text style={ui.text}>
+          Total: {total || 'Not released'}
+          {total && totalMaximum > 0 ? '/' + totalMaximum : ''} · Grade: {grade || 'Not released'}
+        </Text>
+        {value(subject, 'note') ? <Text style={ui.muted}>{value(subject, 'note')}</Text> : null}
+        {index < records.length - 1 ? <View style={ui.divider} /> : null}
+      </View>
+    );
+  });
+}
+
 function DateRange() {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Africa/Lagos',
@@ -377,21 +433,86 @@ export function ParentAcademicScreen({ screenId, context, model, navigation, rou
             <Text style={ui.text}>
               Term: {value(report, 'termName', 'term') || (report.termNumber ? 'Term ' + report.termNumber : '')}
             </Text>
-            <Text style={ui.text}>Published: {value(report, 'publishedAt', 'issuedAt')}</Text>
-            <RecordRows
-              records={list(report.subjects ?? report.results)}
-              empty="The published report has no subject rows."
-            />
-            {!config.demo ? (
-              <PdfButton
-                title="Download official report PDF"
-                filename={'report-' + (recordId || 'card') + '.pdf'}
-                getDocument={() => model.reportPdf(recordId)}
-              />
-            ) : (
-              <Notice text="Official report PDF downloads require the connected Java backend." />
-            )}
+            <Text style={ui.text}>
+              Published: {formatDateTime(value(report, 'publishedAt', 'issuedAt'))}
+            </Text>
+            {value(report, 'class') ? (
+              <Text style={ui.text}>Class: {value(report, 'class')}</Text>
+            ) : null}
           </Card>
+
+          <Card title="Subject results">
+            <ReportSubjectRows
+              records={list(report.subjects ?? report.results)}
+              policy={report.policy}
+            />
+          </Card>
+
+          {value(report, 'average') ? (
+            <Card title="Overall performance">
+              <Text style={ui.text}>
+                Average: {value(report, 'average')}
+                {report.policy?.ca1Maximum != null &&
+                report.policy?.ca2Maximum != null &&
+                report.policy?.examMaximum != null
+                  ? '/' +
+                    (Number(report.policy.ca1Maximum) +
+                      Number(report.policy.ca2Maximum) +
+                      Number(report.policy.examMaximum))
+                  : ''}
+              </Text>
+            </Card>
+          ) : null}
+
+          {report.attendance ? (
+            <Card title="Attendance summary">
+              <Text style={ui.text}>
+                Present: {value(report.attendance, 'present') || '0'} · Absent:{' '}
+                {value(report.attendance, 'absent') || '0'} · Late:{' '}
+                {value(report.attendance, 'late') || '0'} · Excused:{' '}
+                {value(report.attendance, 'excused') || '0'}
+              </Text>
+              {!report.attendance.coverageComplete ? (
+                <Notice
+                  tone="warning"
+                  text={
+                    'Attendance coverage is incomplete: ' +
+                    (value(report.attendance, 'submittedRegisters') || '0') +
+                    ' of ' +
+                    (value(report.attendance, 'expectedRegisters') || 'unknown') +
+                    ' expected registers have been submitted. These figures reflect submitted registers only.'
+                  }
+                />
+              ) : null}
+            </Card>
+          ) : null}
+
+          {value(report, 'classTeacherRemark') || value(report, 'principalRemark') ? (
+            <Card title="School remarks">
+              {value(report, 'classTeacherRemark') ? (
+                <View style={ui.gap}>
+                  <Text style={[ui.text, { fontWeight: '700' }]}>Class teacher</Text>
+                  <Text style={ui.text}>{value(report, 'classTeacherRemark')}</Text>
+                </View>
+              ) : null}
+              {value(report, 'principalRemark') ? (
+                <View style={ui.gap}>
+                  <Text style={[ui.text, { fontWeight: '700' }]}>Principal</Text>
+                  <Text style={ui.text}>{value(report, 'principalRemark')}</Text>
+                </View>
+              ) : null}
+            </Card>
+          ) : null}
+
+          {!config.demo ? (
+            <PdfButton
+              title="Download official report PDF"
+              filename={'report-' + (recordId || 'card') + '.pdf'}
+              getDocument={() => model.reportPdf(recordId)}
+            />
+          ) : (
+            <Notice text="Official report PDF downloads require the connected Java backend." />
+          )}
           <Notice text="This is a published school record. Only the server-issued report revision is authoritative." />
         </>
       ) : null}
