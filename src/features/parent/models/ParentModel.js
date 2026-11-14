@@ -383,7 +383,7 @@ export class ParentModel {
 
   async communicationOverview() {
     this.#requireParentWorkspace();
-    const [contacts, threads, notices, complaints] = await Promise.all([
+    const [contactContext, threads, notices, complaints] = await Promise.all([
       this.api.contacts(),
       this.api.threads(),
       this.api.notices(),
@@ -391,6 +391,27 @@ export class ParentModel {
     ]);
     this.#checkSelectedChildPage(threads);
     this.#checkSelectedChildPage(complaints);
+
+    // The backend returns the child's communication context, not a contact array.
+    // Derive only the class-teacher option from the server-assigned teacher ID.
+    const contacts = Array.isArray(contactContext)
+      ? [...contactContext]
+      : Array.isArray(contactContext?.contacts)
+        ? [...contactContext.contacts]
+        : [];
+    const classTeacherId =
+      contactContext?.classTeacherId ?? contactContext?.classTeacher?.id;
+    const hasClassTeacher = contacts.some((item) => item.target === 'CLASS_TEACHER');
+    if (classTeacherId && !hasClassTeacher) {
+      contacts.push({
+        target: 'CLASS_TEACHER',
+        displayName:
+          contactContext?.classTeacherName ??
+          contactContext?.classTeacher?.fullName ??
+          contactContext?.classTeacher?.name ??
+          'Class teacher',
+      });
+    }
     return { contacts, threads, notices, complaints };
   }
 
