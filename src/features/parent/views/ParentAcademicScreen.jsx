@@ -479,12 +479,19 @@ export function ParentAcademicScreen({ screenId, context, model, navigation, rou
             />
           </Card>
           <Card title="Official attendance corrections">
-            <RecordRows
-              records={(data.corrections ?? []).flatMap(({ registerId, history }) =>
-                list(history).map((item) => ({ ...item, registerId })),
-              )}
-              empty="No approved attendance corrections were returned for this period."
-            />
+            {data.correctionHistoryAvailable ? (
+              <RecordRows
+                records={(data.corrections ?? []).flatMap(({ registerId, history }) =>
+                  list(history).map((item) => ({ ...item, registerId })),
+                )}
+                empty="No approved attendance corrections were returned for this period."
+              />
+            ) : (
+              <EmptyState
+                title="Official correction history is not available in this workspace yet."
+                description="Attendance records are available. Approved corrections will appear here once the school correction-history service is connected."
+              />
+            )}
           </Card>
           <Button
             title="Contact the school about attendance"
