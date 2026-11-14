@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "EduCore",
+    "slug": "educore-frontend",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E5F5F4",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "name": "EduCore",
+      "shortName": "EduCore"
+    },
+    "plugins": ["expo-secure-store", "expo-font"],
+    "scheme": "educore"
+  }
+}

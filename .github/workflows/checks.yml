@@ -1,0 +1,40 @@
+name: Frontend checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: frontend-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Check role folder ownership using the base branch rules
+        if: github.event_name == 'pull_request'
+        env:
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git show "$PR_BASE_SHA:scripts/check-scope.mjs" > .git/educore-base-scope.mjs
+          node .git/educore-base-scope.mjs
+      - run: npm ci
+      - run: npm run check
+      - run: npm run format:check
+      - name: Compile the shared web app
+        env:
+          EXPO_PUBLIC_DEMO_MODE: 'true'
+          EXPO_OFFLINE: '1'
+        run: npm run export:web
