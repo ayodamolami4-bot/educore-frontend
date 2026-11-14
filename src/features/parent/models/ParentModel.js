@@ -493,7 +493,7 @@ export class ParentModel {
 
   async complaintMetadata() {
     this.#requireParentWorkspace();
-    return this.api.metadata();
+    return this.api.complaintMetadata();
   }
 
   async submitComplaint(category, subject, body) {
