@@ -24,6 +24,127 @@ const invoice = {
 };
 const intent = { id: 'intent_test', reference: 'EC-test', state: 'PENDING' };
 
+test('parent messaging maps the server class-teacher context to a permitted recipient', async () => {
+  const teacherId = randomUUID();
+  const model = new ParentModel(
+    {
+      contacts: async () => ({
+        classTeacherId: teacherId,
+        classTeacherName: 'Ibrahim Demo',
+      }),
+      threads: async () => ({ items: [] }),
+      notices: async () => ({ items: [] }),
+      complaints: async () => ({ items: [] }),
+    },
+    null,
+    context,
+    randomUUID,
+    false,
+  );
+
+  const result = await model.communicationOverview();
+  assert.deepEqual(result.contacts, [
+    { target: 'CLASS_TEACHER', displayName: 'Ibrahim Demo' },
+  ]);
+});
+
+test('parent complaint detail includes public conversation entries and account identity', async () => {
+  const profile = { id: randomUUID(), displayName: 'Ada Demo' };
+  const complaint = {
+    id: 'case_demo',
+    studentId: context.childId,
+    entries: [
+      {
+        id: 'entry_parent',
+        authorId: profile.id,
+        visibility: 'PUBLIC',
+        body: 'Please clarify this concern.',
+      },
+      {
+        id: 'entry_school',
+        authorId: randomUUID(),
+        visibility: 'PUBLIC',
+        body: 'The school has reviewed your concern.',
+      },
+    ],
+  };
+  const history = { items: [] };
+  const model = new ParentModel(
+    {
+      complaint: async () => complaint,
+      complaintHistory: async () => history,
+      profile: async () => profile,
+    },
+    null,
+    context,
+    randomUUID,
+    false,
+  );
+
+  assert.deepEqual(await model.complaintDetail(complaint.id), {
+    complaint,
+    history,
+    profile,
+  });
+});
+
+test('parent can view a published assignment when the child has no submission', async () => {
+  const assignment = {
+    assignment: {
+      id: 'assignment_demo',
+      studentId: context.childId,
+      title: 'Fractions practice',
+    },
+  };
+  const model = new ParentModel(
+    {
+      assignment: async () => assignment,
+      submissionHistory: async () => {
+        throw new ApiError({
+          status: 404,
+          code: 'SUBMISSION_NOT_FOUND',
+          detail: 'The submission is unavailable.',
+        });
+      },
+    },
+    null,
+    { ...context, capabilities: { actions: ['child.learning.read'] } },
+    randomUUID,
+    false,
+  );
+
+  assert.deepEqual(await model.assignmentDetail('assignment_demo'), {
+    assignment,
+    history: { items: [] },
+  });
+});
+
+test('parent assignment detail still surfaces non-404 submission history failures', async () => {
+  const model = new ParentModel(
+    {
+      assignment: async () => ({
+        assignment: { id: 'assignment_demo', studentId: context.childId },
+      }),
+      submissionHistory: async () => {
+        throw new ApiError({
+          status: 503,
+          code: 'SERVICE_UNAVAILABLE',
+          detail: 'Submission history is temporarily unavailable.',
+        });
+      },
+    },
+    null,
+    { ...context, capabilities: { actions: ['child.learning.read'] } },
+    randomUUID,
+    false,
+  );
+
+  await assert.rejects(
+    model.assignmentDetail('assignment_demo'),
+    /Submission history is temporarily unavailable/,
+  );
+});
+
 test('changing demo children isolates invoices and confirmed receipts by child and school', async () => {
   const vault = memoryVault();
   const client = new ApiClient('https://demo.educore.invalid/api/v1', vault, createDemoTransport());
