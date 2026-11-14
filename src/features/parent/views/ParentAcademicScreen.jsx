@@ -150,7 +150,7 @@ export function ParentAcademicScreen({ screenId, context, model, navigation, rou
   const back = () => navigation.goBack();
   const data = state.data;
   const student = data?.student?.student ?? data?.student ?? {};
-  const report = data?.report?.report ?? data?.report ?? {};
+  const report = data?.report?.report ?? data?.report ?? data ?? {};
   const assignment = data?.assignment?.assignment ?? data?.assignment ?? {};
   const document = data?.document?.document ?? data?.document ?? {};
   const material = data?.material?.material ?? data?.material ?? {};
