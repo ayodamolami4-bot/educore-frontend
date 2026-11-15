@@ -231,27 +231,50 @@ export class TeacherModel {
   async timetable(schoolId) {
     const on = todayInLagos();
 
-    const [weekly, daily] = await Promise.all([
+    const [weekly, daily, classPage, teachingPage] = await Promise.all([
       this.get(schoolId, '/timetable', { on }),
       this.get(schoolId, '/schedule/day', { on }),
+      this.get(schoolId, '/my-classes'),
+      this.get(schoolId, '/teaching-assignments'),
     ]);
 
-    const days = ['mon', 'tue', 'wed', 'thu', 'fri'];
+    const dayKeys = ['mon', 'tue', 'wed', 'thu', 'fri'];
+    const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    const minuteLabel = (value) => {
+      const minute = Number(value);
+      if (!Number.isFinite(minute) || minute < 0) return '';
+      return `${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`;
+    };
+    const lessons = itemsOf(weekly).map((lesson, index) => {
+      const rawDay = String(lesson.weekday ?? lesson.day ?? lesson.dayOfWeek ?? '').toLowerCase();
+      const numericDay = Number(rawDay);
+      const dayIndex = Number.isInteger(numericDay)
+        ? numericDay - 1
+        : dayKeys.findIndex((key) => rawDay.startsWith(key));
+      const start = minuteLabel(lesson.startMinute) || lesson.startTime || lesson.start || '—';
+      const end = minuteLabel(lesson.endMinute) || lesson.endTime || '';
+      return {
+        id: lesson.id ?? `${lesson.classId}-${lesson.subjectId}-${lesson.startMinute}-${index}`,
+        classId: lesson.classId,
+        classLabel: lesson.classLabel ?? '',
+        subject: lesson.subjectName ?? lesson.subject ?? 'Lesson',
+        room: lesson.room ?? '',
+        dayKey: dayKeys[dayIndex] ?? '',
+        dayLabel: dayNames[dayIndex] ?? '',
+        dayIndex,
+        startMinute: Number(lesson.startMinute ?? 0),
+        time: [start, end].filter(Boolean).join('–'),
+        label: [lesson.subjectName ?? lesson.subject, lesson.classLabel].filter(Boolean).join(' · '),
+      };
+    }).filter((item) => item.dayKey);
+
     const rows = new Map();
-
-    for (const lesson of itemsOf(weekly)) {
-      const time =
-        lesson.startTime ?? lesson.start ?? lesson.startsAt ?? '—';
-      const rawDay = String(
-        lesson.day ?? lesson.weekday ?? lesson.dayOfWeek ?? ''
-      ).toLowerCase();
-
-      const day = days.find((key) => rawDay.startsWith(key));
-      if (!day) continue;
-
-      if (!rows.has(time)) {
-        rows.set(time, {
-          time,
+    for (const lesson of lessons) {
+      const key = lesson.startMinute;
+      if (!rows.has(key)) {
+        rows.set(key, {
+          startMinute: key,
+          time: lesson.time,
           mon: '',
           tue: '',
           wed: '',
@@ -259,26 +282,39 @@ export class TeacherModel {
           fri: '',
         });
       }
-
-      const label = [
-        lesson.subjectName ?? lesson.subject,
-        lesson.classLabel,
-      ]
-        .filter(Boolean)
-        .join(' · ');
-
-      rows.get(time)[day] = label;
+      rows.get(key)[lesson.dayKey] = lesson.label;
     }
 
+    const classMap = new Map();
+    for (const item of itemsOf(classPage)) {
+      classMap.set(item.id, { id: item.id, label: classLabel(item), classTeacher: item.classTeacher });
+    }
+    for (const item of itemsOf(teachingPage)) {
+      if (!classMap.has(item.classId)) {
+        classMap.set(item.classId, { id: item.classId, label: classLabel({ level: item.level, arm: item.arm }) || item.classLabel || 'Assigned class', classTeacher: false });
+      }
+    }
+
+    const duties = itemsOf(daily).map((item, index) => ({
+      id: item.id ?? `${item.type ?? 'activity'}-${index}`,
+      time: [minuteLabel(item.startMinute), minuteLabel(item.endMinute)].filter(Boolean).join('–'),
+      title: item.title ?? item.subjectName ?? item.type ?? 'School activity',
+      detail: [item.classLabel, item.room, item.description].filter(Boolean).join(' · '),
+      classId: item.classId ?? null,
+      type: item.type ?? 'ACTIVITY',
+      state: item.state ?? item.status ?? '',
+    }));
+
     return {
+      date: on,
       week: weekly.effectiveFrom ?? '',
-      grid: [...rows.values()],
-      duties: itemsOf(daily).map((item) => ({
-        id: item.id,
-        title: item.title ?? item.subjectName ?? item.type ?? '',
-        detail: item.description ?? item.classLabel ?? '',
-        state: item.state ?? item.status ?? '',
-      })),
+      published: weekly.published ?? false,
+      grid: [...rows.values()].sort((a, b) => a.startMinute - b.startMinute),
+      lessons,
+      classes: [...classMap.values()],
+      duties,
+      todayEvents: duties,
+      timezone: weekly.timezone ?? daily.timezone ?? 'Africa/Lagos',
     };
   }
 
