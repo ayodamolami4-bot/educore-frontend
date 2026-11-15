@@ -1,121 +1,193 @@
 /**
- * AD02/AD03/AD04 — Students: search/list, enrolment, profile actions.
- * The Model turns raw API payloads into the plain display objects the
- * Presenters and Views use — screens never see raw JSON.
+ * AD02–AD04 — Student records and enrolment.
+ * Routes and DTO names mirror the Java school API; the server owns IDs,
+ * admission numbers, placement, metadata versions and guardian relationships.
  */
 import { api, normalizePage } from '../api/client';
 import { endpoints } from '../api/endpoints';
 
-function toListItem(raw) {
+const itemsOf = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.items)) return payload.items;
+  return [];
+};
+
+const classLabel = (item) =>
+  [item?.level, item?.arm].filter(Boolean).join(' ') || item?.classLabel || '';
+
+function toListItem(raw, classesById = new Map()) {
+  const placement = raw.enrolments?.[0] ?? null;
   return {
     id: raw.id,
-    name: raw.fullName || raw.name || `${raw.firstName || ''} ${raw.lastName || ''}`.trim(),
-    admissionNumber: raw.admissionNumber || raw.admissionNo || '',
-    classLabel: raw.classLabel || raw.className || '',
-    department: raw.department || null, // SSS only; JSS has no department
-    status: raw.status || 'Active',
+    name: raw.fullName || raw.name || '',
+    admissionNumber: raw.admissionNumber || '',
+    classLabel: raw.classLabel || classLabel(classesById.get(placement?.classId)),
+    department: placement?.department ?? raw.department ?? null,
+    status: raw.status || '',
+    version: raw.version,
   };
 }
 
 export const StudentModel = {
-  /** AD02 , filtered/paged list. params: { q, sessionId, classId, department, status, page } */
   async list(filters = {}) {
-    const payload = await api.get(endpoints.students.list, null, filters);
+    const payload = await api.get('students', null, {
+      search: filters.search ?? filters.q,
+      classId: filters.classId,
+      cursor: filters.cursor,
+      limit: filters.limit ?? 30,
+    });
     const page = normalizePage(payload);
-    return { ...page, items: page.items.map(toListItem) };
+    const classIds = [...new Set(page.items.map((item) => item.classId).filter(Boolean))];
+    const classesPage = classIds.length ? await api.get('classes') : { items: [] };
+    const classes = new Map(itemsOf(classesPage).map((item) => [item.id, item]));
+    return { ...page, items: page.items.map((item) => toListItem(item, classes)) };
   },
 
-  /** AD02/AD33 , raw rows (guardian, DOB…) for CSV export and import checks. */
   async listFull(filters = {}) {
-    const payload = await api.get(endpoints.students.list, null, filters);
+    const payload = await api.get('students', null, {
+      search: filters.search ?? filters.q,
+      classId: filters.classId,
+      cursor: filters.cursor,
+      limit: filters.limit ?? 30,
+    });
     return normalizePage(payload);
   },
 
-  /** AD33 , every student in the school (walks every page). Used by the import
-      duplicate check so a pasted row is caught when it matches an EXISTING
-      student's guardian phone, guardian email, or first+last name + class —
-      not just against other rows in the same paste. */
   async listAll(filters = {}) {
     const items = [];
-    let page = 1;
-    let pages = 1;
+    let cursor;
+    let page;
     do {
-      const result = await this.listFull({ ...filters, page });
-      items.push(...(result.items || []));
-      pages = result.pages || 1;
-      page += 1;
-    } while (page <= pages);
+      page = await this.listFull({ ...filters, cursor });
+      items.push(...page.items);
+      cursor = page.hasMore ? page.items.at(-1)?.id : null;
+    } while (cursor);
     return items;
   },
 
-  /** AD03 , the enrolment form definition (fields + options for this school). */
   async enrolmentForm() {
-    return api.get(endpoints.students.enrolmentForm);
+    const metadata = await api.get('metadata');
+    const [classesPage, sessionsPage] = await Promise.all([
+      api.get('classes', null, { sessionId: metadata.activeSessionId }),
+      api.get('academic-sessions'),
+    ]);
+    const sessions = itemsOf(sessionsPage);
+    const sessionById = new Map(sessions.map((item) => [item.id, item]));
+    const classes = itemsOf(classesPage).map((item) => ({
+      ...item,
+      label: classLabel(item),
+      session: sessionById.get(item.sessionId) ?? null,
+    }));
+    return {
+      metadataVersion: metadata.version,
+      definition: metadata.definition ?? {},
+      activeSessionId: metadata.activeSessionId ?? null,
+      classes,
+      sessions,
+    };
   },
 
-  /** AD03 , match a guardian email/phone to an existing account before creating one. */
-  async findGuardianMatches(body) {
-    return api.post(endpoints.students.guardianMatches, null, body);
+  async findGuardianMatches({ guardianPhone, guardianEmail } = {}) {
+    const search = String(guardianPhone || guardianEmail || '').trim();
+    if (!search) return { matches: [] };
+    const result = await api.get('guardians', null, { search, limit: 10 });
+    return {
+      matches: itemsOf(result).map((item) => ({
+        id: item.id,
+        fullName: item.fullName ?? '',
+        phone: item.phone ?? '',
+        email: item.email ?? '',
+        childrenCount: item.childrenCount ?? null,
+      })),
+    };
   },
 
-  /** AD03 , submit the enrolment. Backend (Java) validates and provisions accounts. */
   async enrol(body) {
-    return api.post(endpoints.students.enrol, null, body);
+    return api.post('students', null, body);
   },
 
-  /** AD03 , re-run account provisioning after a failed workflow step. */
-  async retryProvisioning(workflowId) {
-    return api.post(endpoints.students.retryProvisioning, { workflowId });
+  async retryProvisioning(subjectId) {
+    return api.post('provisioning/STUDENT/{subjectId}/retry', { subjectId });
   },
 
-  async admissionWorkflow(workflowId) {
-    return api.get(endpoints.students.admissionWorkflow, { workflowId });
+  async admissionWorkflow(subjectId) {
+    return api.get('provisioning/STUDENT/{subjectId}', { subjectId });
   },
 
-  /** AD04 , full profile. */
   async byId(studentId) {
-    const raw = await api.get(endpoints.students.byId, { studentId });
-    return { ...toListItem(raw), ...raw };
+    const raw = await api.get('students/{studentId}', { studentId });
+    const enrolments = Array.isArray(raw.enrolments) ? raw.enrolments : [];
+    const current = enrolments.find((item) => !item.endsOn) ?? enrolments[0] ?? null;
+    return {
+      ...toListItem({ ...raw, enrolments }),
+      ...raw,
+      classLabel: classLabel(current),
+      department: current?.department ?? null,
+      enrolments,
+      guardians: Array.isArray(raw.guardians) ? raw.guardians : [],
+    };
   },
 
-  /** AD03/AD04 , edit core details. */
-  async update(studentId, body) {
-    return api.patch(endpoints.students.byId, { studentId }, body);
+  async update(studentId, body, version) {
+    return api.patch(
+      'students/{studentId}',
+      { studentId },
+      body,
+      { version },
+    );
   },
 
   async enrolments(studentId) {
-    return api.get(endpoints.students.enrolments, { studentId });
+    const student = await this.byId(studentId);
+    return student.enrolments ?? [];
   },
 
-  /** AD04 , move class. One student identity; a move never creates a second student. */
-  async moveClass(studentId, body) {
-    return api.post(endpoints.students.classMoves, { studentId }, body);
+  async moveClass(studentId, body, version) {
+    return api.post(
+      'students/{studentId}/transfers',
+      { studentId },
+      {
+        classId: body.classId ?? body.targetClassId,
+        effectiveOn: body.effectiveOn ?? body.effectiveFrom,
+        department: body.department ?? null,
+        reason: body.reason,
+      },
+      { version },
+    );
   },
 
-  /** AD04 , withdraw (status filter on AD02 must be used to find them afterwards). */
-  async withdraw(studentId, body) {
-    return api.post(endpoints.students.withdrawals, { studentId }, body);
+  async withdraw(studentId, body, version) {
+    return api.post(
+      'students/{studentId}/withdrawal',
+      { studentId },
+      {
+        effectiveOn: body.effectiveOn ?? body.effectiveDate,
+        reason: body.reason,
+      },
+      { version },
+    );
   },
 
   async externalResults(studentId) {
-    return api.get(endpoints.students.externalResults, { studentId });
+    return api.get('students/{studentId}/external-results', { studentId });
   },
 
   async addExternalResult(studentId, body) {
-    return api.post(endpoints.students.externalResults, { studentId }, body);
+    return api.post('students/{studentId}/external-results', { studentId }, body);
   },
 
   async attachHistoricalReport(studentId, body) {
-    return api.post(endpoints.students.historicalReports, { studentId }, body);
+    return api.post('documents', null, { ...body, studentId });
   },
 
-  async feeStatus(studentId) {
-    return api.get(endpoints.students.feeStatus, { studentId });
+  async feeStatus(studentId, termId) {
+    return api.get('invoices/fee-status', null, { studentId, termId });
   },
 
-  /** AD02 ,export only the filtered rows the user may access. */
   async exportFiltered(filters = {}) {
-    return api.post(endpoints.exports, null, { type: 'students', ...filters });
+    return api.download('students/export.csv', null, {
+      classId: filters.classId,
+    });
   },
 };
 
