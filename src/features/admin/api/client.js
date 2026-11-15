@@ -36,6 +36,14 @@ function getContext() {
   return { services, context };
 }
 
+export function getActiveContext() {
+  return getContext().context;
+}
+
+export function getActiveServices() {
+  return getContext().services;
+}
+
 export function path(template, params = {}) {
   return template.replace(/\{([^}]+)\}/g, (match, key) => {
     const value = params[key];
