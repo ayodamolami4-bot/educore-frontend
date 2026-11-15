@@ -139,6 +139,32 @@ export default function StudentFormView({ route, navigation }) {
                   </View>
                 )}
               </View>
+              {state.subjectChoiceGroups.map((group) => {
+                const selectedId = v.subjectIds?.[group.key] ?? '';
+                const selectedName = group.options.find((item) => item.id === selectedId)?.name ?? '';
+                return (
+                  <View key={group.key} style={styles.choiceGroup}>
+                    <LabelledField
+                      label={`Subject choice · ${group.label} *`}
+                      displayValue={selectedName}
+                      placeholder="Choose one curriculum option…"
+                      onPress={() => setSheet(`subjectChoice:${group.key}`)}
+                      error={state.errors[`subjectChoice:${group.key}`]}
+                    />
+                    <SelectSheet
+                      visible={sheet === `subjectChoice:${group.key}`}
+                      label={`Choose one · ${group.label}`}
+                      options={group.options.map((item) => ({ label: item.name, value: item.id }))}
+                      value={selectedId}
+                      onSelect={(value) => presenter.onValueChange(`subjectChoice:${group.key}`, value)}
+                      onClose={() => setSheet(null)}
+                    />
+                  </View>
+                );
+              })}
+              {state.subjectChoiceGroups.length ? (
+                <Text style={styles.hint}>Choose exactly one subject in every published curriculum choice group.</Text>
+              ) : null}
               <LabelledField
                 label="Enrolment start date *"
                 value={v.startsOn}
@@ -292,6 +318,7 @@ const styles = StyleSheet.create({
   section: { ...typography.sectionTitle, marginTop: spacing.md, marginBottom: spacing.sm },
   hint: { ...typography.label, color: colors.muted, marginTop: spacing.md, marginBottom: spacing.sm },
   notice: { ...typography.label, color: colors.muted, marginTop: spacing.sm, textAlign: 'center' },
+  choiceGroup: { marginTop: spacing.xs },
   guardianMatches: {
     backgroundColor: colors.white,
     borderWidth: StyleSheet.hairlineWidth,
