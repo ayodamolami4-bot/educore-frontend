@@ -289,6 +289,15 @@ export class TeacherModel {
     for (const item of itemsOf(classPage)) {
       classMap.set(item.id, { id: item.id, label: classLabel(item), classTeacher: item.classTeacher });
     }
+    for (const lesson of lessons) {
+      if (lesson.classId && !classMap.has(lesson.classId)) {
+        classMap.set(lesson.classId, {
+          id: lesson.classId,
+          label: lesson.classLabel || 'Assigned class',
+          classTeacher: false,
+        });
+      }
+    }
     for (const item of itemsOf(teachingPage)) {
       if (!classMap.has(item.classId)) {
         classMap.set(item.classId, { id: item.classId, label: classLabel({ level: item.level, arm: item.arm }) || item.classLabel || 'Assigned class', classTeacher: false });
@@ -597,7 +606,7 @@ export class TeacherModel {
     );
 
     const packages = [];
-    let classReport = null;
+    const classReports = [];
 
     for (const cycle of itemsOf(cycles)) {
       const classInfo = classById.get(cycle.classId);
@@ -631,18 +640,23 @@ export class TeacherModel {
       }
 
       if (classInfo?.classTeacher) {
-        classReport = {
+        classReports.push({
+          id: `${cycle.id}-${cycle.classId}`,
           cycleId: cycle.id,
           classId: cycle.classId,
           label: `${classLabel(classInfo)} class report`,
           detail: `Assessment cycle: ${cycle.state}`,
           state: cycle.state,
           version: cycle.version,
-        };
+        });
       }
     }
 
-    return { packages, classReport };
+    return {
+      packages,
+      classReports,
+      classReport: classReports[0] ?? null,
+    };
   }
 
   async scores(schoolId, cycleId, assignmentId) {
