@@ -261,6 +261,9 @@ export class StudentFormPresenter {
     if (this.state.mode === 'enrol') {
       const selectedClass = this.state.classOptions.find((item) => item.id === value.classId);
       if (!selectedClass) errors.classId = 'Choose an actual class from the current school session.';
+      if (selectedClass?.level?.startsWith('SSS') && !value.department) {
+        errors.department = 'Choose the SSS department for this enrolment.';
+      }
       if (!value.startsOn) errors.startsOn = 'Choose an enrolment start date.';
       else if (selectedClass?.session && (
         value.startsOn < selectedClass.session.startsOn ||
