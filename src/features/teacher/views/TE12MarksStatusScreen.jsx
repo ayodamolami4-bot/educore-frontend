@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Screen } from '../../../components/Screen';
-import { Button, Card, Notice, Select, ui } from '../../../components/Controls';
+import { Button, Card, Notice, ui } from '../../../components/Controls';
 import { BottomNav } from './BottomNav';
 import { useTeacher } from './TeacherNavigator';
 
@@ -10,57 +10,90 @@ export function TE12MarksStatusScreen() {
   const navigation = useNavigation();
   const { context, model } = useTeacher();
   const [data, setData] = useState(null);
+  const [error, setError] = useState('');
 
-  useEffect(() => { void model.marksPackages(context.schoolId).then(setData); }, [model, context.schoolId]);
+  useEffect(() => {
+    let active = true;
+    model.marksPackages(context.schoolId)
+      .then((value) => { if (active) setData(value); })
+      .catch((reason) => {
+        if (active) setError(reason?.message ?? 'Could not load the teacher assessment packages.');
+      });
+    return () => { active = false; };
+  }, [model, context.schoolId]);
+
+  const firstPackage = data?.packages?.[0] ?? null;
+  const firstClassReport = data?.classReports?.[0] ?? data?.classReport ?? null;
 
   return (
-    <Screen title="Marks and submission status" subtitle="Your subject marks and separate class-report duty." code="TE12">
-      <Select label="Session" value="2026/2027" onChange={() => {}} options={[{ value: '2026/2027', label: '2026/2027' }, { value: '2025/2026', label: '2025/2026' }]} />
-      <Select label="Term" value="First Term" onChange={() => {}} options={[{ value: 'First Term', label: 'First Term' }, { value: 'Second Term', label: 'Second Term' }, { value: 'Third Term', label: 'Third Term' }]} />
-      <Select label="Class" value="JSS1 A" onChange={() => {}} options={[{ value: 'JSS1 A', label: 'JSS1 A' }, { value: 'JSS1 B', label: 'JSS1 B' }]} />
-      <Select label="Subject" value="Mathematics" onChange={() => {}} options={[{ value: 'Mathematics', label: 'Mathematics' }]} />
+    <Screen
+      title="Marks and submission status"
+      subtitle="Only your assigned subject sheets and class-teacher reports are shown."
+      code="TE12"
+    >
+      {error ? <Notice text={error} tone="error" /> : null}
 
       <Card title="Subject mark packages">
-        {(data?.packages ?? []).map((p) => (
-          <Pressable key={p.id} style={[ui.row, { paddingVertical: 8 }]} onPress={() => navigation.navigate('TE13', { cycleId: p.cycleId, assignmentId: p.assignmentId })}>
+        {(data?.packages ?? []).map((item) => (
+          <Pressable
+            key={item.id}
+            style={[ui.row, { paddingVertical: 8 }]}
+            onPress={() => navigation.navigate('TE13', {
+              cycleId: item.cycleId,
+              assignmentId: item.assignmentId,
+            })}
+          >
             <View style={{ flex: 1 }}>
-              <Text style={ui.text}>{p.label}</Text>
-              <Text style={ui.muted}>{p.detail}</Text>
+              <Text style={ui.text}>{item.label}</Text>
+              <Text style={ui.muted}>{item.detail}</Text>
             </View>
-            <Text style={[ui.muted, { fontWeight: '600' }]}>{p.state}</Text>
+            <Text style={[ui.muted, { fontWeight: '600' }]}>{item.state}</Text>
           </Pressable>
         ))}
+        {!data?.packages?.length && !error ? (
+          <Text style={ui.muted}>No assessment sheets are currently assigned to this teacher.</Text>
+        ) : null}
       </Card>
 
       <Card title="Class-teacher responsibility">
-        {data?.classReport && (
-          <Pressable style={[ui.row]} onPress={() => navigation.navigate('TE14', { classId: data.classReport.classId, cycleId: data.classReport.cycleId })}>
+        {(data?.classReports ?? (data?.classReport ? [data.classReport] : [])).map((item) => (
+          <Pressable
+            key={item.id ?? item.cycleId}
+            style={[ui.row, { paddingVertical: 8 }]}
+            onPress={() => navigation.navigate('TE14', {
+              classId: item.classId,
+              cycleId: item.cycleId,
+            })}
+          >
             <View style={{ flex: 1 }}>
-              <Text style={ui.text}>{data.classReport.label}</Text>
-              <Text style={ui.muted}>{data.classReport.detail}</Text>
+              <Text style={ui.text}>{item.label}</Text>
+              <Text style={ui.muted}>{item.detail}</Text>
             </View>
-            <Text style={[ui.muted, { fontWeight: '600' }]}>{data.classReport.state}</Text>
+            <Text style={[ui.muted, { fontWeight: '600' }]}>{item.state}</Text>
           </Pressable>
-        )}
+        ))}
+        {!data?.classReports?.length && !data?.classReport ? (
+          <Text style={ui.muted}>No current class-teacher report cycle is assigned.</Text>
+        ) : null}
       </Card>
 
-      <Notice text="When you teach a subject in your own class, submit those subject marks once. The class sheet reuses them; class-report preparation is a separate task." />
+      <Notice text="Subject score sheets and class-teacher report remarks are separate workflows. The backend checks marks, ratings and completeness before submission; this app does not calculate official grades." />
 
       <Button
         title="Enter or review scores"
-        disabled={!data?.packages?.length}
-        onPress={() => {
-          const first = data?.packages?.[0];
-          if (first) navigation.navigate('TE13', { cycleId: first.cycleId, assignmentId: first.assignmentId });
-        }}
+        disabled={!firstPackage}
+        onPress={() => firstPackage && navigation.navigate('TE13', {
+          cycleId: firstPackage.cycleId,
+          assignmentId: firstPackage.assignmentId,
+        })}
       />
       <Button
         title="Prepare class reports"
         variant="secondary"
-        disabled={!data?.classReport}
-        onPress={() => data?.classReport && navigation.navigate('TE14', {
-          classId: data.classReport.classId,
-          cycleId: data.classReport.cycleId,
+        disabled={!firstClassReport}
+        onPress={() => firstClassReport && navigation.navigate('TE14', {
+          classId: firstClassReport.classId,
+          cycleId: firstClassReport.cycleId,
         })}
       />
 
