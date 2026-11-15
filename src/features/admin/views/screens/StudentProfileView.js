@@ -17,7 +17,7 @@ import { LoadingView, ErrorState, useActionErrorAlert } from '../components/Feed
 import { PrimaryButton, SecondaryButton } from './AdminHomeView';
 import { StudentProfilePresenter } from '../../presenters/StudentProfilePresenter';
 import { StudentModel } from '../../models';
-import { AcademicStructureModel } from '../../models';
+import { StudentModel, AcademicStructureModel } from '../../models';
 import { colors, typography, spacing, statusTone } from '../theme';
 
 export default function StudentProfileView({ route, navigation }) {
