@@ -425,22 +425,27 @@ export class TeacherModel {
   }
 
   async assignmentOptions(schoolId) {
-    const [classes, assignments, terms] = await Promise.all([
+    const [classes, assignments] = await Promise.all([
       this.get(schoolId, '/my-classes'),
       this.get(schoolId, '/teaching-assignments'),
-      this.get(schoolId, '/terms'),
     ]);
-    const classById = new Map(itemsOf(classes).map((item) => [item.id, item]));
+    const classItems = itemsOf(classes);
+    const classById = new Map(classItems.map((item) => [item.id, item]));
+    const sessionIds = [...new Set(classItems.map((item) => item.sessionId).filter(Boolean))];
+    const termPages = await Promise.all(
+      sessionIds.map((sessionId) => this.get(schoolId, '/terms', { sessionId })),
+    );
+    const terms = termPages.flatMap((page) => itemsOf(page));
     return {
       teachingAssignments: itemsOf(assignments).map((item) => ({
         id: item.id,
         classId: item.classId,
         subjectId: item.subjectId,
-        termId: item.termId ?? '',
+        teacherId: item.teacherId,
         department: item.department ?? '',
         label: `${classLabel(classById.get(item.classId))} · ${item.subjectName ?? 'Subject'}${item.department ? ` · ${item.department}` : ''}`,
       })),
-      terms: itemsOf(terms).map((item) => ({
+      terms: terms.map((item) => ({
         id: item.id,
         sessionId: item.sessionId,
         number: item.number,
@@ -815,33 +820,32 @@ export class TeacherModel {
   }
 
   async profile(schoolId) {
-    const staffId = this.context?.subjectId;
-
-    if (!staffId) {
-      throw localError('The signed-in teacher identity is unavailable.');
-    }
-
-    const [account, staff, classes, assignments] = await Promise.all([
+    const [account, classes, assignments] = await Promise.all([
       this.client.request('/me'),
-      this.get(schoolId, `/staff/${encodeURIComponent(staffId)}`),
       this.get(schoolId, '/my-classes'),
       this.get(schoolId, '/teaching-assignments'),
     ]);
-
     const classItems = itemsOf(classes);
     const assignmentItems = itemsOf(assignments);
+    // The browser's selected-context wire intentionally omits subjectId.
+    // The authenticated teaching-assignment collection is already scoped by
+    // the backend to this teacher and carries the authoritative staff ID.
+    const staffId = assignmentItems.find((item) => item.teacherId)?.teacherId;
+    const staff = staffId
+      ? await this.get(schoolId, `/staff/${encodeURIComponent(staffId)}`)
+      : null;
+    const assignedSubjects = [...new Set(
+      assignmentItems.map((item) => item.subjectName).filter(Boolean),
+    )];
 
     return {
-      displayName: staff.fullName ?? account.displayName ?? '',
-      code: staff.staffNumber ?? staff.code ?? '',
+      displayName: staff?.fullName ?? account.displayName ?? '',
+      code: staff?.staffNumber ?? '',
       role: 'Teacher',
-      state: staff.status ?? (staff.active ? 'Active' : ''),
+      state: staff ? (staff.active ? 'Active' : 'Inactive') : 'No current teaching assignment',
       official: {
         school: this.context?.schoolName ?? '',
-        canTeach: itemsOf(staff.teachingScope?.subjects)
-          .map((item) => item.name ?? item.subjectName)
-          .filter(Boolean)
-          .join(', '),
+        canTeach: assignedSubjects.join(', '),
         assigned: assignmentItems
           .map((item) => `${classLabel(classItems.find((c) => c.id === item.classId))} ${item.subjectName ?? ''}`)
           .join('; '),
