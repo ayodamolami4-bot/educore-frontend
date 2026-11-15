@@ -22,7 +22,7 @@ export function TE12MarksStatusScreen() {
 
       <Card title="Subject mark packages">
         {(data?.packages ?? []).map((p) => (
-          <Pressable key={p.id} style={[ui.row, { paddingVertical: 8 }]} onPress={() => navigation.navigate('TE13')}>
+          <Pressable key={p.id} style={[ui.row, { paddingVertical: 8 }]} onPress={() => navigation.navigate('TE13', { cycleId: p.cycleId, assignmentId: p.assignmentId })}>
             <View style={{ flex: 1 }}>
               <Text style={ui.text}>{p.label}</Text>
               <Text style={ui.muted}>{p.detail}</Text>
@@ -34,7 +34,7 @@ export function TE12MarksStatusScreen() {
 
       <Card title="Class-teacher responsibility">
         {data?.classReport && (
-          <Pressable style={[ui.row]} onPress={() => navigation.navigate('TE14')}>
+          <Pressable style={[ui.row]} onPress={() => navigation.navigate('TE14', { classId: data.classReport.classId, cycleId: data.classReport.cycleId })}>
             <View style={{ flex: 1 }}>
               <Text style={ui.text}>{data.classReport.label}</Text>
               <Text style={ui.muted}>{data.classReport.detail}</Text>
@@ -46,8 +46,23 @@ export function TE12MarksStatusScreen() {
 
       <Notice text="When you teach a subject in your own class, submit those subject marks once. The class sheet reuses them; class-report preparation is a separate task." />
 
-      <Button title="Enter or review scores" onPress={() => navigation.navigate('TE13')} />
-      <Button title="Prepare class reports" variant="secondary" onPress={() => navigation.navigate('TE14')} />
+      <Button
+        title="Enter or review scores"
+        disabled={!data?.packages?.length}
+        onPress={() => {
+          const first = data?.packages?.[0];
+          if (first) navigation.navigate('TE13', { cycleId: first.cycleId, assignmentId: first.assignmentId });
+        }}
+      />
+      <Button
+        title="Prepare class reports"
+        variant="secondary"
+        disabled={!data?.classReport}
+        onPress={() => data?.classReport && navigation.navigate('TE14', {
+          classId: data.classReport.classId,
+          cycleId: data.classReport.cycleId,
+        })}
+      />
 
       <BottomNav navigation={navigation} current="TE12" />
     </Screen>
