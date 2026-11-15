@@ -85,14 +85,19 @@ export class StudentProfilePresenter {
   }
 
   /** Move class: the backend keeps one identity per student across years. */
-  async confirmClassMove(targetClassId, effectiveFrom) {
+  async confirmClassMove(targetClassId, effectiveOn, reason) {
     if (this.state.classMoveState === 'saving') return;
+    if (!reason || reason.trim().length < 5) {
+      this._setState({ classMoveState: 'failed', classMoveError: 'Enter a transfer reason of at least five characters.' });
+      return;
+    }
     this._setState({ classMoveState: 'saving', classMoveError: null, classMoveNotice: null });
     try {
-      const result = await this.model.moveClass(this._studentId, {
-        targetClassId,
-        effectiveFrom,
-      });
+      const result = await this.model.moveClass(
+        this._studentId,
+        { classId: targetClassId, effectiveOn, department: this.state.student?.department ?? null, reason: reason.trim() },
+        this.state.student?.version,
+      );
       const from = this.state.student ? this.state.student.classLabel : null;
       const to = (result && result.to) || targetClassId;
       this._setState({
@@ -125,7 +130,11 @@ export class StudentProfilePresenter {
     }
     this._setState({ withdrawalState: 'saving', withdrawalError: null });
     try {
-      await this.model.withdraw(this._studentId, { reason, effectiveDate });
+      await this.model.withdraw(
+        this._studentId,
+        { reason, effectiveOn: effectiveDate },
+        current?.version,
+      );
       this._setState({ withdrawalState: 'accepted' });
       // Reload the profile at once so the status flips to "Withdrawn" and the
       // page becomes read-only IMMEDIATELY — without this, the Edit / Move /
