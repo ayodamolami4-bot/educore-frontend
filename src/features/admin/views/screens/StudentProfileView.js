@@ -17,7 +17,7 @@ import { LoadingView, ErrorState, useActionErrorAlert } from '../components/Feed
 import { PrimaryButton, SecondaryButton } from './AdminHomeView';
 import { StudentProfilePresenter } from '../../presenters/StudentProfilePresenter';
 import { StudentModel } from '../../models';
-import useClassOptions from '../components/useClassOptions';
+import { AcademicStructureModel } from '../../models';
 import { colors, typography, spacing, statusTone } from '../theme';
 
 export default function StudentProfileView({ route, navigation }) {
@@ -25,9 +25,25 @@ export default function StudentProfileView({ route, navigation }) {
   const [state, setState] = useState(presenter.initialState);
   const [classSheet, setClassSheet] = useState(false);
   const [targetClass, setTargetClass] = useState(null);
+  const [classOptions, setClassOptions] = useState([]);
+  const [moveReason, setMoveReason] = useState('');
   const loadedOnce = useRef(false);
-  // Live class list — a class created in AD12 is a valid move target here.
-  const CLASSES = useClassOptions();
+
+  useEffect(() => {
+    let active = true;
+    AcademicStructureModel.classes()
+      .then((page) => {
+        if (!active) return;
+        setClassOptions((page.items ?? []).map((item) => ({
+          label: [item.level, item.arm].filter(Boolean).join(' '),
+          value: item.id,
+        })));
+      })
+      .catch(() => {
+        if (active) setClassOptions([]);
+      });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     presenter.attach(setState, navigation);
@@ -48,7 +64,8 @@ export default function StudentProfileView({ route, navigation }) {
   useActionErrorAlert(state.withdrawalError, 'Withdrawal not accepted');
 
   const s = state.student;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos' }).format(new Date());
+  const targetClassLabel = classOptions.find((item) => item.value === targetClass)?.label ?? '';
 
   const confirmWithdrawal = () => {
     Alert.alert(
@@ -96,7 +113,9 @@ export default function StudentProfileView({ route, navigation }) {
 
           <Text style={styles.section}>Fee status</Text>
           <Text style={styles.line}>
-            {state.feeStatus ? state.feeStatus.summary || 'Up to date' : 'Not available'}
+            {state.feeStatus?.summary
+              ? `Outstanding: ₦${(Number(state.feeStatus.summary.outstandingMinor ?? 0) / 100).toLocaleString()} · Overdue invoices: ${state.feeStatus.summary.overdueInvoiceCount ?? 0}`
+              : 'No fee-status summary is available for this pupil.'}
           </Text>
 
           <Text style={styles.section}>Guardian</Text>
@@ -119,8 +138,14 @@ export default function StudentProfileView({ route, navigation }) {
               <LabelledField
                 label="New class"
                 placeholder="Choose the class to move to"
-                displayValue={targetClass || ''}
+                displayValue={targetClassLabel}
                 onPress={() => setClassSheet(true)}
+              />
+              <LabelledField
+                label="Transfer reason *"
+                value={moveReason}
+                onChangeText={setMoveReason}
+                placeholder="Explain the approved class transfer"
               />
               {state.classMoveError ? (
                 <Text style={styles.error}>{state.classMoveError}</Text>
@@ -136,8 +161,8 @@ export default function StudentProfileView({ route, navigation }) {
                       ? 'Class move accepted'
                       : 'Request class move'
                 }
-                disabled={state.classMoveState === 'saving' || !targetClass}
-                onPress={() => presenter.confirmClassMove(targetClass, today)}
+                disabled={state.classMoveState === 'saving' || !targetClass || moveReason.trim().length < 5}
+                onPress={() => presenter.confirmClassMove(targetClass, today, moveReason)}
               />
             </>
           )}
@@ -187,7 +212,7 @@ export default function StudentProfileView({ route, navigation }) {
       <SelectSheet
         visible={classSheet}
         label="Move to class"
-        options={CLASSES}
+        options={classOptions}
         value={targetClass}
         onSelect={(v) => setTargetClass(v)}
         onClose={() => setClassSheet(false)}
