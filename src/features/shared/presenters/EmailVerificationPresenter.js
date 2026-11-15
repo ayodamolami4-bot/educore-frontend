@@ -1,7 +1,8 @@
-import { Store } from '../../../core/Store.js';
-import { errorMessage } from '../../../api/errors.js';
-
+import { Store } from '../../../core/Store';
+import { errorMessage } from '../../../api/errors';
 export class EmailVerificationPresenter extends Store {
+  model;
+  uuid;
   resendKey;
   constructor(model, uuid) {
     super({ busy: false, error: '', notice: '', verified: false });

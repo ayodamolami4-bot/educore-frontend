@@ -1,12 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
-import { Screen } from '../../../components/Screen.jsx';
-import { Button, Chip, Field, Notice, ui } from '../../../components/Controls.jsx';
-import { useServices } from '../../../core/ServicesContext.jsx';
-import { usePresenter } from '../../../core/usePresenter.js';
-import { AuthPresenter } from '../presenters/AuthPresenter.js';
-import { DEMO } from '../../../api/demoTransport.js';
-
+import { Screen } from '../../../components/Screen';
+import { Button, Chip, Field, Notice, ui } from '../../../components/Controls';
+import { useServices } from '../../../core/ServicesContext';
+import { usePresenter } from '../../../core/usePresenter';
+import { AuthPresenter } from '../presenters/AuthPresenter';
+import { DEMO } from '../../../api/demoTransport';
 export function RecoveryScreen({ navigation, route }) {
   const services = useServices(),
     [method, setMethod] = useState('email');
@@ -48,7 +47,6 @@ export function RecoveryScreen({ navigation, route }) {
               selected={method === 'email'}
               onPress={() => setMethod('email')}
             />
-
             <Chip
               label="Saved recovery code"
               selected={method === 'code'}
@@ -61,7 +59,6 @@ export function RecoveryScreen({ navigation, route }) {
             placeholder="Your school-issued login ID"
             onChangeText={(v) => presenter.field('identifier', v)}
           />
-
           {method === 'code' && (
             <Field
               label="Saved personal recovery code"
@@ -82,7 +79,6 @@ export function RecoveryScreen({ navigation, route }) {
                 });
             }}
           />
-
           {services.config.demo && (
             <>
               <Button
@@ -95,7 +91,6 @@ export function RecoveryScreen({ navigation, route }) {
                   presenter.field('code', DEMO.recoveryCode);
                 }}
               />
-
               {method === 'email' && state.notice && (
                 <Button
                   title="Open the demo reset link"

@@ -1,12 +1,11 @@
 import React, { useEffect, useMemo } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
-import { Screen } from '../../../components/Screen.jsx';
-import { Button, Card, Notice, ui } from '../../../components/Controls.jsx';
-import { useServices } from '../../../core/ServicesContext.jsx';
-import { usePresenter } from '../../../core/usePresenter.js';
-import { HelpPresenter } from '../presenters/HelpPresenter.js';
-import { colors } from '../../../theme/tokens.js';
-
+import { Screen } from '../../../components/Screen';
+import { Button, Card, Notice, ui } from '../../../components/Controls';
+import { useServices } from '../../../core/ServicesContext';
+import { usePresenter } from '../../../core/usePresenter';
+import { HelpPresenter } from '../presenters/HelpPresenter';
+import { colors } from '../../../theme/tokens';
 export function AccessHelpScreen({ navigation }) {
   const services = useServices(),
     session = usePresenter(services.session);
@@ -70,7 +69,6 @@ export function AccessHelpScreen({ navigation }) {
           void presenter.load();
         }}
       />
-
       <Button
         title={session.signedIn ? 'Back to my workspace' : 'Back to sign in'}
         variant="quiet"

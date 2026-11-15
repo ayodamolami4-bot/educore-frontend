@@ -1,15 +1,15 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Screen } from '../../../components/Screen.jsx';
-import { Button, Card, Field, Notice, ToggleRow, ui } from '../../../components/Controls.jsx';
-import { PrivateCode } from '../../../components/PrivateCode.jsx';
-import { useServices } from '../../../core/ServicesContext.jsx';
-import { usePresenter } from '../../../core/usePresenter.js';
-import { SettingsPresenter } from '../presenters/SettingsPresenter.js';
-import { enablePush } from '../../../notifications/push.js';
-import { errorMessage } from '../../../api/errors.js';
-import { ConfirmDialog } from '../../../components/ConfirmDialog.jsx';
+import { Screen } from '../../../components/Screen';
+import { Button, Card, Field, Notice, ToggleRow, ui } from '../../../components/Controls';
+import { PrivateCode } from '../../../components/PrivateCode';
+import { useServices } from '../../../core/ServicesContext';
+import { usePresenter } from '../../../core/usePresenter';
+import { SettingsPresenter } from '../presenters/SettingsPresenter';
+import { enablePush } from '../../../notifications/push';
+import { errorMessage } from '../../../api/errors';
+import { ConfirmDialog } from '../../../components/ConfirmDialog';
 export function SettingsScreen({ navigation }) {
   const services = useServices(),
     session = usePresenter(services.session);
@@ -50,7 +50,6 @@ export function SettingsScreen({ navigation }) {
           onChangeText={(v) => presenter.field('phone', v)}
           hint="A contact update does not change school roles or child relationships."
         />
-
         <Button
           title="Save contact phone"
           variant="secondary"
@@ -75,7 +74,6 @@ export function SettingsScreen({ navigation }) {
           autoComplete="email"
           onChangeText={(v) => presenter.field('email', v)}
         />
-
         <Text style={ui.muted}>
           Use the current-password field below to verify sensitive changes.
         </Text>
@@ -87,7 +85,6 @@ export function SettingsScreen({ navigation }) {
             void presenter.requestEmailChange();
           }}
         />
-
         {state.emailRequest && (
           <Button
             title="View email verification status"
@@ -113,7 +110,6 @@ export function SettingsScreen({ navigation }) {
                 void presenter.setPreference('pushEnabled', v);
               }}
             />
-
             <ToggleRow
               title="Optional email updates"
               description="Mandatory account messages and in-app records stay available."
@@ -148,20 +144,17 @@ export function SettingsScreen({ navigation }) {
           onChangeText={(v) => presenter.field('currentPassword', v)}
           hint="Re-enter it before changing email, replacing a recovery code or signing out other sessions."
         />
-
         <Button
           title="Change my password"
           variant="secondary"
           onPress={() => navigation.navigate('Password', { change: true })}
         />
-
         <Button
           title="Replace saved recovery code"
           variant="secondary"
           loading={state.busy}
           onPress={() => setConfirm('recovery')}
         />
-
         {state.recoveryCode && (
           <PrivateCode value={state.recoveryCode} onDone={() => presenter.clearRecoveryCode()} />
         )}
@@ -187,13 +180,11 @@ export function SettingsScreen({ navigation }) {
         variant="secondary"
         onPress={() => navigation.navigate('ChooseContext')}
       />
-
       <Button
         title="Access help"
         variant="quiet"
         onPress={() => navigation.navigate('AccessHelp')}
       />
-
       <Button title="Sign out of EduCore" variant="danger" onPress={() => setConfirm('logout')} />
       <ConfirmDialog
         visible={confirm !== null}

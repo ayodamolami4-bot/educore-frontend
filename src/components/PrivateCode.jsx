@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { AppState, StyleSheet, Text, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import { Button, Notice } from './Controls.jsx';
-import { colors } from '../theme/tokens.js';
+import { Button, Notice } from './Controls';
+import { colors } from '../theme/tokens';
 export function PrivateCode({ value, onDone }) {
   const [visible, setVisible] = useState(
       AppState.currentState === 'active' || AppState.currentState === null,
@@ -28,7 +28,6 @@ export function PrivateCode({ value, onDone }) {
         text="Do not send this code to school staff or put it in a complaint or message."
         tone="warning"
       />
-
       <Button
         title={copied ? 'Copied — store it privately' : 'Copy recovery code'}
         variant="secondary"
@@ -36,7 +35,6 @@ export function PrivateCode({ value, onDone }) {
           void Clipboard.setStringAsync(value).then(() => setCopied(true));
         }}
       />
-
       <Button title="I have saved my code" onPress={onDone} />
     </View>
   );

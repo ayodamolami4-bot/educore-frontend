@@ -1,5 +1,4 @@
 import React, { createContext, useContext } from 'react';
-
 const Context = createContext(null);
 export function ServicesProvider({ services, children }) {
   return <Context.Provider value={services}>{children}</Context.Provider>;

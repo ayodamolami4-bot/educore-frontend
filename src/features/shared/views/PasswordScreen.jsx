@@ -1,11 +1,10 @@
 import React, { useMemo } from 'react';
-import { Screen } from '../../../components/Screen.jsx';
-import { Button, Field, Notice } from '../../../components/Controls.jsx';
-import { PrivateCode } from '../../../components/PrivateCode.jsx';
-import { useServices } from '../../../core/ServicesContext.jsx';
-import { usePresenter } from '../../../core/usePresenter.js';
-import { AuthPresenter } from '../presenters/AuthPresenter.js';
-
+import { Screen } from '../../../components/Screen';
+import { Button, Field, Notice } from '../../../components/Controls';
+import { PrivateCode } from '../../../components/PrivateCode';
+import { useServices } from '../../../core/ServicesContext';
+import { usePresenter } from '../../../core/usePresenter';
+import { AuthPresenter } from '../presenters/AuthPresenter';
 export function PasswordScreen({ navigation, route }) {
   const services = useServices(),
     flow = route.params.flow,
@@ -76,7 +75,6 @@ export function PasswordScreen({ navigation, route }) {
             autoComplete="new-password"
             hint="Use 15–128 characters. Spaces and memorable phrases are welcome."
           />
-
           <Field
             label="Confirm new password"
             password
@@ -84,7 +82,6 @@ export function PasswordScreen({ navigation, route }) {
             onChangeText={(v) => presenter.field('confirmPassword', v)}
             autoComplete="new-password"
           />
-
           <Button
             title="Save my password"
             loading={state.busy}
@@ -92,7 +89,6 @@ export function PasswordScreen({ navigation, route }) {
               void presenter.savePassword(flow, change);
             }}
           />
-
           <Notice text="Your school will not see your permanent password or personal recovery code." />
         </>
       ) : (

@@ -1,12 +1,11 @@
 import React, { useMemo } from 'react';
 import { Text } from 'react-native';
-import { Screen } from '../../../components/Screen.jsx';
-import { Button, Card, Notice, ui } from '../../../components/Controls.jsx';
-import { useServices } from '../../../core/ServicesContext.jsx';
-import { usePresenter } from '../../../core/usePresenter.js';
-import { EmailVerificationPresenter } from '../presenters/EmailVerificationPresenter.js';
-import { DEMO } from '../../../api/demoTransport.js';
-
+import { Screen } from '../../../components/Screen';
+import { Button, Card, Notice, ui } from '../../../components/Controls';
+import { useServices } from '../../../core/ServicesContext';
+import { usePresenter } from '../../../core/usePresenter';
+import { EmailVerificationPresenter } from '../presenters/EmailVerificationPresenter';
+import { DEMO } from '../../../api/demoTransport';
 export function EmailVerificationScreen({ navigation, route }) {
   const services = useServices(),
     params = route.params;

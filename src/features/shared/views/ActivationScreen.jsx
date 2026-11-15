@@ -1,12 +1,11 @@
 import React, { useMemo } from 'react';
 import { Text } from 'react-native';
-import { Screen } from '../../../components/Screen.jsx';
-import { Button, Field, Notice, ui } from '../../../components/Controls.jsx';
-import { useServices } from '../../../core/ServicesContext.jsx';
-import { usePresenter } from '../../../core/usePresenter.js';
-import { AuthPresenter } from '../presenters/AuthPresenter.js';
-import { DEMO } from '../../../api/demoTransport.js';
-
+import { Screen } from '../../../components/Screen';
+import { Button, Field, Notice, ui } from '../../../components/Controls';
+import { useServices } from '../../../core/ServicesContext';
+import { usePresenter } from '../../../core/usePresenter';
+import { AuthPresenter } from '../presenters/AuthPresenter';
+import { DEMO } from '../../../api/demoTransport';
 export function ActivationScreen({ navigation, route }) {
   const services = useServices(),
     token = route.params?.token;
@@ -34,7 +33,6 @@ export function ActivationScreen({ navigation, route }) {
             value={state.values.identifier}
             onChangeText={(v) => presenter.field('identifier', v)}
           />
-
           <Field
             label="One-time activation code"
             placeholder="Code on your private access slip"
@@ -54,7 +52,6 @@ export function ActivationScreen({ navigation, route }) {
           });
         }}
       />
-
       <Text style={ui.muted}>
         Already have an active account for another child? Keep your existing login. Ask the school
         to link the child to that account.
@@ -64,7 +61,6 @@ export function ActivationScreen({ navigation, route }) {
         variant="quiet"
         onPress={() => navigation.navigate('AccessHelp')}
       />
-
       {services.config.demo && !token && (
         <Button
           title="Fill demo activation slip"

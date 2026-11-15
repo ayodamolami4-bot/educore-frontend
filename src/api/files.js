@@ -1,7 +1,7 @@
-import { schoolPath } from './client.js';
-
+import { schoolPath } from './client';
 /** Role-specific pickers supply FormData; native file selection stays in the feature. */
 export class FileApi {
+  client;
   constructor(client) {
     this.client = client;
   }

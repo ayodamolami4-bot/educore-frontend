@@ -1,12 +1,11 @@
 import React, { useMemo } from 'react';
 import { Text } from 'react-native';
-import { Screen } from '../../../components/Screen.jsx';
-import { Button, Card, EmptyState, Notice, Select, ui } from '../../../components/Controls.jsx';
-import { useServices } from '../../../core/ServicesContext.jsx';
-import { usePresenter } from '../../../core/usePresenter.js';
-import { ContextPresenter } from '../presenters/ContextPresenter.js';
-import { roleLabel } from '../../../utils/format.js';
-
+import { Screen } from '../../../components/Screen';
+import { Button, Card, EmptyState, Notice, Select, ui } from '../../../components/Controls';
+import { useServices } from '../../../core/ServicesContext';
+import { usePresenter } from '../../../core/usePresenter';
+import { ContextPresenter } from '../presenters/ContextPresenter';
+import { roleLabel } from '../../../utils/format';
 export function ContextScreen({ navigation }) {
   const services = useServices(),
     session = usePresenter(services.session);
@@ -18,14 +17,12 @@ export function ContextScreen({ navigation }) {
       session.contexts.map((c) => [c.schoolId, { value: c.schoolId, label: c.schoolName }]),
     ).values(),
   ];
-
   const schoolRoles = session.contexts.filter((c) => c.schoolId === selected?.schoolId);
   const roles = [
     ...new Map(
       schoolRoles.map((c) => [c.role, { value: c.role, label: roleLabel(c.role) }]),
     ).values(),
   ];
-
   const children = schoolRoles.filter((c) => c.role === 'PARENT' && c.childId);
   return (
     <Screen
@@ -44,7 +41,6 @@ export function ContextScreen({ navigation }) {
               options={schools}
               onChange={(id) => presenter.choose(session.contexts.find((c) => c.schoolId === id))}
             />
-
             <Select
               label="Available role"
               value={selected?.role}
@@ -52,7 +48,6 @@ export function ContextScreen({ navigation }) {
               disabled={!selected?.schoolId}
               onChange={(role) => presenter.choose(schoolRoles.find((c) => c.role === role))}
             />
-
             {selected?.role === 'PARENT' && children.length > 0 && (
               <Select
                 label="Child"
@@ -91,13 +86,11 @@ export function ContextScreen({ navigation }) {
           void presenter.refresh();
         }}
       />
-
       <Button
         title="Get access help"
         variant="quiet"
         onPress={() => navigation.navigate('AccessHelp')}
       />
-
       <Button
         title="Sign out"
         variant="quiet"

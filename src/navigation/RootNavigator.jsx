@@ -3,22 +3,21 @@ import { NavigationContainer, createNavigationContainerRef } from '@react-naviga
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import * as Linking from 'expo-linking';
 import { Platform, View } from 'react-native';
-import { parseAuthLink } from './authLinks.js';
-import { useServices } from '../core/ServicesContext.jsx';
-import { usePresenter } from '../core/usePresenter.js';
-import { Notice } from '../components/Controls.jsx';
-import { errorMessage } from '../api/errors.js';
-import { SignInScreen } from '../features/shared/views/SignInScreen.jsx';
-import { ActivationScreen } from '../features/shared/views/ActivationScreen.jsx';
-import { RecoveryScreen } from '../features/shared/views/RecoveryScreen.jsx';
-import { PasswordScreen } from '../features/shared/views/PasswordScreen.jsx';
-import { ContextScreen } from '../features/shared/views/ContextScreen.jsx';
-import { NotificationsScreen } from '../features/shared/views/NotificationsScreen.jsx';
-import { SettingsScreen } from '../features/shared/views/SettingsScreen.jsx';
-import { EmailVerificationScreen } from '../features/shared/views/EmailVerificationScreen.jsx';
-import { AccessHelpScreen } from '../features/shared/views/AccessHelpScreen.jsx';
-import { RoleWorkspaceScreen } from '../features/shared/views/RoleWorkspaceScreen.jsx';
-
+import { parseAuthLink } from './authLinks';
+import { useServices } from '../core/ServicesContext';
+import { usePresenter } from '../core/usePresenter';
+import { Notice } from '../components/Controls';
+import { errorMessage } from '../api/errors';
+import { SignInScreen } from '../features/shared/views/SignInScreen';
+import { ActivationScreen } from '../features/shared/views/ActivationScreen';
+import { RecoveryScreen } from '../features/shared/views/RecoveryScreen';
+import { PasswordScreen } from '../features/shared/views/PasswordScreen';
+import { ContextScreen } from '../features/shared/views/ContextScreen';
+import { NotificationsScreen } from '../features/shared/views/NotificationsScreen';
+import { SettingsScreen } from '../features/shared/views/SettingsScreen';
+import { EmailVerificationScreen } from '../features/shared/views/EmailVerificationScreen';
+import { AccessHelpScreen } from '../features/shared/views/AccessHelpScreen';
+import { RoleWorkspaceScreen } from '../features/shared/views/RoleWorkspaceScreen';
 const Stack = createNativeStackNavigator();
 const navigation = createNavigationContainerRef();
 export function RootNavigator() {

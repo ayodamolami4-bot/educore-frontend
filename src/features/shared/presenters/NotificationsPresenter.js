@@ -1,7 +1,8 @@
-import { Store } from '../../../core/Store.js';
-import { errorMessage } from '../../../api/errors.js';
-
+import { Store } from '../../../core/Store';
+import { errorMessage } from '../../../api/errors';
 export class NotificationsPresenter extends Store {
+  model;
+  schoolId;
   generation = 0;
   constructor(model, schoolId) {
     super({ items: [], loading: false, more: false, cursor: null, error: '', unread: false });

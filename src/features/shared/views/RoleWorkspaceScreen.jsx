@@ -1,19 +1,20 @@
 import React from 'react';
 import { Text } from 'react-native';
-import { Screen } from '../../../components/Screen.jsx';
-import { Button, Card, EmptyState, Notice, ui } from '../../../components/Controls.jsx';
-import { useServices } from '../../../core/ServicesContext.jsx';
-import { usePresenter } from '../../../core/usePresenter.js';
-import { roleModule } from '../../../navigation/roleModules.js';
-import { roleLabel } from '../../../utils/format.js';
-
+import { Screen } from '../../../components/Screen';
+import { Button, Card, EmptyState, Notice, ui } from '../../../components/Controls';
+import { useServices } from '../../../core/ServicesContext';
+import { usePresenter } from '../../../core/usePresenter';
+import { roleModule } from '../../../navigation/roleModules';
+import { roleLabel } from '../../../utils/format';
 export function RoleWorkspaceScreen({ navigation }) {
-  const services = useServices(),
-    session = usePresenter(services.session),
-    context = session.context;
+  const services = useServices();
+  const session = usePresenter(services.session);
+  const context = session.context;
+
   if (!context) return null;
-  const module = roleModule(context.role),
-    HomeScreen = module.HomeScreen;
+
+  const feature = roleModule(context.role) ?? {};
+  const HomeScreen = feature.HomeScreen;
   if (HomeScreen)
     return (
       <HomeScreen
@@ -22,7 +23,6 @@ export function RoleWorkspaceScreen({ navigation }) {
         target={session.requestedTarget ?? undefined}
       />
     );
-
   return (
     <Screen
       title={`${roleLabel(context.role)} workspace`}
@@ -52,20 +52,17 @@ export function RoleWorkspaceScreen({ navigation }) {
         icon="notifications-outline"
         onPress={() => navigation.navigate('Notifications')}
       />
-
       <Button
         title="Account settings"
         icon="settings-outline"
         variant="secondary"
         onPress={() => navigation.navigate('Settings')}
       />
-
       <Button
         title="Switch school or role"
         variant="secondary"
         onPress={() => navigation.navigate('ChooseContext')}
       />
-
       <Button
         title="Access help"
         variant="quiet"

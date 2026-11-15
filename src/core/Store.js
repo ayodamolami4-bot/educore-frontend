@@ -1,5 +1,6 @@
 /** Observable Presenter state; contains no React UI code. */
 export class Store {
+  state;
   listeners = new Set();
   active = true;
   constructor(state) {

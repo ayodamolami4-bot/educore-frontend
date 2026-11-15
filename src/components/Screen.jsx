@@ -12,8 +12,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useServices } from '../core/ServicesContext.jsx';
-import { colors } from '../theme/tokens.js';
+import { useServices } from '../core/ServicesContext';
+import { colors } from '../theme/tokens';
 export function Screen({ children, title, subtitle, back, code, auth = false, actions }) {
   const services = useServices();
   const wide = useWindowDimensions().width >= 960;
@@ -72,7 +72,6 @@ export function Screen({ children, title, subtitle, back, code, auth = false, ac
                       ].map(([icon, label]) => (
                         <View key={label} style={styles.heroTile}>
                           <Ionicons name={icon} size={22} color={colors.primary} />
-
                           <Text style={styles.heroTileText}>{label}</Text>
                         </View>
                       ))}

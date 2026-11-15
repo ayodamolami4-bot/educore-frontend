@@ -1,7 +1,6 @@
-import { ParentNavigator } from './views/ParentNavigator.jsx';
-
+/** Parent developer: export your own navigator as HomeScreen when ready. */
 export const parentModule = {
   name: 'parent',
   title: 'Parent / Guardian',
-  HomeScreen: ParentNavigator,
+  HomeScreen: null,
 };

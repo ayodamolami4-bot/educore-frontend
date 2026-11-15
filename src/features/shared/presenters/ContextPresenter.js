@@ -1,7 +1,7 @@
-import { Store } from '../../../core/Store.js';
-import { errorMessage } from '../../../api/errors.js';
-
+import { Store } from '../../../core/Store';
+import { errorMessage } from '../../../api/errors';
 export class ContextPresenter extends Store {
+  session;
   constructor(session) {
     super({ selected: session.getSnapshot().context, busy: false, error: '' });
     this.session = session;

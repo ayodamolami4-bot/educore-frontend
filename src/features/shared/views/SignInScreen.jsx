@@ -1,11 +1,10 @@
 import React, { useMemo } from 'react';
 import { Text, View } from 'react-native';
-import { Screen } from '../../../components/Screen.jsx';
-import { Button, Field, Notice, ui } from '../../../components/Controls.jsx';
-import { useServices } from '../../../core/ServicesContext.jsx';
-import { usePresenter } from '../../../core/usePresenter.js';
-import { AuthPresenter } from '../presenters/AuthPresenter.js';
-
+import { Screen } from '../../../components/Screen';
+import { Button, Field, Notice, ui } from '../../../components/Controls';
+import { useServices } from '../../../core/ServicesContext';
+import { usePresenter } from '../../../core/usePresenter';
+import { AuthPresenter } from '../presenters/AuthPresenter';
 export function SignInScreen({ navigation }) {
   const services = useServices();
   const presenter = useMemo(
@@ -31,7 +30,6 @@ export function SignInScreen({ navigation }) {
         autoComplete="username"
         textContentType="username"
       />
-
       <Field
         label="Password"
         placeholder="Your personal password"
@@ -44,7 +42,6 @@ export function SignInScreen({ navigation }) {
           void presenter.signIn();
         }}
       />
-
       <Button
         title="Sign in"
         icon="arrow-forward"
@@ -53,13 +50,11 @@ export function SignInScreen({ navigation }) {
           void presenter.signIn();
         }}
       />
-
       <Button
         title="Forgot your password?"
         variant="quiet"
         onPress={() => navigation.navigate('Recovery')}
       />
-
       <View style={ui.divider} />
       <Text style={[ui.muted, { textAlign: 'center' }]}>Joining EduCore for the first time?</Text>
       <Button
@@ -67,13 +62,11 @@ export function SignInScreen({ navigation }) {
         variant="secondary"
         onPress={() => navigation.navigate('Activation')}
       />
-
       <Button
         title="I need access help"
         variant="quiet"
         onPress={() => navigation.navigate('AccessHelp')}
       />
-
       {services.config.demo && (
         <Button
           title="Fill demo sign-in details"

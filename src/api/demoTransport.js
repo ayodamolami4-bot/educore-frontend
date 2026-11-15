@@ -1,5 +1,3 @@
-import { parentDemoPayload } from '../features/parent/api/parentDemo.js';
-
 export const DEMO = {
   loginId: 'EC-DEMO-001',
   password: 'EduCore learning demo 2026!',
@@ -8,7 +6,6 @@ export const DEMO = {
   resetToken: 'demo-reset-link-token-not-a-real-secret-2026',
   emailToken: 'demo-email-verification-not-a-real-secret-2026',
 };
-
 /** Fictional isolated transport. No network, real accounts, emails or push delivery. */
 export function createDemoTransport() {
   let serial = 0,
@@ -60,6 +57,11 @@ export function createDemoTransport() {
       schoolId: 'sch_greenfield',
       schoolName: 'Greenfield Secondary School',
       role: 'STUDENT',
+      // The signed-in student's id in the academics service. In demo mode this
+      // maps to Amara Okafor (id 1) in the admin demo STUDENTS seed, so the
+      // student app and the admin app share one roster. The real backend
+      // returns the learner id from the identity → academics linkage.
+      studentId: 1,
       homeScreenId: 'ST01',
       capabilities: { actions: ['shared.read'] },
     },
@@ -70,7 +72,7 @@ export function createDemoTransport() {
       childId: 'stu_zainab_001',
       childName: 'Zainab Bello',
       homeScreenId: 'PA01',
-      capabilities: { actions: ['child.learning.read', 'fees.pay'] },
+      capabilities: { actions: ['shared.read'] },
     },
     {
       schoolId: 'sch_brightfield',
@@ -79,10 +81,9 @@ export function createDemoTransport() {
       childId: 'stu_mariam_001',
       childName: 'Mariam Bello',
       homeScreenId: 'PA01',
-      capabilities: { actions: ['child.learning.read', 'fees.pay'] },
+      capabilities: { actions: ['shared.read'] },
     },
   ];
-
   const account = {
     id: 'acc_demo_001',
     version: 1,
@@ -146,7 +147,6 @@ export function createDemoTransport() {
       target: { schoolId: 'sch_brightfield', screenId: 'PA15', childId: 'stu_mariam_001' },
     },
   ];
-
   const issueTokens = () => {
     access = 'demo-access-' + ++serial;
     refresh = 'demo-refresh-' + ++serial;
@@ -273,7 +273,6 @@ export function createDemoTransport() {
           'Forgotten password: use your verified email or your privately saved recovery code.',
           'Missing school or child: ask the school office to review your authorised relationship.',
         ],
-
         assistedRecoveryAvailable: false,
       });
     if (!access || headers.get('Authorization') !== 'Bearer ' + access)
@@ -410,14 +409,9 @@ export function createDemoTransport() {
               ]
             : []),
         ],
-
         nextCursor: null,
         hasMore: false,
       });
-    if (method === 'GET') {
-      const parent = parentDemoPayload(path, url.searchParams, account.lastContext);
-      if (parent !== undefined) return response(parent);
-    }
     return fail(
       'This endpoint belongs to a role feature or integration that is not built in the shared starter.',
       404,

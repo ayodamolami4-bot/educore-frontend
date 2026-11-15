@@ -1,5 +1,5 @@
 export class ApiError extends Error {
-  /** @param {import('./contracts.js').Problem} problem */
+  problem;
   constructor(problem) {
     super(problem.detail || problem.title);
     this.problem = problem;

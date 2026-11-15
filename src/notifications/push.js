@@ -1,7 +1,6 @@
 import { Platform } from 'react-native';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
-
 /** Invoked only after the user presses Enable on this device. Never ask on app launch. */
 export async function enablePush(model, config, installationId) {
   if (config.demo)

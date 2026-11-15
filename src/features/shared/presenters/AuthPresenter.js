@@ -1,7 +1,6 @@
-import { Store } from '../../../core/Store.js';
-import { errorMessage, localError } from '../../../api/errors.js';
-import { newPassword, required, passwordValue } from '../../../utils/validation.js';
-
+import { Store } from '../../../core/Store';
+import { errorMessage, localError } from '../../../api/errors';
+import { newPassword, required, passwordValue } from '../../../utils/validation';
 const emptyValues = {
   identifier: '',
   password: '',
@@ -10,8 +9,10 @@ const emptyValues = {
   confirmPassword: '',
   currentPassword: '',
 };
-
 export class AuthPresenter extends Store {
+  model;
+  session;
+  installationId;
   constructor(model, session, installationId) {
     super({ values: { ...emptyValues }, busy: false, error: '', notice: '', saved: null });
     this.model = model;

@@ -1,6 +1,7 @@
-import { Store } from '../../../core/Store.js';
-import { errorMessage } from '../../../api/errors.js';
+import { Store } from '../../../core/Store';
+import { errorMessage } from '../../../api/errors';
 export class HelpPresenter extends Store {
+  model;
   constructor(model) {
     super({ loading: true, error: '', help: null });
     this.model = model;

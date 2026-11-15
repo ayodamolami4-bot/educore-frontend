@@ -1,4 +1,4 @@
-import { localError } from '../api/errors.js';
+import { localError } from '../api/errors';
 export function required(value, label) {
   const trimmed = value.trim();
   if (!trimmed) throw localError(`Enter ${label}.`);

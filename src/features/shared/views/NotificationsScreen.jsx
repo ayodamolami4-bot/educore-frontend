@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Screen } from '../../../components/Screen.jsx';
+import { Screen } from '../../../components/Screen';
 import {
   Button,
   Card,
@@ -10,14 +10,13 @@ import {
   Select,
   ToggleRow,
   ui,
-} from '../../../components/Controls.jsx';
-import { useServices } from '../../../core/ServicesContext.jsx';
-import { usePresenter } from '../../../core/usePresenter.js';
-import { NotificationsPresenter } from '../presenters/NotificationsPresenter.js';
-import { dateTime } from '../../../utils/format.js';
-import { errorMessage } from '../../../api/errors.js';
-import { colors } from '../../../theme/tokens.js';
-
+} from '../../../components/Controls';
+import { useServices } from '../../../core/ServicesContext';
+import { usePresenter } from '../../../core/usePresenter';
+import { NotificationsPresenter } from '../presenters/NotificationsPresenter';
+import { dateTime } from '../../../utils/format';
+import { errorMessage } from '../../../api/errors';
+import { colors } from '../../../theme/tokens';
 const categories = [
   { value: 'ALL', label: 'All categories' },
   { value: 'SCHOOL', label: 'School notices' },
@@ -26,7 +25,6 @@ const categories = [
   { value: 'MESSAGES', label: 'Messages' },
   { value: 'CASES', label: 'Complaints' },
 ];
-
 export function NotificationsScreen({ navigation }) {
   const services = useServices(),
     session = usePresenter(services.session),
@@ -57,7 +55,6 @@ export function NotificationsScreen({ navigation }) {
             void presenter.filter(v === 'ALL' ? undefined : v, state.unread);
           }}
         />
-
         <ToggleRow
           title="Unread only"
           description="Show notifications you have not marked as read."
@@ -66,7 +63,6 @@ export function NotificationsScreen({ navigation }) {
             void presenter.filter(state.category, v);
           }}
         />
-
         <Button
           title="Refresh notifications"
           variant="secondary"
@@ -98,7 +94,6 @@ export function NotificationsScreen({ navigation }) {
                   backgroundColor: item.readAt ? colors.border : colors.primary,
                 }}
               />
-
               <Text style={[ui.title, { flex: 1, fontSize: 16 }]}>{item.title}</Text>
             </View>
             <Text style={ui.text}>{item.safePreview}</Text>
@@ -120,7 +115,6 @@ export function NotificationsScreen({ navigation }) {
                 })();
               }}
             />
-
             {!item.readAt && (
               <Button
                 title="Mark as read"

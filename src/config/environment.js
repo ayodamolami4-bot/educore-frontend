@@ -29,7 +29,6 @@ export function readEnvironment(values) {
     easProjectId: values.easProjectId ?? '',
   };
 }
-
 export const environment = readEnvironment({
   demo: process.env.EXPO_PUBLIC_DEMO_MODE,
   apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL,

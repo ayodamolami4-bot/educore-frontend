@@ -1,7 +1,8 @@
-import { queryString } from '../../../api/client.js';
-import { ApiError } from '../../../api/errors.js';
-
+import { queryString } from '../../../api/client';
+import { ApiError } from '../../../api/errors';
 export class SharedModel {
+  client;
+  uuid;
   pendingCommands = new Map();
   constructor(client, uuid) {
     this.client = client;

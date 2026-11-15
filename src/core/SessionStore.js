@@ -1,7 +1,9 @@
-import { Store } from './Store.js';
-import { localError } from '../api/errors.js';
-
+import { Store } from './Store';
+import { localError } from '../api/errors';
 export class SessionStore extends Store {
+  client;
+  model;
+  vault;
   constructor(client, model, vault) {
     super({
       booting: true,

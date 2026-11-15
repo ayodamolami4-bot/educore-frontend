@@ -11,8 +11,7 @@ import {
   View,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, radius } from '../theme/tokens.js';
-
+import { colors, radius } from '../theme/tokens';
 export function Button({
   title,
   onPress,
@@ -76,7 +75,6 @@ export function Field({ label, hint, error, password = false, ...props }) {
           autoCapitalize={props.autoCapitalize ?? 'none'}
           style={[styles.input, props.style]}
         />
-
         {password && (
           <Pressable
             accessibilityRole="button"
@@ -199,7 +197,6 @@ export function Notice({ text, tone = 'info' }) {
         size={20}
         color={danger ? colors.danger : colors.primary}
       />
-
       <Text style={[styles.noticeText, danger && { color: colors.danger }]}>{text}</Text>
     </View>
   );
@@ -325,6 +322,8 @@ const styles = StyleSheet.create({
   modal: {
     backgroundColor: colors.white,
     borderRadius: radius.lg,
+    borderWidth: 2,
+    borderColor: colors.primary,
     width: '100%',
     maxWidth: 480,
     padding: 20,

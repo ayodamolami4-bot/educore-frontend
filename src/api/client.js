@@ -1,53 +1,27 @@
-import { ApiError } from './errors.js';
-
-/**
- * @typedef {Object} TokenVault
- * @property {() => Promise<string | null>} get
- * @property {(token: string | null) => Promise<void>} set
- */
-
-/** @typedef {(input: string, init: RequestInit) => Promise<Response>} Transport */
-
-/**
- * @typedef {Object} RequestOptions
- * @property {'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'} [method]
- * @property {unknown} [body]
- * @property {boolean} [auth]
- * @property {number} [version]
- * @property {string} [idempotencyKey]
- * @property {AbortSignal} [signal]
- * @property {Record<string, string>} [headers]
- */
-
+import { ApiError } from './errors';
 export class ApiClient {
+  baseUrl;
+  vault;
+  transport;
+  timeoutMs;
   tokens = null;
   refreshPromise = null;
   authEpoch = 0;
   scopeEpoch = 0;
   inflight = new Set();
   onSessionExpired = () => {};
-
-  /**
-   * @param {string} baseUrl
-   * @param {TokenVault} vault
-   * @param {Transport} [transport]
-   * @param {number} [timeoutMs]
-   */
   constructor(baseUrl, vault, transport = fetch, timeoutMs = 20000) {
     this.baseUrl = baseUrl;
     this.vault = vault;
     this.transport = transport;
     this.timeoutMs = timeoutMs;
   }
-
-  /** @param {import('./contracts.js').SessionTokens} tokens */
   async acceptTokens(tokens) {
     this.authEpoch += 1;
     this.refreshPromise = null;
     this.tokens = tokens;
     await this.vault.set(tokens.refreshToken);
   }
-
   async clearSession() {
     this.authEpoch += 1;
     this.refreshPromise = null;
@@ -55,19 +29,16 @@ export class ApiClient {
     this.invalidateScope();
     await this.vault.set(null);
   }
-
   invalidateScope() {
     this.scopeEpoch += 1;
     for (const controller of this.inflight) controller.abort();
     this.inflight.clear();
   }
-
   async restore() {
     if (!(await this.vault.get())) return false;
     await this.refresh();
     return true;
   }
-
   async refresh() {
     if (this.refreshPromise) return this.refreshPromise;
     const epoch = this.authEpoch;
@@ -97,7 +68,6 @@ export class ApiClient {
     this.refreshPromise = operation;
     return operation;
   }
-
   async send(path, options) {
     if (!path.startsWith('/') || path.startsWith('//') || path.includes('://'))
       throw new Error('Use a relative API path');
@@ -144,7 +114,6 @@ export class ApiClient {
       options.signal?.removeEventListener('abort', abort);
     }
   }
-
   async authorisedResponse(path, options) {
     let response = await this.send(path, options);
     if (response.status === 401 && options.auth !== false) {
@@ -163,7 +132,6 @@ export class ApiClient {
     }
     return response;
   }
-
   checkScope(path, scope) {
     if (scope !== this.scopeEpoch && path.startsWith('/schools/'))
       throw new ApiError({
@@ -174,11 +142,6 @@ export class ApiClient {
         retryable: false,
       });
   }
-
-  /**
-   * @param {string} path API path relative to the gateway base URL.
-   * @param {RequestOptions} [options]
-   */
   async request(path, options = {}) {
     const scope = this.scopeEpoch;
     const response = await this.authorisedResponse(path, options);
@@ -187,7 +150,6 @@ export class ApiClient {
     this.checkScope(path, scope);
     return result;
   }
-
   /** Protected binary download; the caller decides how to view/store the returned Blob. */
   async download(path, signal) {
     const scope = this.scopeEpoch;
@@ -197,7 +159,6 @@ export class ApiClient {
     this.checkScope(path, scope);
     return file;
   }
-
   async decode(response) {
     if (response.status === 204) return undefined;
     const value = await response.json().catch(() => null);
@@ -216,7 +177,6 @@ export class ApiClient {
     return value;
   }
 }
-
 export function schoolPath(schoolId, path) {
   if (
     !/^[A-Za-z0-9_-]{6,80}$/.test(schoolId) ||

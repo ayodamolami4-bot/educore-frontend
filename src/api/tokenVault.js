@@ -1,7 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
-import { memoryVault } from './memoryVault.js';
-
+import { memoryVault } from './memoryVault';
 /** Native refresh token only. Browser preview deliberately keeps credentials in memory. */
 export function nativeTokenVault() {
   if (Platform.OS === 'web') return memoryVault();

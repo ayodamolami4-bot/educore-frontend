@@ -1,8 +1,9 @@
-import { Store } from '../../../core/Store.js';
-import { errorMessage } from '../../../api/errors.js';
-import { normalisePhone, passwordValue, validEmail } from '../../../utils/validation.js';
-
+import { Store } from '../../../core/Store';
+import { errorMessage } from '../../../api/errors';
+import { normalisePhone, passwordValue, validEmail } from '../../../utils/validation';
 export class SettingsPresenter extends Store {
+  model;
+  session;
   constructor(model, session) {
     const account = session.getSnapshot().account;
     super({

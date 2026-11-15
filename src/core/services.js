@@ -1,14 +1,13 @@
 import { Platform } from 'react-native';
-import { uuid } from '../utils/uuid.js';
+import { uuid } from '../utils/uuid';
 import * as SecureStore from 'expo-secure-store';
-import { environment } from '../config/environment.js';
-import { ApiClient } from '../api/client.js';
-import { createDemoTransport } from '../api/demoTransport.js';
-import { nativeTokenVault } from '../api/tokenVault.js';
-import { memoryVault } from '../api/memoryVault.js';
-import { SharedModel } from '../features/shared/models/SharedModel.js';
-import { SessionStore } from './SessionStore.js';
-
+import { environment } from '../config/environment';
+import { ApiClient } from '../api/client';
+import { createDemoTransport } from '../api/demoTransport';
+import { nativeTokenVault } from '../api/tokenVault';
+import { memoryVault } from '../api/memoryVault';
+import { SharedModel } from '../features/shared/models/SharedModel';
+import { SessionStore } from './SessionStore';
 let singleton = null;
 export function createServices() {
   singleton ??= (async () => {

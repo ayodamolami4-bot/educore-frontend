@@ -1,7 +1,7 @@
 import React from 'react';
 import { Modal, StyleSheet, Text, View } from 'react-native';
-import { Button, ui } from './Controls.jsx';
-import { colors } from '../theme/tokens.js';
+import { Button, ui } from './Controls';
+import { colors } from '../theme/tokens';
 export function ConfirmDialog({ visible, title, description, onConfirm, onCancel }) {
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onCancel}>
@@ -28,6 +28,8 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 440,
     borderRadius: 20,
+    borderWidth: 2,
+    borderColor: colors.primary,
     padding: 24,
     backgroundColor: colors.white,
     gap: 18,
