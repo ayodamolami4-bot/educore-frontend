@@ -15,7 +15,7 @@ export function TE19ProfileScreen() {
 
   return (
     <Screen title="Profile and responsibilities" subtitle="Read your official school duties." code="TE19">
-      <Card title={data?.displayName ?? 'Mr Chinedu Okafor'} subtitle={`${data?.code ?? 'ST-001'} - ${data?.role ?? 'Teacher'}`}>
+      <Card title={data?.displayName ?? 'Teacher profile'} subtitle={`${data?.code ?? 'Staff number unavailable'} - ${data?.role ?? 'Teacher'}`}>
         <Text style={ui.muted}>Status: {data?.state}</Text>
       </Card>
 
