@@ -61,6 +61,7 @@ export class StudentFormPresenter {
     this._alive = false;
     this._studentId = null;
     this._guardianSearchSeq = 0;
+    this._choiceSearchSeq = 0;
     this._metadata = null;
     this.initialState = {
       status: 'loading',
@@ -75,6 +76,7 @@ export class StudentFormPresenter {
       classOptions: [],
       metadataFields: [],
       metadataVersion: null,
+      subjectChoiceGroups: [],
     };
     this.state = this.initialState;
   }
@@ -161,8 +163,12 @@ export class StudentFormPresenter {
     if (key === 'classId') {
       const selected = this.state.classOptions.find((item) => item.id === value);
       values.classLabel = selected?.label ?? '';
-      values.department = selected?.level?.startsWith('JSS') ? '' : values.department;
+      values.department = '';
+      values.subjectIds = {};
       values.startsOn = enrolmentDateFor(selected);
+    }
+    if (key === 'department') {
+      values.subjectIds = {};
     }
     if (key.startsWith('field:')) {
       const fieldKey = key.slice('field:'.length);
@@ -196,8 +202,38 @@ export class StudentFormPresenter {
     }
     this._setState(patch);
 
+    if (this.state.mode === 'enrol' && ['classId', 'department'].includes(key)) {
+      void this._loadSubjectChoiceGroups(values.classId, values.department);
+    }
+
     if (this.state.mode === 'enrol' && ['guardianPhone', 'guardianEmail'].includes(key)) {
       void this._searchGuardianMatches(values);
+    }
+  }
+
+  async _loadSubjectChoiceGroups(classId, department) {
+    const seq = ++this._choiceSearchSeq;
+    if (!classId) {
+      this._setState({ subjectChoiceGroups: [] });
+      return;
+    }
+    const selectedClass = this.state.classOptions.find((item) => item.id === classId);
+    if (selectedClass?.level?.startsWith('SSS') && !department) {
+      this._setState({ subjectChoiceGroups: [] });
+      return;
+    }
+    try {
+      const groups = await this.model.subjectChoiceOptions(classId, department || null);
+      if (!this._alive || seq !== this._choiceSearchSeq) return;
+      this._setState({ subjectChoiceGroups: groups });
+    } catch (error) {
+      if (!this._alive || seq !== this._choiceSearchSeq) return;
+      this._setState({
+        subjectChoiceGroups: [],
+        errorText: error instanceof ApiError
+          ? error.message
+          : 'Could not load the published subject-choice groups for this class.',
+      });
     }
   }
 
@@ -263,6 +299,11 @@ export class StudentFormPresenter {
       if (!selectedClass) errors.classId = 'Choose an actual class from the current school session.';
       if (selectedClass?.level?.startsWith('SSS') && !value.department) {
         errors.department = 'Choose the SSS department for this enrolment.';
+      }
+      for (const group of this.state.subjectChoiceGroups ?? []) {
+        if (!value.subjectIds?.[group.key]) {
+          errors[`subjectChoice:${group.key}`] = `Choose one subject for ${group.label}.`;
+        }
       }
       if (!value.startsOn) errors.startsOn = 'Choose an enrolment start date.';
       else if (selectedClass?.session && (
@@ -355,7 +396,7 @@ export class StudentFormPresenter {
         fields: value.fields ?? {},
         guardian,
         admissionType: 'FRESH',
-        subjectIds: [],
+        subjectIds: Object.values(value.subjectIds ?? {}).filter(Boolean),
       });
 
       this._setState({
