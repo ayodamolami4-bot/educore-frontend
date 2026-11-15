@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Screen } from '../../../components/Screen';
 import { Button, Card, Notice, Select, ui } from '../../../components/Controls';
@@ -11,55 +11,131 @@ export function TE05TimetableScreen() {
   const { context, model } = useTeacher();
   const [data, setData] = useState(null);
   const [display, setDisplay] = useState('week');
+  const [selectedClass, setSelectedClass] = useState('all');
+  const [error, setError] = useState('');
 
-  useEffect(() => { void model.timetable(context.schoolId).then(setData); }, [model, context.schoolId]);
+  useEffect(() => {
+    let active = true;
+    model.timetable(context.schoolId)
+      .then((value) => {
+        if (!active) return;
+        setData(value);
+        setSelectedClass('all');
+      })
+      .catch((reason) => {
+        if (active) setError(reason?.message ?? 'Could not load your published timetable.');
+      });
+    return () => { active = false; };
+  }, [model, context.schoolId]);
+
+  const classes = data?.classes ?? [];
+  const lessons = (data?.lessons ?? []).filter((item) =>
+    selectedClass === 'all' || item.classId === selectedClass,
+  );
+  const firstAssignedClass = classes[0]?.id ?? '';
 
   return (
-    <Screen title="Timetable and calendar" subtitle="Your published lessons, exams and assigned school duties." code="TE05">
-      <Select label="Session" value="2026/2027" onChange={() => {}} options={[{ value: '2026/2027', label: '2026/2027' }, { value: '2025/2026', label: '2025/2026' }]} />
-      <Select label="Week" value="9-13 November 2026" onChange={() => {}} options={[{ value: 'w1', label: '9-13 November 2026' }, { value: 'w2', label: '16-20 November 2026' }]} />
-      <Select label="Display" value={display} onChange={setDisplay}
-        options={[{ value: 'week', label: 'My combined week' }, { value: 'class', label: 'Selected class' }, { value: 'calendar', label: 'Calendar events' }]} />
-      <Select label="Class filter" value="all" onChange={() => {}}
-        options={[{ value: 'all', label: 'All my classes' }, { value: 'JSS1A', label: 'JSS1 A' }, { value: 'JSS1B', label: 'JSS1 B' }]} />
+    <Screen
+      title="Timetable and calendar"
+      subtitle={data ? `${data.date} · ${data.timezone} · week from ${data.week || 'school timetable'}` : 'Your published lessons, exams and assigned school duties.'}
+      code="TE05"
+    >
+      {error ? <Notice text={error} tone="error" /> : null}
+      <Select
+        label="Display"
+        value={display}
+        onChange={setDisplay}
+        options={[
+          { value: 'week', label: 'My combined week' },
+          { value: 'class', label: 'Selected class' },
+          { value: 'calendar', label: "Today's activities" },
+        ]}
+      />
+      <Select
+        label="Class filter"
+        value={selectedClass}
+        onChange={setSelectedClass}
+        options={[
+          { value: 'all', label: 'All my classes' },
+          ...classes.map((item) => ({ value: item.id, label: item.label })),
+        ]}
+      />
 
-      {display === 'week' && (
-        <Card title="Combined teacher week">
+      {display === 'week' ? (
+        <Card title="Published weekly timetable">
           <View style={[ui.row, { paddingVertical: 4 }]}>
-            <Text style={[ui.muted, { width: 50 }]}>WAT</Text>
-            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((d) => (
-              <Text key={d} style={[ui.muted, { flex: 1, textAlign: 'center', fontWeight: '600' }]}>{d}</Text>
+            <Text style={[ui.muted, { width: 60 }]}>WAT</Text>
+            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((day) => (
+              <Text key={day} style={[ui.muted, { flex: 1, textAlign: 'center', fontWeight: '600' }]}>{day}</Text>
             ))}
           </View>
           {(data?.grid ?? []).map((row) => (
-            <View key={row.time} style={[ui.row, { paddingVertical: 4 }]}>
-              <Text style={[ui.muted, { width: 50 }]}>{row.time}</Text>
-              {['mon', 'tue', 'wed', 'thu', 'fri'].map((d) => (
-                <Text key={d} style={[ui.text, { flex: 1, textAlign: 'center' }]}>{row[d]}</Text>
+            <View key={row.startMinute} style={[ui.row, { paddingVertical: 6 }]}>
+              <Text style={[ui.muted, { width: 60 }]}>{row.time}</Text>
+              {['mon', 'tue', 'wed', 'thu', 'fri'].map((day) => (
+                <Text key={day} style={[ui.text, { flex: 1, textAlign: 'center', fontSize: 11 }]}>
+                  {row[day] || '—'}
+                </Text>
               ))}
             </View>
           ))}
-          <Notice text="Math A = JSS1 A; Math B = JSS1 B. Only actual assigned lessons and supervision duties appear." />
+          {!data?.grid?.length ? <Text style={ui.muted}>No published weekly lessons are assigned to this teacher.</Text> : null}
+          <Notice text="Only published lessons appear here. WAT times and weekday positions come from the school timetable." />
         </Card>
-      )}
+      ) : null}
 
-      {display === 'calendar' && (
-        <Card title="November 2026">
-          <Text style={ui.muted}>Calendar mode placeholder — render a real month grid here.</Text>
+      {display === 'class' ? (
+        <Card title="Lessons for selected class">
+          {lessons.map((lesson) => (
+            <Pressable
+              key={lesson.id}
+              onPress={() => navigation.navigate('TE03', { classId: lesson.classId })}
+              style={[ui.row, { paddingVertical: 8 }]}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={ui.text}>{lesson.dayLabel} · {lesson.time}</Text>
+                <Text style={ui.muted}>{lesson.subject} · {lesson.classLabel}</Text>
+                {lesson.room ? <Text style={ui.muted}>Room: {lesson.room}</Text> : null}
+              </View>
+              <Text style={ui.muted}>Open class</Text>
+            </Pressable>
+          ))}
+          {!lessons.length ? <Text style={ui.muted}>No published lessons match this class filter.</Text> : null}
         </Card>
-      )}
+      ) : null}
 
-      <Card title="Duties and exceptions">
-        {(data?.duties ?? []).map((d) => (
-          <View key={d.id} style={{ paddingVertical: 6 }}>
-            <Text style={ui.text}>{d.title}</Text>
-            <Text style={ui.muted}>{d.detail}</Text>
-          </View>
+      {display === 'calendar' ? (
+        <Card title={`School activities · ${data?.date ?? ''}`}>
+          {(data?.duties ?? []).map((item) => (
+            <View key={item.id} style={{ paddingVertical: 7 }}>
+              <Text style={ui.text}>{item.time || 'Time not set'} · {item.title}</Text>
+              <Text style={ui.muted}>{item.detail}</Text>
+            </View>
+          ))}
+          {!data?.duties?.length ? <Text style={ui.muted}>No published teaching, examination or supervision activities are listed for today.</Text> : null}
+        </Card>
+      ) : null}
+
+      <Card title="Assigned classes">
+        {classes.map((item) => (
+          <Pressable
+            key={item.id}
+            onPress={() => navigation.navigate('TE03', { classId: item.id })}
+            style={[ui.row, { paddingVertical: 6 }]}
+          >
+            <Text style={[ui.text, { flex: 1 }]}>{item.label}</Text>
+            <Text style={ui.muted}>{item.classTeacher ? 'Class teacher' : 'Subject teaching'}</Text>
+          </Pressable>
         ))}
+        {!classes.length ? <Text style={ui.muted}>No current class assignments were returned.</Text> : null}
       </Card>
 
-      <Button title="Open today's class" onPress={() => navigation.navigate('TE03', { classId: 'c1' })} />
-      <Button title="View calendar notices" variant="secondary" onPress={() => navigation.navigate('TE16')} />
+      <Button
+        title="Open an assigned class"
+        onPress={() => navigation.navigate('TE03', { classId: selectedClass === 'all' ? firstAssignedClass : selectedClass })}
+        disabled={!classes.length}
+      />
+      <Button title="View school notices" variant="secondary" onPress={() => navigation.navigate('TE16')} />
 
       <BottomNav navigation={navigation} current="TE05" />
     </Screen>
