@@ -58,6 +58,21 @@ export default function TimetableScreen({ route }) {
             </View>
           ))}
 
+          {tt.todayEvents?.length ? (
+            <View style={styles.calendarBlock}>
+              <Text style={styles.section}>Today · {tt.today}</Text>
+              {tt.todayEvents.map((event) => (
+                <View key={event.id} style={styles.dateRow}>
+                  <Text style={styles.dateDay}>{event.time || event.type}</Text>
+                  <View style={styles.dateMain}>
+                    <Text style={styles.dateTitle}>{event.title}</Text>
+                    {event.detail ? <Text style={styles.dateDetail}>{event.detail}</Text> : null}
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : null}
+
           {cal ? (
             <View style={styles.calendarBlock}>
               <Text style={styles.section}>School calendar</Text>
