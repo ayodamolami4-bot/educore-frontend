@@ -7,6 +7,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import AdminScaffold from '../components/AdminScaffold';
 import RecordList from '../components/RecordList';
 import StatusBadge from '../components/StatusBadge';
+import LabelledField from '../components/LabelledField';
 import SelectSheet from '../components/SelectSheet';
 import {
   LoadingView,
