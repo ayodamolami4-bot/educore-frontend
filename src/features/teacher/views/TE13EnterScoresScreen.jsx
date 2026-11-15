@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import React, { useEffect, useState } from 'react';
+import { Text, View } from 'react-native';
+import { useRoute } from '@react-navigation/native';
 import { Screen } from '../../../components/Screen';
 import { Button, Card, Field, Notice, Select, ui } from '../../../components/Controls';
 import { BottomNav } from './BottomNav';
@@ -20,7 +21,6 @@ const formFrom = (student) => ({
 });
 
 export function TE13EnterScoresScreen() {
-  const navigation = useNavigation();
   const route = useRoute();
   const { cycleId, assignmentId } = route.params ?? {};
   const { context, model } = useTeacher();
@@ -31,10 +31,6 @@ export function TE13EnterScoresScreen() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
-  const currentStudent = useMemo(
-    () => data?.students?.find((item) => item.id === selectedStudent) ?? null,
-    [data, selectedStudent],
-  );
   const readOnly = data?.state === 'SUBMITTED';
 
   const load = async () => {
