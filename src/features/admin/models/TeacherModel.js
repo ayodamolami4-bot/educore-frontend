@@ -1,73 +1,145 @@
-/** AD07/AD08/AD09 — Teachers: list, registration, assignments, access, timetable. */
+/** AD07–AD09 — Teacher records, teaching scope and staff provisioning. */
 import { api, normalizePage } from '../api/client';
 import { endpoints } from '../api/endpoints';
 
+const itemsOf = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.items)) return payload.items;
+  return [];
+};
+
+const classLabel = (item) => [item?.level, item?.arm].filter(Boolean).join(' ');
+
 export const TeacherModel = {
   async list(filters = {}) {
-    const page = normalizePage(await api.get(endpoints.teachers.list, null, filters));
+    const active = filters.status === 'Active'
+      ? true
+      : filters.status === 'Inactive'
+        ? false
+        : undefined;
+    const page = normalizePage(await api.get(endpoints.teachers.list, null, {
+      search: filters.q || undefined,
+      active,
+      limit: 30,
+    }));
+    const [assignmentsPage, classesPage] = await Promise.all([
+      api.get('teaching-assignments', null, { limit: 100 }),
+      api.get('classes'),
+    ]);
+    const assignments = itemsOf(assignmentsPage);
+    const classes = itemsOf(classesPage);
     return {
       ...page,
-      items: page.items.map((t) => ({
-        id: t.id,
-        name: t.fullName || t.name || '',
-        staffNumber: t.staffNumber || '',
-        phone: t.phone || '',
-        email: t.email || '',
-        formClass: t.formClass || null,
-        subjects: t.subjects || [],
-        status: t.status || 'Active',
-      })),
+      items: page.items.map((teacher) => {
+        const duties = assignments.filter((item) => item.teacherId === teacher.id);
+        const classDuty = classes.find((item) => item.attendanceTeacherId === teacher.id);
+        return {
+          id: teacher.id,
+          name: teacher.fullName ?? '',
+          staffNumber: teacher.staffNumber ?? '',
+          phone: teacher.phone ?? '',
+          email: teacher.email ?? '',
+          formClass: classDuty ? classLabel(classDuty) : '',
+          subjects: [...new Set(duties.map((item) => item.subjectName).filter(Boolean))],
+          status: teacher.active ? 'Active' : 'Inactive',
+          version: teacher.version,
+        };
+      }),
     };
   },
 
-  async create(body) {
-    return api.post(endpoints.teachers.create, null, body);
+  create(body) {
+    return api.post('teachers', null, body);
   },
 
-  /** The staff number the NEXT new teacher will get (read-only preview). */
   async nextStaffNumber() {
-    return api.get(endpoints.teachers.nextStaffNumber);
+    return null;
   },
 
-  /** Bulk CSV import — the server validates every row with the same rules
-      as the manual form and answers per-row results. */
-  async importRows(rows) {
-    return api.post(endpoints.teachers.importCsv, null, { rows });
+  async importRows() {
+    throw new Error('Teacher CSV import must use the school Imports workflow; the backend does not accept direct teacher JSON imports.');
   },
 
   async byId(teacherId) {
-    return api.get(endpoints.teachers.byId, { teacherId });
+    const staff = await api.get('staff/{teacherId}', { teacherId });
+    const [subjectsPage, classesPage] = await Promise.all([
+      api.get('subjects'),
+      api.get('classes'),
+    ]);
+    const subjectById = new Map(itemsOf(subjectsPage).map((item) => [item.id, item]));
+    const classById = new Map(itemsOf(classesPage).map((item) => [item.id, item]));
+    const qualifications = (staff.qualifications ?? []).map((item) => ({
+      ...item,
+      subjectName: subjectById.get(item.subjectId)?.name ?? item.subjectId,
+    }));
+    const assignments = (staff.assignments ?? []).map((item) => ({
+      ...item,
+      subjectName: subjectById.get(item.subjectId)?.name ?? item.subjectId,
+      classLabel: classLabel(classById.get(item.classId)),
+    }));
+    return {
+      ...staff,
+      status: staff.active ? 'Active' : 'Inactive',
+      qualifications,
+      assignments,
+      subjects: [...new Set(qualifications.map((item) => item.subjectName))],
+      formClass: (staff.attendanceClasses ?? []).map(classLabel).join(', '),
+      classOptions: itemsOf(classesPage).map((item) => ({ id: item.id, label: classLabel(item), level: item.level, sessionId: item.sessionId })),
+      subjectOptions: itemsOf(subjectsPage).map((item) => ({ id: item.id, name: item.name })),
+    };
   },
 
-  async update(teacherId, body) {
-    return api.patch(endpoints.teachers.byId, { teacherId }, body);
+  update(teacherId, body, version) {
+    return api.patch(
+      'staff/{teacherId}',
+      { teacherId },
+      body,
+      { version },
+    );
   },
 
-  /** Current teaching responsibilities (class/subject pairs). */
   async assignments(teacherId) {
-    return api.get(endpoints.teachers.assignments, { teacherId });
+    const page = await api.get('teaching-assignments', null, { teacherId, limit: 100 });
+    return itemsOf(page);
   },
 
-  /** Change responsibilities; the backend checks clashes and permissions. */
-  async changeAssignments(body) {
-    return api.post(endpoints.teachers.assignmentChanges, null, body);
+  changeAssignments(assignmentId, body, version) {
+    return api.put(
+      'teaching-assignments/{assignmentId}',
+      { assignmentId },
+      body,
+      { version },
+    );
   },
 
-  async retryProvisioning(teacherId) {
-    return api.post(endpoints.teachers.retryProvisioning, { teacherId });
+  provisioning(teacherId) {
+    return api.get('provisioning/STAFF/{teacherId}', { teacherId });
   },
 
-  /** Deactivate/reactivate app access. */
-  async changeAccess(teacherId, body) {
-    return api.post(endpoints.teachers.accessChange, { teacherId }, body);
+  retryProvisioning(teacherId, eventId, version, reason) {
+    return api.post(
+      'provisioning/STAFF/{teacherId}/retry',
+      { teacherId },
+      { eventId, reason },
+      { version },
+    );
   },
 
-  async timetable(teacherId) {
-    return api.get(endpoints.teachers.timetable, { teacherId });
+  async changeAccess(teacherId, body, version) {
+    return api.post(
+      'staff/{teacherId}/access',
+      { teacherId },
+      body,
+      { version },
+    );
   },
 
-  async invite(body) {
-    return api.post(endpoints.students.inviteAccount, null, body);
+  timetable(teacherId) {
+    return api.get('timetable', null, { teacherId });
+  },
+
+  async invite() {
+    throw new Error('Staff activation slips are managed through the onboarding workflow.');
   },
 };
 
