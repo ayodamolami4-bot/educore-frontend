@@ -17,14 +17,17 @@ import {
 import { SecondaryButton } from './AdminHomeView';
 import { TeacherProfilePresenter } from '../../presenters/TeacherProfilePresenter';
 import { TeacherModel } from '../../models';
+import { getActiveContext } from '../../api/client';
 import { colors, typography, spacing, statusTone } from '../theme';
 
-const TEACHER_STATUSES = ['Active', 'On Leave', 'Inactive'].map((s) => ({ label: s, value: s }));
+const TEACHER_STATUSES = ['Active', 'Inactive'].map((s) => ({ label: s, value: s }));
 
 export default function TeacherProfileView({ route, navigation }) {
   const [presenter] = useState(() => new TeacherProfilePresenter(TeacherModel));
   const [state, setState] = useState(presenter.initialState);
   const [statusSheet, setStatusSheet] = useState(false);
+  const [changeReason, setChangeReason] = useState('');
+  const canChangeAccess = getActiveContext()?.role === 'PRINCIPAL';
   const teacherId = route.params?.teacherId;
   const loadedOnce = useRef(false);
 
@@ -73,7 +76,7 @@ export default function TeacherProfileView({ route, navigation }) {
           <View style={styles.badgeRow}>
             <StatusBadge label={t.status} tone={statusTone[t.status] || 'muted'} />
             <Text style={styles.meta}>
-              {t.status === 'On Leave' ? 'Away — reassigned for now' : 'On duty this term'}
+              {t.status === 'Inactive' ? 'Inactive staff account' : 'Active staff record'}
             </Text>
           </View>
 
@@ -82,32 +85,41 @@ export default function TeacherProfileView({ route, navigation }) {
 
           <Text style={styles.section}>Responsibilities</Text>
           <Text style={styles.line}>
-            {t.formClass
-              ? `Form teacher of ${t.formClass}`
-              : 'Not a form teacher — subject duties only'}
+            {(t.attendanceClasses ?? []).length
+              ? `Attendance and class-report duty: ${t.attendanceClasses.map((item) => [item.level, item.arm].filter(Boolean).join(' ')).join(', ')}`
+              : 'No current attendance / class-report duty'}
           </Text>
 
           <Text style={styles.section}>Subjects taught</Text>
           <RecordList
-            items={(t.subjects || []).map((subject) => ({
-              id: subject,
-              title: subject,
-              meta: t.formClass ? `Including duties in ${t.formClass}` : 'Subject teacher',
+            items={(t.assignments || []).map((assignment) => ({
+              id: assignment.id,
+              title: assignment.subjectName,
+              meta: `${assignment.classLabel} · ${assignment.weeklyPeriods} periods / week`,
             }))}
             emptyText="No subjects assigned yet."
           />
 
-          <Text style={styles.section}>Status</Text>
+          <Text style={styles.section}>Staff access</Text>
           {state.notice ? <Text style={styles.notice}>{state.notice}</Text> : null}
-          <SecondaryButton
-            label={
-              state.busy
-                ? 'Saving…'
-                : `Change status — now ${t.status === 'On Leave' ? 'On Leave' : t.status || 'Active'}`
-            }
-            disabled={state.busy}
-            onPress={() => setStatusSheet(true)}
-          />
+          {canChangeAccess ? (
+            <>
+              <Text style={styles.meta}>Only a Principal can change staff app access. Existing teaching and attendance duties must be handed over first.</Text>
+              <LabelledField
+                label="Reason for access change *"
+                value={changeReason}
+                onChangeText={setChangeReason}
+                placeholder="Explain why this teacher is being activated or deactivated"
+              />
+              <SecondaryButton
+                label={state.busy ? 'Saving…' : `Change access — now ${t.status || 'Unknown'}`}
+                disabled={state.busy || changeReason.trim().length < 5}
+                onPress={() => setStatusSheet(true)}
+              />
+            </>
+          ) : (
+            <Text style={styles.meta}>Staff access changes are restricted to the Principal. The School Office can maintain contact records.</Text>
+          )}
 
           <View style={styles.editWrap}>
             <SecondaryButton
@@ -120,12 +132,12 @@ export default function TeacherProfileView({ route, navigation }) {
 
       <SelectSheet
         visible={statusSheet}
-        label="Teacher status — the list and timetable follow at once"
+        label="Teacher access — the backend enforces duty handover"
         options={TEACHER_STATUSES}
         value={t ? t.status : null}
         onSelect={(v) => {
           setStatusSheet(false);
-          if (v && t && v !== t.status) presenter.changeStatus(v);
+          if (v && t && v !== t.status) presenter.changeStatus(v, changeReason);
         }}
         onClose={() => setStatusSheet(false)}
       />
