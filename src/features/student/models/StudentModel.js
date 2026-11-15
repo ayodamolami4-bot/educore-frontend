@@ -37,16 +37,27 @@ function itemsOf(value) {
 }
 
 function localDate(date = new Date()) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Africa/Lagos',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
 function dateDaysAgo(days) {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  return localDate(date);
+  const [year, month, day] = localDate().split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day - days)).toISOString().slice(0, 10);
+}
+
+function minuteLabel(value) {
+  const minute = Number(value);
+  if (!Number.isFinite(minute) || minute < 0) return '';
+  const hours = Math.floor(minute / 60);
+  const minutes = minute % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
 function currentEnrolment(rows) {
@@ -290,9 +301,11 @@ export const StudentModel = {
       return response.timetable;
     }
 
-    const [timetable, classPage] = await Promise.all([
-      api.get(backend.timetable, null, {}),
+    const today = localDate();
+    const [timetable, classPage, dailySchedule] = await Promise.all([
+      api.get(backend.timetable, null, { on: today }),
       getClasses(),
+      api.get('schedule/day', null, { on: today }),
     ]);
 
     const enrolment = currentEnrolment(classPage.items);
@@ -303,29 +316,43 @@ export const StudentModel = {
       day,
       periods: lessons
         .filter((lesson) => {
-          const rawDay = String(
-            lesson.day ?? lesson.dayName ?? lesson.weekday ?? ''
-          );
-          const numericDay = Number(rawDay);
-          return rawDay.toLowerCase() === day.toLowerCase() ||
+          const numericDay = Number(lesson.weekday ?? lesson.dayOfWeek ?? lesson.day);
+          const rawDay = String(lesson.dayName ?? lesson.day ?? '').toLowerCase();
+          return rawDay === day.toLowerCase() ||
             (Number.isInteger(numericDay) && numericDay === days.indexOf(day) + 1);
         })
         .map((lesson, index) => ({
           period: lesson.period ?? lesson.periodNumber ?? index + 1,
           time:
             lesson.time ??
-            [lesson.startsAt ?? lesson.startTime, lesson.endsAt ?? lesson.endTime]
-              .filter(Boolean)
-              .join(' – '),
+            (minuteLabel(lesson.startMinute) && minuteLabel(lesson.endMinute)
+              ? `${minuteLabel(lesson.startMinute)} – ${minuteLabel(lesson.endMinute)}`
+              : [lesson.startsAt ?? lesson.startTime, lesson.endsAt ?? lesson.endTime]
+                  .filter(Boolean)
+                  .join(' – ')),
           subject: lesson.subjectName ?? lesson.subject ?? '',
         })),
     })).filter((day) => day.periods.length > 0);
+
+    const todayEvents = itemsOf(dailySchedule).map((item) => ({
+      id: item.id ?? `${item.type}-${item.startMinute}`,
+      title: item.title ?? item.subjectName ?? item.type ?? 'School activity',
+      detail: [item.classLabel, item.room, item.description].filter(Boolean).join(' · '),
+      time:
+        minuteLabel(item.startMinute) && minuteLabel(item.endMinute)
+          ? `${minuteLabel(item.startMinute)} – ${minuteLabel(item.endMinute)}`
+          : '',
+      type: item.type ?? 'ACTIVITY',
+    }));
 
     return {
       classLabel: classLabel(enrolment),
       termLabel: '',
       days: grouped,
+      today,
+      todayEvents,
       published: timetable.published ?? false,
+      timezone: timetable.timezone ?? 'Africa/Lagos',
     };
   },
 
@@ -414,10 +441,26 @@ export const StudentModel = {
       { assignmentId }
     );
     const submission = submissionView(assignment.submission);
+    if (!submission) {
+      return { items: [], assignment: assignmentView(assignment), history: null };
+    }
+
+    const history = await api.get(
+      backend.history,
+      { assignmentId, studentId }
+    );
+    const submissionWithHistory = {
+      ...submission,
+      history: {
+        revisions: itemsOf(history.revisions),
+        reviews: itemsOf(history.reviews),
+      },
+    };
 
     return {
-      items: submission ? [submission] : [],
+      items: [submissionWithHistory],
       assignment: assignmentView(assignment),
+      history,
     };
   },
 
