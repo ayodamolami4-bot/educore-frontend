@@ -15,6 +15,9 @@ export class DashboardPresenter {
       schoolName: '',
       staffName: '',
       dateLabel: '',
+      role: '',
+      schoolSummary: null,
+      financeSummary: null,
       attendance: null,
       attention: [],
       todaySchedule: [],
@@ -77,6 +80,7 @@ export class DashboardPresenter {
     if (!this._navigation) return;
     const routeByType = {
       results: 'ResultsReview',
+      imports: 'ImportsExports',
       payment: 'PaymentsBoard',
       complaint: 'ComplaintsList',
     };
