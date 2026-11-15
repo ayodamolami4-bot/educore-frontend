@@ -65,25 +65,32 @@ export class TeacherProfilePresenter {
   /** Change the teacher's status (Active / On Leave / Inactive) — the same
       control the office has for students and admins. The list, timetable
       and form-class duties all read the fresh status afterwards. */
-  async changeStatus(next) {
+  async changeStatus(next, reason) {
     if (!this._teacherId || this.state.busy) return;
+    if (!['Active', 'Inactive'].includes(next)) {
+      this._setState({ errorText: 'Choose Active or Inactive.' });
+      return;
+    }
+    if (!reason || reason.trim().length < 5) {
+      this._setState({ errorText: 'Enter an access-change reason of at least five characters.' });
+      return;
+    }
     this._setState({ busy: true, notice: null, errorText: null });
     try {
-      await this.model.update(this._teacherId, { status: next });
+      await this.model.changeAccess(
+        this._teacherId,
+        { role: 'TEACHER', active: next === 'Active', reason: reason.trim() },
+        this.state.teacher?.version,
+      );
       this._setState({
         busy: false,
-        notice:
-          next === 'Active'
-            ? 'Status set to Active — they are on duty and their app access works.'
-            : next === 'On Leave'
-              ? 'Status set to On Leave — their duties are flagged for reassignment.'
-              : 'Status set to Inactive — their subjects and form class are freed up.',
+        notice: `Teacher access change accepted. The school now records this staff member as ${next}; identity provisioning is processed separately.`,
       });
       await this.load(this._teacherId);
     } catch (error) {
       this._setState({
         busy: false,
-        errorText: error instanceof ApiError ? error.message : 'The status was not changed.',
+        errorText: error instanceof ApiError ? error.message : 'The access change was not accepted.',
       });
     }
   }
