@@ -120,29 +120,40 @@ export class TeacherModel {
       this.get(schoolId, '/teaching-assignments'),
     ]);
 
+    const classItems = itemsOf(classes);
     const assignmentItems = itemsOf(assignments);
+    const classById = new Map(classItems.map((item) => [item.id, item]));
+    const missingIds = [...new Set(assignmentItems.map((item) => item.classId).filter((id) => id && !classById.has(id)))];
+    const workspaces = await Promise.all(missingIds.map(async (id) => {
+      try {
+        const workspace = await this.get(schoolId, `/classes/${encodeURIComponent(id)}/workspace`);
+        return [id, workspace.class ?? {}];
+      } catch (error) {
+        if (error instanceof ApiError && error.problem?.status === 403) return [id, {}];
+        throw error;
+      }
+    }));
+    for (const [id, info] of workspaces) classById.set(id, info);
+
+    const byClass = new Map();
+    for (const assignment of assignmentItems) {
+      if (!byClass.has(assignment.classId)) byClass.set(assignment.classId, []);
+      byClass.get(assignment.classId).push(assignment);
+    }
 
     return {
-      items: itemsOf(classes).map((item) => {
-        const assigned = assignmentItems.filter(
-          (assignment) => assignment.classId === item.id
-        );
-
+      items: [...classById.entries()].map(([id, item]) => {
+        const assigned = byClass.get(id) ?? [];
+        const label = classLabel(item) || assigned[0]?.classLabel || 'Assigned class';
         return {
-          id: item.id,
-          label: classLabel(item),
-          detail: [
-            ...new Set(
-              assigned
-                .map((assignment) => assignment.subjectName)
-                .filter(Boolean)
-            ),
-          ].join(', '),
-          state: item.classTeacher ? 'Class teacher' : 'Assigned',
+          id,
+          label,
+          detail: [...new Set(assigned.map((assignment) => assignment.subjectName).filter(Boolean))].join(', '),
+          state: item.classTeacher ? 'Class teacher' : 'Subject teaching',
           sessionId: item.sessionId,
-          classTeacher: item.classTeacher,
+          classTeacher: Boolean(item.classTeacher),
         };
-      }),
+      }).sort((a, b) => a.label.localeCompare(b.label)),
     };
   }
 
@@ -158,9 +169,14 @@ export class TeacherModel {
     const classInfo = workspace.class ?? {};
     const subjects = itemsOf(workspace.subjects);
     const students = itemsOf(workspace.students);
+    const terms = classInfo.sessionId
+      ? itemsOf(await this.get(schoolId, '/terms', { sessionId: classInfo.sessionId }))
+      : [];
 
     return {
       classId,
+      classLabel: classLabel(classInfo),
+      sessionId: classInfo.sessionId ?? null,
       subject: subjects.map((item) => item.subjectName).filter(Boolean).join(', '),
       primaryTeacher: subjects[0]?.teacherName ?? '',
       classTeacher: classInfo.attendanceTeacherName ?? '',
@@ -171,13 +187,38 @@ export class TeacherModel {
         code: student.admissionNumber,
         state: student.status ?? student.state ?? '',
       })),
-      materials: itemsOf(materials).map((item) => ({
+      subjects: subjects.map((item) => ({
         id: item.id,
-        title: item.title,
-        detail: item.body ?? item.description ?? item.state ?? '',
-        state: item.state ?? '',
+        subjectId: item.subjectId,
+        name: item.subjectName,
+        teacherId: item.teacherId,
+        teacherName: item.teacherName,
+        department: item.department,
+        required: item.required,
+        weeklyPeriods: item.weeklyPeriods,
       })),
-      assignments: itemsOf(assignments),
+      terms: terms.map((item) => ({
+        id: item.id,
+        number: item.number,
+        label: `Term ${item.number}`,
+        startsOn: item.startsOn,
+        endsOn: item.endsOn,
+      })),
+      materials: itemsOf(materials).map((item) => {
+        const snapshot = item.draft ?? item.published ?? {};
+        return {
+          id: item.id,
+          title: snapshot.title ?? item.title ?? 'Untitled material',
+          detail: snapshot.body ?? item.description ?? '',
+          state: item.state ?? '',
+          version: item.version,
+          publishedAt: item.publishedAt ?? null,
+        };
+      }),
+      assignments: itemsOf(assignments).map((item) => ({
+        ...item,
+        detail: item.instructions ?? item.title ?? '',
+      })),
     };
   }
 
@@ -467,6 +508,30 @@ export class TeacherModel {
         state: item.state,
       })),
     };
+  }
+
+  createMaterial(schoolId, body) {
+    return this.command(schoolId, '/materials', 'POST', body);
+  }
+
+  updateMaterial(schoolId, materialId, body, version) {
+    return this.command(
+      schoolId,
+      `/materials/${encodeURIComponent(materialId)}`,
+      'PUT',
+      body,
+      version,
+    );
+  }
+
+  publishMaterial(schoolId, material) {
+    return this.command(
+      schoolId,
+      `/materials/${encodeURIComponent(material.id)}/publish`,
+      'POST',
+      undefined,
+      material.version,
+    );
   }
 
   async assignmentOptions(schoolId) {
