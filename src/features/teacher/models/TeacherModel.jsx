@@ -424,6 +424,31 @@ export class TeacherModel {
     };
   }
 
+  async assignmentOptions(schoolId) {
+    const [classes, assignments, terms] = await Promise.all([
+      this.get(schoolId, '/my-classes'),
+      this.get(schoolId, '/teaching-assignments'),
+      this.get(schoolId, '/terms'),
+    ]);
+    const classById = new Map(itemsOf(classes).map((item) => [item.id, item]));
+    return {
+      teachingAssignments: itemsOf(assignments).map((item) => ({
+        id: item.id,
+        classId: item.classId,
+        subjectId: item.subjectId,
+        termId: item.termId ?? '',
+        department: item.department ?? '',
+        label: `${classLabel(classById.get(item.classId))} · ${item.subjectName ?? 'Subject'}${item.department ? ` · ${item.department}` : ''}`,
+      })),
+      terms: itemsOf(terms).map((item) => ({
+        id: item.id,
+        sessionId: item.sessionId,
+        number: item.number,
+        label: item.label ?? `Term ${item.number ?? ''}${item.startsOn ? ` · ${item.startsOn}` : ''}`,
+      })),
+    };
+  }
+
   async assignment(schoolId, assignmentId) {
     if (!assignmentId) throw localError('Choose an assignment first.');
 
@@ -831,6 +856,23 @@ export class TeacherModel {
         session: [...new Set(classItems.map((item) => item.sessionId).filter(Boolean))].join(', '),
       },
     };
+  }
+
+  changeAssignment(schoolId, assignmentId, body, version) {
+    return this.command(
+      schoolId,
+      `/assignments/${encodeURIComponent(assignmentId)}/changes`,
+      'POST',
+      body,
+      version
+    );
+  }
+
+  reviewDraft(schoolId, assignmentId, studentId) {
+    return this.get(
+      schoolId,
+      `/assignments/${encodeURIComponent(assignmentId)}/submissions/${encodeURIComponent(studentId)}/review-draft`
+    );
   }
 
   createAssignment(schoolId, body) {
