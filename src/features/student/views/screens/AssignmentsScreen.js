@@ -7,7 +7,12 @@ import React, { useEffect, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import StudentScaffold from '../components/StudentScaffold';
 import RecordList from '../components/RecordList';
-import { LoadingView, ErrorState, EmptyState, useActionErrorAlert } from '../components/FeedbackViews';
+import {
+  LoadingView,
+  ErrorState,
+  EmptyState,
+  useActionErrorAlert,
+} from '../components/FeedbackViews';
 import { StudentAssignmentsPresenter } from '../../presenters/StudentAssignmentsPresenter';
 import { StudentModel } from '../../models';
 
@@ -25,7 +30,6 @@ export default function AssignmentsScreen({ route }) {
       unsubscribe?.remove?.();
       presenter.detach();
     };
-     
   }, [presenter, navigation, studentId]);
 
   useActionErrorAlert(state.errorText);
@@ -51,7 +55,9 @@ export default function AssignmentsScreen({ route }) {
             meta: `${a.subject} · due ${a.dueAt}${a.submission && a.submission.score != null ? ` · ${a.submission.score}/${a.maxScore}` : ''}`,
             status: a.status,
           }))}
-          onPressItem={(row) => navigation.navigate('AssignmentDetail', { studentId, assignmentId: row.id })}
+          onPressItem={(row) =>
+            navigation.navigate('AssignmentDetail', { studentId, assignmentId: row.id })
+          }
           emptyText="No assignments yet."
         />
       ) : null}

@@ -23,7 +23,6 @@ export default function AssignmentDetailScreen({ route }) {
     presenter.attach(setState);
     presenter.open(studentId, assignmentId);
     return () => presenter.detach();
-     
   }, [presenter, studentId, assignmentId]);
 
   useActionErrorAlert(state.errorText);
@@ -39,7 +38,10 @@ export default function AssignmentDetailScreen({ route }) {
     >
       {state.status === 'loading' ? <LoadingView label="Loading this assignment…" /> : null}
       {state.status === 'error' ? (
-        <ErrorState message={state.errorText} onRetry={() => presenter.open(studentId, assignmentId)} />
+        <ErrorState
+          message={state.errorText}
+          onRetry={() => presenter.open(studentId, assignmentId)}
+        />
       ) : null}
       {state.status === 'content' && a ? (
         <View>
@@ -49,14 +51,18 @@ export default function AssignmentDetailScreen({ route }) {
           {sub ? (
             <View style={styles.subBlock}>
               <Text style={styles.section}>Your last submission</Text>
-              <Text style={styles.subMeta}>Submitted {sub.submittedAt} · {sub.status}</Text>
+              <Text style={styles.subMeta}>
+                Submitted {sub.submittedAt} · {sub.status}
+              </Text>
               <Text style={styles.body}>{sub.content}</Text>
               {sub.feedback ? (
                 <View style={styles.feedbackBox}>
                   <Text style={styles.feedbackLabel}>Teacher feedback</Text>
                   <Text style={styles.body}>{sub.feedback}</Text>
                   {sub.score != null ? (
-                    <Text style={styles.score}>Score: {sub.score}/{a.maxScore}</Text>
+                    <Text style={styles.score}>
+                      Score: {sub.score}/{a.maxScore}
+                    </Text>
                   ) : null}
                 </View>
               ) : null}

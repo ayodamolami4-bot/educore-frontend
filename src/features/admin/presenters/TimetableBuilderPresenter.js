@@ -7,8 +7,12 @@ import { ApiError } from '../api/ApiError';
 import { timeError, minutesOf } from '../api/validation.js';
 
 const BASE_TIMES = [
-  '08:00 – 08:40', '08:45 – 09:25', '09:30 – 10:10',
-  '10:40 – 11:20', '11:25 – 12:05', '12:10 – 12:50',
+  '08:00 – 08:40',
+  '08:45 – 09:25',
+  '09:30 – 10:10',
+  '10:40 – 11:20',
+  '11:25 – 12:05',
+  '12:10 – 12:50',
 ];
 // Extra periods 7–10: up to 10 periods per day (raised from 8). The first two
 // extras are activity-friendly lunch/afternoon slots; 9 and 10 cover a full
@@ -90,14 +94,18 @@ export class TimetableBuilderPresenter {
     this._setState({ status: 'loading', notice: null, errorText: null });
     try {
       const page = await this.model.drafts();
-      const existing = page.items.find((d) => d.classLabel === classLabel && d.status !== 'Published');
+      const existing = page.items.find(
+        (d) => d.classLabel === classLabel && d.status !== 'Published',
+      );
       let draft;
       if (existing) {
         draft = (await this.model.draftById(existing.id)).draft;
       } else {
         // No in-progress draft. If a PUBLISHED one exists, seed the new draft
         // with its slots so the fields are NOT empty on re-open.
-        const published = page.items.find((d) => d.classLabel === classLabel && d.status === 'Published');
+        const published = page.items.find(
+          (d) => d.classLabel === classLabel && d.status === 'Published',
+        );
         const createBody = { classLabel };
         if (published) {
           createBody.seedSlots = published.slots;
@@ -139,9 +147,7 @@ export class TimetableBuilderPresenter {
     const draft = this.state.draft;
     if (!draft || this.state.saving) return;
     const slots = draft.slots.map((s) =>
-      s.day === day && s.period === period
-        ? { ...s, subject, teacherName, activity: null }
-        : s,
+      s.day === day && s.period === period ? { ...s, subject, teacherName, activity: null } : s,
     );
     this._setState({ saving: true, errorText: null });
     try {
@@ -209,7 +215,10 @@ export class TimetableBuilderPresenter {
     } catch (error) {
       this._setState({
         saving: false,
-        errorText: error instanceof ApiError ? error.message : 'The time was not saved — check the times and try again.',
+        errorText:
+          error instanceof ApiError
+            ? error.message
+            : 'The time was not saved — check the times and try again.',
       });
       return false;
     }

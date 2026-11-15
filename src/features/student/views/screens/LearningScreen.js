@@ -8,7 +8,12 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import StudentScaffold from '../components/StudentScaffold';
 import RecordList from '../components/RecordList';
-import { LoadingView, ErrorState, EmptyState, useActionErrorAlert } from '../components/FeedbackViews';
+import {
+  LoadingView,
+  ErrorState,
+  EmptyState,
+  useActionErrorAlert,
+} from '../components/FeedbackViews';
 import { StudentLearningPresenter } from '../../presenters/StudentReadPresenters';
 import { StudentModel } from '../../models';
 import { colors, typography, spacing } from '../theme';
@@ -28,15 +33,12 @@ export default function LearningScreen({ route }) {
       unsubscribe?.remove?.();
       presenter.detach();
     };
-     
   }, [presenter, navigation, studentId]);
 
   useActionErrorAlert(state.errorText);
 
   const items = state.items || [];
-  const filtered = subjectFilter
-    ? items.filter((m) => m.subject === subjectFilter)
-    : items;
+  const filtered = subjectFilter ? items.filter((m) => m.subject === subjectFilter) : items;
 
   // Detail overlay (ST03 materialById).
   const material = state.material;
@@ -90,7 +92,10 @@ export default function LearningScreen({ route }) {
 const styles = StyleSheet.create({
   overlay: {
     position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.35)',
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,

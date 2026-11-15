@@ -26,12 +26,7 @@
  * call goes to the network again.
  */
 
-import {
-  emailError,
-  phoneError,
-  timeError,
-  minutesOf,
-} from './validation.js';
+import { emailError, phoneError, timeError, minutesOf } from './validation.js';
 import {
   cleanText,
   normalizeEmail,
@@ -82,26 +77,204 @@ const DASHBOARD = {
   ],
   todaySchedule: [
     { id: 'sch-1', time: '08:00', subject: 'Morning assembly', detail: 'Main hall · all classes' },
-    { id: 'sch-2', time: '10:30', subject: 'SSS1 A · Mathematics', detail: 'Continuous assessment marks close today' },
-    { id: 'sch-3', time: '14:00', subject: 'Staff briefing', detail: 'Staff room · first-term review' },
+    {
+      id: 'sch-2',
+      time: '10:30',
+      subject: 'SSS1 A · Mathematics',
+      detail: 'Continuous assessment marks close today',
+    },
+    {
+      id: 'sch-3',
+      time: '14:00',
+      subject: 'Staff briefing',
+      detail: 'Staff room · first-term review',
+    },
   ],
 };
 
 /* ── AD02/AD04 — Students ───────────────────────────────────────────── */
 
 const STUDENTS = [
-  { id: 1, fullName: 'Amara Okafor', admissionNumber: 'GSS/2026/0141', classLabel: 'SSS1 A', department: 'Science', status: 'Active', dateOfBirth: '2010-04-17', gender: 'Female', admissionDate: '2026-09-14', guardianName: 'Mrs. Ngozi Okafor', guardianPhone: '+234 803 111 2233', guardianEmail: 'ngozi.okafor@example.com', address: '12 Palm Grove Road, Enugu' },
-  { id: 2, fullName: 'Chiamaka Eze', admissionNumber: 'GSS/2026/0142', classLabel: 'SSS1 A', department: 'Science', status: 'Active', dateOfBirth: '2010-08-02', gender: 'Female', admissionDate: '2026-09-14', guardianName: 'Mr. Chidi Eze', guardianPhone: '+234 805 222 3344', guardianEmail: 'chidi.eze@example.com', address: '4 Abakpa Nike Street, Enugu' },
-  { id: 3, fullName: 'Ngozi Ibe', admissionNumber: 'GSS/2026/0143', classLabel: 'SSS1 A', department: 'Science', status: 'Active', dateOfBirth: '2010-01-25', gender: 'Female', admissionDate: '2026-09-15', guardianName: 'Mrs. Ada Ibe', guardianPhone: '+234 807 333 4455', guardianEmail: 'ada.ibe@example.com', address: '8 Ogui Road, Enugu' },
-  { id: 4, fullName: 'Tunde Balogun', admissionNumber: 'GSS/2026/0144', classLabel: 'SSS2 A', department: 'Business / Commercial', status: 'Active', dateOfBirth: '2009-06-11', gender: 'Male', admissionDate: '2026-09-14', guardianName: 'Mr. Kunle Balogun', guardianPhone: '+234 802 444 5566', guardianEmail: 'kunle.balogun@example.com', address: '23 New Haven Road, Enugu' },
-  { id: 5, fullName: 'Fatima Bello', admissionNumber: 'GSS/2026/0145', classLabel: 'SSS2 A', department: 'Humanities / Arts', status: 'Active', dateOfBirth: '2009-12-30', gender: 'Female', admissionDate: '2026-09-14', guardianName: 'Alhaji Sani Bello', guardianPhone: '+234 806 555 6677', guardianEmail: 'sani.bello@example.com', address: '5 Garki Avenue, Enugu' },
-  { id: 6, fullName: 'Daniel Ogun', admissionNumber: 'GSS/2026/0146', classLabel: 'SSS3 A', department: 'Science', status: 'Active', dateOfBirth: '2008-03-09', gender: 'Male', admissionDate: '2026-09-14', guardianName: 'Dr. Kemi Ogun', guardianPhone: '+234 809 666 7788', guardianEmail: 'kemi.ogun@example.com', address: '17 Independence Layout, Enugu' },
-  { id: 7, fullName: 'Zainab Musa', admissionNumber: 'GSS/2026/0147', classLabel: 'SSS3 A', department: 'Business / Commercial', status: 'Active', dateOfBirth: '2008-07-21', gender: 'Female', admissionDate: '2026-09-14', guardianName: 'Alhaji Yusuf Musa', guardianPhone: '+234 803 777 8899', guardianEmail: 'yusuf.musa@example.com', address: '31 New Market Road, Enugu' },
-  { id: 8, fullName: 'Emeka Nwosu', admissionNumber: 'GSS/2026/0148', classLabel: 'JSS1 A', department: null, status: 'Active', dateOfBirth: '2012-05-14', gender: 'Male', admissionDate: '2026-09-14', guardianName: 'Mr. Obi Nwosu', guardianPhone: '+234 808 888 9900', guardianEmail: 'obi.nwosu@example.com', address: '9 Achara Layout, Enugu' },
-  { id: 9, fullName: 'Aisha Mohammed', admissionNumber: 'GSS/2026/0149', classLabel: 'JSS1 A', department: null, status: 'Active', dateOfBirth: '2012-09-28', gender: 'Female', admissionDate: '2026-09-15', guardianName: 'Hajiya Amina Mohammed', guardianPhone: '+234 805 999 0011', guardianEmail: 'amina.mohammed@example.com', address: '14 Coal City Gardens, Enugu' },
-  { id: 10, fullName: 'Kelechi Umeh', admissionNumber: 'GSS/2026/0150', classLabel: 'JSS2 A', department: null, status: 'Active', dateOfBirth: '2011-11-03', gender: 'Male', admissionDate: '2026-09-14', guardianName: 'Mrs. Ify Umeh', guardianPhone: '+234 802 101 1122', guardianEmail: 'ify.umeh@example.com', address: '2 Trans Ekulu Road, Enugu' },
-  { id: 11, fullName: 'Yusuf Abubakar', admissionNumber: 'GSS/2026/0151', classLabel: 'JSS2 A', department: null, status: 'Active', dateOfBirth: '2011-02-19', gender: 'Male', admissionDate: '2026-09-14', guardianName: 'Alhaji Bello Abubakar', guardianPhone: '+234 806 202 2233', guardianEmail: 'bello.abubakar@example.com', address: '6 Emene Road, Enugu' },
-  { id: 12, fullName: 'Blessing Adeyemi', admissionNumber: 'GSS/2025/0098', classLabel: 'JSS3 A', department: null, status: 'Withdrawn', dateOfBirth: '2011-04-08', gender: 'Female', admissionDate: '2025-09-15', guardianName: 'Pastor Samuel Adeyemi', guardianPhone: '+234 807 303 3344', guardianEmail: 'samuel.adeyemi@example.com', address: '19 Uwani, Enugu' },
+  {
+    id: 1,
+    fullName: 'Amara Okafor',
+    admissionNumber: 'GSS/2026/0141',
+    classLabel: 'SSS1 A',
+    department: 'Science',
+    status: 'Active',
+    dateOfBirth: '2010-04-17',
+    gender: 'Female',
+    admissionDate: '2026-09-14',
+    guardianName: 'Mrs. Ngozi Okafor',
+    guardianPhone: '+234 803 111 2233',
+    guardianEmail: 'ngozi.okafor@example.com',
+    address: '12 Palm Grove Road, Enugu',
+  },
+  {
+    id: 2,
+    fullName: 'Chiamaka Eze',
+    admissionNumber: 'GSS/2026/0142',
+    classLabel: 'SSS1 A',
+    department: 'Science',
+    status: 'Active',
+    dateOfBirth: '2010-08-02',
+    gender: 'Female',
+    admissionDate: '2026-09-14',
+    guardianName: 'Mr. Chidi Eze',
+    guardianPhone: '+234 805 222 3344',
+    guardianEmail: 'chidi.eze@example.com',
+    address: '4 Abakpa Nike Street, Enugu',
+  },
+  {
+    id: 3,
+    fullName: 'Ngozi Ibe',
+    admissionNumber: 'GSS/2026/0143',
+    classLabel: 'SSS1 A',
+    department: 'Science',
+    status: 'Active',
+    dateOfBirth: '2010-01-25',
+    gender: 'Female',
+    admissionDate: '2026-09-15',
+    guardianName: 'Mrs. Ada Ibe',
+    guardianPhone: '+234 807 333 4455',
+    guardianEmail: 'ada.ibe@example.com',
+    address: '8 Ogui Road, Enugu',
+  },
+  {
+    id: 4,
+    fullName: 'Tunde Balogun',
+    admissionNumber: 'GSS/2026/0144',
+    classLabel: 'SSS2 A',
+    department: 'Business / Commercial',
+    status: 'Active',
+    dateOfBirth: '2009-06-11',
+    gender: 'Male',
+    admissionDate: '2026-09-14',
+    guardianName: 'Mr. Kunle Balogun',
+    guardianPhone: '+234 802 444 5566',
+    guardianEmail: 'kunle.balogun@example.com',
+    address: '23 New Haven Road, Enugu',
+  },
+  {
+    id: 5,
+    fullName: 'Fatima Bello',
+    admissionNumber: 'GSS/2026/0145',
+    classLabel: 'SSS2 A',
+    department: 'Humanities / Arts',
+    status: 'Active',
+    dateOfBirth: '2009-12-30',
+    gender: 'Female',
+    admissionDate: '2026-09-14',
+    guardianName: 'Alhaji Sani Bello',
+    guardianPhone: '+234 806 555 6677',
+    guardianEmail: 'sani.bello@example.com',
+    address: '5 Garki Avenue, Enugu',
+  },
+  {
+    id: 6,
+    fullName: 'Daniel Ogun',
+    admissionNumber: 'GSS/2026/0146',
+    classLabel: 'SSS3 A',
+    department: 'Science',
+    status: 'Active',
+    dateOfBirth: '2008-03-09',
+    gender: 'Male',
+    admissionDate: '2026-09-14',
+    guardianName: 'Dr. Kemi Ogun',
+    guardianPhone: '+234 809 666 7788',
+    guardianEmail: 'kemi.ogun@example.com',
+    address: '17 Independence Layout, Enugu',
+  },
+  {
+    id: 7,
+    fullName: 'Zainab Musa',
+    admissionNumber: 'GSS/2026/0147',
+    classLabel: 'SSS3 A',
+    department: 'Business / Commercial',
+    status: 'Active',
+    dateOfBirth: '2008-07-21',
+    gender: 'Female',
+    admissionDate: '2026-09-14',
+    guardianName: 'Alhaji Yusuf Musa',
+    guardianPhone: '+234 803 777 8899',
+    guardianEmail: 'yusuf.musa@example.com',
+    address: '31 New Market Road, Enugu',
+  },
+  {
+    id: 8,
+    fullName: 'Emeka Nwosu',
+    admissionNumber: 'GSS/2026/0148',
+    classLabel: 'JSS1 A',
+    department: null,
+    status: 'Active',
+    dateOfBirth: '2012-05-14',
+    gender: 'Male',
+    admissionDate: '2026-09-14',
+    guardianName: 'Mr. Obi Nwosu',
+    guardianPhone: '+234 808 888 9900',
+    guardianEmail: 'obi.nwosu@example.com',
+    address: '9 Achara Layout, Enugu',
+  },
+  {
+    id: 9,
+    fullName: 'Aisha Mohammed',
+    admissionNumber: 'GSS/2026/0149',
+    classLabel: 'JSS1 A',
+    department: null,
+    status: 'Active',
+    dateOfBirth: '2012-09-28',
+    gender: 'Female',
+    admissionDate: '2026-09-15',
+    guardianName: 'Hajiya Amina Mohammed',
+    guardianPhone: '+234 805 999 0011',
+    guardianEmail: 'amina.mohammed@example.com',
+    address: '14 Coal City Gardens, Enugu',
+  },
+  {
+    id: 10,
+    fullName: 'Kelechi Umeh',
+    admissionNumber: 'GSS/2026/0150',
+    classLabel: 'JSS2 A',
+    department: null,
+    status: 'Active',
+    dateOfBirth: '2011-11-03',
+    gender: 'Male',
+    admissionDate: '2026-09-14',
+    guardianName: 'Mrs. Ify Umeh',
+    guardianPhone: '+234 802 101 1122',
+    guardianEmail: 'ify.umeh@example.com',
+    address: '2 Trans Ekulu Road, Enugu',
+  },
+  {
+    id: 11,
+    fullName: 'Yusuf Abubakar',
+    admissionNumber: 'GSS/2026/0151',
+    classLabel: 'JSS2 A',
+    department: null,
+    status: 'Active',
+    dateOfBirth: '2011-02-19',
+    gender: 'Male',
+    admissionDate: '2026-09-14',
+    guardianName: 'Alhaji Bello Abubakar',
+    guardianPhone: '+234 806 202 2233',
+    guardianEmail: 'bello.abubakar@example.com',
+    address: '6 Emene Road, Enugu',
+  },
+  {
+    id: 12,
+    fullName: 'Blessing Adeyemi',
+    admissionNumber: 'GSS/2025/0098',
+    classLabel: 'JSS3 A',
+    department: null,
+    status: 'Withdrawn',
+    dateOfBirth: '2011-04-08',
+    gender: 'Female',
+    admissionDate: '2025-09-15',
+    guardianName: 'Pastor Samuel Adeyemi',
+    guardianPhone: '+234 807 303 3344',
+    guardianEmail: 'samuel.adeyemi@example.com',
+    address: '19 Uwani, Enugu',
+  },
 ];
 
 const PREVIOUS_CLASS = {
@@ -167,7 +340,10 @@ function feeStatusFor(id) {
     return { summary: 'Account closed — nothing outstanding', planName: '—' };
   }
   if (!invoice || invoice.status === 'Paid') {
-    return { summary: 'Up to date — nothing outstanding', planName: invoice ? invoice.planName : 'First Term 2026/2027 fees' };
+    return {
+      summary: 'Up to date — nothing outstanding',
+      planName: invoice ? invoice.planName : 'First Term 2026/2027 fees',
+    };
   }
   const owing = (invoice.balanceLabel || '').replace('Balance ', '');
   return { summary: `${owing} outstanding for ${invoice.planName}`, planName: invoice.planName };
@@ -176,24 +352,119 @@ function feeStatusFor(id) {
 /* ── AD22 — Invoices ────────────────────────────────────────────────── */
 
 const INVOICES = [
-  { id: 'inv-1', number: 'INV-2026-0141', studentName: 'Amara Okafor', planName: 'First Term tuition 2026/2027', amountLabel: '₦85,000', balanceLabel: 'Balance ₦0', status: 'Paid', dueDate: '2026-09-28', amount: 85000, paid: 85000 },
-  { id: 'inv-2', number: 'INV-2026-0142', studentName: 'Chiamaka Eze', planName: 'First Term tuition 2026/2027', amountLabel: '₦85,000', balanceLabel: 'Balance ₦45,000', status: 'PartiallyPaid', dueDate: '2026-09-28', amount: 85000, paid: 40000 },
-  { id: 'inv-3', number: 'INV-2026-0144', studentName: 'Tunde Balogun', planName: 'Tuition + boarding 2026/2027', amountLabel: '₦120,000', balanceLabel: 'Balance ₦120,000', status: 'Overdue', dueDate: '2026-09-28', amount: 120000, paid: 0 },
-  { id: 'inv-4', number: 'INV-2026-0145', studentName: 'Fatima Bello', planName: 'First Term tuition 2026/2027', amountLabel: '₦85,000', balanceLabel: 'Balance ₦0', status: 'Paid', dueDate: '2026-09-28', amount: 85000, paid: 85000 },
-  { id: 'inv-5', number: 'INV-2026-0146', studentName: 'Daniel Ogun', planName: 'First Term tuition 2026/2027', amountLabel: '₦85,000', balanceLabel: 'Balance ₦30,000', status: 'PartiallyPaid', dueDate: '2026-09-28', amount: 85000, paid: 55000 },
-  { id: 'inv-6', number: 'INV-2026-0148', studentName: 'Emeka Nwosu', planName: 'First Term tuition 2026/2027', amountLabel: '₦85,000', balanceLabel: 'Balance ₦85,000', status: 'Draft', dueDate: '2026-09-28', amount: 85000, paid: 0 },
-  { id: 'inv-7', number: 'INV-2026-0147', studentName: 'Zainab Musa', planName: 'First Term tuition 2026/2027', amountLabel: '₦85,000', balanceLabel: 'Balance ₦0', status: 'Paid', dueDate: '2026-09-28', amount: 85000, paid: 85000 },
+  {
+    id: 'inv-1',
+    number: 'INV-2026-0141',
+    studentName: 'Amara Okafor',
+    planName: 'First Term tuition 2026/2027',
+    amountLabel: '₦85,000',
+    balanceLabel: 'Balance ₦0',
+    status: 'Paid',
+    dueDate: '2026-09-28',
+    amount: 85000,
+    paid: 85000,
+  },
+  {
+    id: 'inv-2',
+    number: 'INV-2026-0142',
+    studentName: 'Chiamaka Eze',
+    planName: 'First Term tuition 2026/2027',
+    amountLabel: '₦85,000',
+    balanceLabel: 'Balance ₦45,000',
+    status: 'PartiallyPaid',
+    dueDate: '2026-09-28',
+    amount: 85000,
+    paid: 40000,
+  },
+  {
+    id: 'inv-3',
+    number: 'INV-2026-0144',
+    studentName: 'Tunde Balogun',
+    planName: 'Tuition + boarding 2026/2027',
+    amountLabel: '₦120,000',
+    balanceLabel: 'Balance ₦120,000',
+    status: 'Overdue',
+    dueDate: '2026-09-28',
+    amount: 120000,
+    paid: 0,
+  },
+  {
+    id: 'inv-4',
+    number: 'INV-2026-0145',
+    studentName: 'Fatima Bello',
+    planName: 'First Term tuition 2026/2027',
+    amountLabel: '₦85,000',
+    balanceLabel: 'Balance ₦0',
+    status: 'Paid',
+    dueDate: '2026-09-28',
+    amount: 85000,
+    paid: 85000,
+  },
+  {
+    id: 'inv-5',
+    number: 'INV-2026-0146',
+    studentName: 'Daniel Ogun',
+    planName: 'First Term tuition 2026/2027',
+    amountLabel: '₦85,000',
+    balanceLabel: 'Balance ₦30,000',
+    status: 'PartiallyPaid',
+    dueDate: '2026-09-28',
+    amount: 85000,
+    paid: 55000,
+  },
+  {
+    id: 'inv-6',
+    number: 'INV-2026-0148',
+    studentName: 'Emeka Nwosu',
+    planName: 'First Term tuition 2026/2027',
+    amountLabel: '₦85,000',
+    balanceLabel: 'Balance ₦85,000',
+    status: 'Draft',
+    dueDate: '2026-09-28',
+    amount: 85000,
+    paid: 0,
+  },
+  {
+    id: 'inv-7',
+    number: 'INV-2026-0147',
+    studentName: 'Zainab Musa',
+    planName: 'First Term tuition 2026/2027',
+    amountLabel: '₦85,000',
+    balanceLabel: 'Balance ₦0',
+    status: 'Paid',
+    dueDate: '2026-09-28',
+    amount: 85000,
+    paid: 85000,
+  },
 ];
 
 // AD23 — payments already recorded on each invoice (office + online).
 const INVOICE_PAYMENTS = {
   'inv-2': [
-    { id: 'ipm-1', method: 'Paystack (online)', amountLabel: '₦40,000', reference: 'PSK-2201-0920-E', paidAt: '2026-09-20' },
-    { id: 'ipm-2', method: 'Cash (office)', amountLabel: '₦15,000', reference: 'RCP-0112', paidAt: '2026-09-05' },
+    {
+      id: 'ipm-1',
+      method: 'Paystack (online)',
+      amountLabel: '₦40,000',
+      reference: 'PSK-2201-0920-E',
+      paidAt: '2026-09-20',
+    },
+    {
+      id: 'ipm-2',
+      method: 'Cash (office)',
+      amountLabel: '₦15,000',
+      reference: 'RCP-0112',
+      paidAt: '2026-09-05',
+    },
   ],
   'inv-3': [],
   'inv-5': [
-    { id: 'ipm-3', method: 'Transfer (office)', amountLabel: '₦55,000', reference: 'RCP-0134', paidAt: '2026-09-18' },
+    {
+      id: 'ipm-3',
+      method: 'Transfer (office)',
+      amountLabel: '₦55,000',
+      reference: 'RCP-0134',
+      paidAt: '2026-09-18',
+    },
   ],
 };
 
@@ -249,36 +520,72 @@ const REFUND_REQUESTS = [
 // the STUDENTS seed so a child row opens that student's profile.
 const GUARDIANS = [
   {
-    id: 'gd-1', fullName: 'Mrs. Ngozi Okafor', phone: '+234 803 111 2233', email: 'ngozi.okafor@example.com',
-    relationship: 'Mother', status: 'Active', childrenCount: 1,
-    children: [{ studentId: 1, name: 'Amara Okafor', classLabel: 'SSS1 A', relationship: 'Mother' }],
+    id: 'gd-1',
+    fullName: 'Mrs. Ngozi Okafor',
+    phone: '+234 803 111 2233',
+    email: 'ngozi.okafor@example.com',
+    relationship: 'Mother',
+    status: 'Active',
+    childrenCount: 1,
+    children: [
+      { studentId: 1, name: 'Amara Okafor', classLabel: 'SSS1 A', relationship: 'Mother' },
+    ],
   },
   {
-    id: 'gd-2', fullName: 'Mr. Chibueze Eze', phone: '+234 805 222 3344', email: 'chibueze.eze@example.com',
-    relationship: 'Father', status: 'Active', childrenCount: 2,
+    id: 'gd-2',
+    fullName: 'Mr. Chibueze Eze',
+    phone: '+234 805 222 3344',
+    email: 'chibueze.eze@example.com',
+    relationship: 'Father',
+    status: 'Active',
+    childrenCount: 2,
     children: [
       { studentId: 2, name: 'Chiamaka Eze', classLabel: 'SSS1 A', relationship: 'Father' },
       { studentId: 12, name: 'Blessing Adeyemi', classLabel: 'JSS3 A', relationship: 'Father' },
     ],
   },
   {
-    id: 'gd-3', fullName: 'Alhaji Sani Musa', phone: '+234 806 333 4455', email: 'sani.musa@example.com',
-    relationship: 'Father', status: 'Invited', childrenCount: 1,
+    id: 'gd-3',
+    fullName: 'Alhaji Sani Musa',
+    phone: '+234 806 333 4455',
+    email: 'sani.musa@example.com',
+    relationship: 'Father',
+    status: 'Invited',
+    childrenCount: 1,
     children: [{ studentId: 7, name: 'Zainab Musa', classLabel: 'SSS3 A', relationship: 'Father' }],
   },
   {
-    id: 'gd-4', fullName: 'Mrs. Funke Balogun', phone: '+234 807 444 5566', email: 'funke.balogun@example.com',
-    relationship: 'Mother', status: 'Active', childrenCount: 1,
-    children: [{ studentId: 4, name: 'Tunde Balogun', classLabel: 'SSS2 A', relationship: 'Mother' }],
+    id: 'gd-4',
+    fullName: 'Mrs. Funke Balogun',
+    phone: '+234 807 444 5566',
+    email: 'funke.balogun@example.com',
+    relationship: 'Mother',
+    status: 'Active',
+    childrenCount: 1,
+    children: [
+      { studentId: 4, name: 'Tunde Balogun', classLabel: 'SSS2 A', relationship: 'Mother' },
+    ],
   },
   {
-    id: 'gd-5', fullName: 'Mr. Emeka Bello', phone: '+234 808 555 6677', email: 'emeka.bello@example.com',
-    relationship: 'Father', status: 'Active', childrenCount: 1,
-    children: [{ studentId: 5, name: 'Fatima Bello', classLabel: 'SSS2 A', relationship: 'Father' }],
+    id: 'gd-5',
+    fullName: 'Mr. Emeka Bello',
+    phone: '+234 808 555 6677',
+    email: 'emeka.bello@example.com',
+    relationship: 'Father',
+    status: 'Active',
+    childrenCount: 1,
+    children: [
+      { studentId: 5, name: 'Fatima Bello', classLabel: 'SSS2 A', relationship: 'Father' },
+    ],
   },
   {
-    id: 'gd-6', fullName: 'Mrs. Adaeze Ogun', phone: '+234 809 666 7788', email: 'adaeze.ogun@example.com',
-    relationship: 'Mother', status: 'Active', childrenCount: 1,
+    id: 'gd-6',
+    fullName: 'Mrs. Adaeze Ogun',
+    phone: '+234 809 666 7788',
+    email: 'adaeze.ogun@example.com',
+    relationship: 'Mother',
+    status: 'Active',
+    childrenCount: 1,
     children: [{ studentId: 6, name: 'Daniel Ogun', classLabel: 'SSS3 A', relationship: 'Mother' }],
   },
 ];
@@ -286,28 +593,53 @@ const GUARDIANS = [
 // AD07/AD09 — teachers, their subjects and form-class responsibilities.
 const TEACHERS = [
   {
-    id: 'tch-1', fullName: 'Mrs. Ifeoma Eze', staffNumber: 'GST/014', phone: '+234 810 111 2020',
-    email: 'ifeoma.eze@greenfield.edu.ng', status: 'Active', formClass: 'SSS1 A',
+    id: 'tch-1',
+    fullName: 'Mrs. Ifeoma Eze',
+    staffNumber: 'GST/014',
+    phone: '+234 810 111 2020',
+    email: 'ifeoma.eze@greenfield.edu.ng',
+    status: 'Active',
+    formClass: 'SSS1 A',
     subjects: ['Biology', 'Agricultural Science', 'Chemistry'],
   },
   {
-    id: 'tch-2', fullName: 'Mr. Ademola Adeyinka', staffNumber: 'GST/022', phone: '+234 810 222 3030',
-    email: 'ademola.adeyinka@greenfield.edu.ng', status: 'Active', formClass: 'SSS2 A',
+    id: 'tch-2',
+    fullName: 'Mr. Ademola Adeyinka',
+    staffNumber: 'GST/022',
+    phone: '+234 810 222 3030',
+    email: 'ademola.adeyinka@greenfield.edu.ng',
+    status: 'Active',
+    formClass: 'SSS2 A',
     subjects: ['Economics', 'Commerce', 'Government'],
   },
   {
-    id: 'tch-3', fullName: 'Mr. Kabiru Lawal', staffNumber: 'GST/031', phone: '+234 810 333 4040',
-    email: 'kabiru.lawal@greenfield.edu.ng', status: 'On Leave', formClass: null,
+    id: 'tch-3',
+    fullName: 'Mr. Kabiru Lawal',
+    staffNumber: 'GST/031',
+    phone: '+234 810 333 4040',
+    email: 'kabiru.lawal@greenfield.edu.ng',
+    status: 'On Leave',
+    formClass: null,
     subjects: ['Further Mathematics'],
   },
   {
-    id: 'tch-4', fullName: 'Miss Chioma Obi', staffNumber: 'GST/040', phone: '+234 810 444 5050',
-    email: 'chioma.obi@greenfield.edu.ng', status: 'Active', formClass: 'JSS1 A',
+    id: 'tch-4',
+    fullName: 'Miss Chioma Obi',
+    staffNumber: 'GST/040',
+    phone: '+234 810 444 5050',
+    email: 'chioma.obi@greenfield.edu.ng',
+    status: 'Active',
+    formClass: 'JSS1 A',
     subjects: ['English Language', 'Literature', 'Igbo Language'],
   },
   {
-    id: 'tch-5', fullName: 'Mr. Danladi Yusuf', staffNumber: 'GST/053', phone: '+234 810 555 6060',
-    email: 'danladi.yusuf@greenfield.edu.ng', status: 'Active', formClass: null,
+    id: 'tch-5',
+    fullName: 'Mr. Danladi Yusuf',
+    staffNumber: 'GST/053',
+    phone: '+234 810 555 6060',
+    email: 'danladi.yusuf@greenfield.edu.ng',
+    status: 'Active',
+    formClass: null,
     subjects: ['Basic Science', 'Mathematics', 'Physics'],
   },
 ];
@@ -316,24 +648,48 @@ const TEACHERS = [
 // creates one invoice per ACTIVE student in that class.
 const FEE_PLANS = [
   {
-    id: 'fp-1', classLabel: 'JSS1 A', title: 'First Term tuition 2026/2027',
-    term: '2026/2027 · First Term', amount: 85000, amountLabel: '₦85,000',
-    dueDate: '2026-09-28', status: 'Issued', issuedCount: 3,
+    id: 'fp-1',
+    classLabel: 'JSS1 A',
+    title: 'First Term tuition 2026/2027',
+    term: '2026/2027 · First Term',
+    amount: 85000,
+    amountLabel: '₦85,000',
+    dueDate: '2026-09-28',
+    status: 'Issued',
+    issuedCount: 3,
   },
   {
-    id: 'fp-2', classLabel: 'SSS3 A', title: 'First Term tuition 2026/2027',
-    term: '2026/2027 · First Term', amount: 85000, amountLabel: '₦85,000',
-    dueDate: '2026-09-28', status: 'Issued', issuedCount: 2,
+    id: 'fp-2',
+    classLabel: 'SSS3 A',
+    title: 'First Term tuition 2026/2027',
+    term: '2026/2027 · First Term',
+    amount: 85000,
+    amountLabel: '₦85,000',
+    dueDate: '2026-09-28',
+    status: 'Issued',
+    issuedCount: 2,
   },
   {
-    id: 'fp-3', classLabel: 'JSS2 A', title: 'First Term tuition 2026/2027',
-    term: '2026/2027 · First Term', amount: 85000, amountLabel: '₦85,000',
-    dueDate: '2026-12-15', status: 'Draft', studentsCount: 2,
+    id: 'fp-3',
+    classLabel: 'JSS2 A',
+    title: 'First Term tuition 2026/2027',
+    term: '2026/2027 · First Term',
+    amount: 85000,
+    amountLabel: '₦85,000',
+    dueDate: '2026-12-15',
+    status: 'Draft',
+    studentsCount: 2,
   },
   {
-    id: 'fp-4', classLabel: 'SSS1 A', title: 'Excursion levy — First Term',
-    term: '2026/2027 · First Term', amount: 15000, amountLabel: '₦15,000',
-    dueDate: '2026-11-30', status: 'Draft', studentsCount: 3,
+    id: 'fp-4',
+    classLabel: 'SSS1 A',
+    title: 'Excursion levy — First Term',
+    term: '2026/2027 · First Term',
+    amount: 15000,
+    amountLabel: '₦15,000',
+    dueDate: '2026-11-30',
+    status: 'Draft',
+    studentsCount: 3,
   },
 ];
 
@@ -346,18 +702,90 @@ const SSS_DEPARTMENTS = {
   'SSS3 A': 'Science',
 };
 const SUBJECTS = [
-  { id: 'sub-1', name: 'Mathematics', department: 'Core', departments: ['Core'], classes: CLASS_NAMES.slice() },
-  { id: 'sub-2', name: 'English Language', department: 'Core', departments: ['Core'], classes: CLASS_NAMES.slice() },
-  { id: 'sub-3', name: 'Basic Science', department: 'JSS', departments: ['JSS'], classes: ['JSS1 A', 'JSS1 B', 'JSS2 A', 'JSS3 A'] },
-  { id: 'sub-4', name: 'Igbo Language', department: 'Core', departments: ['Core'], classes: CLASS_NAMES.slice() },
-  { id: 'sub-5', name: 'Biology', department: 'Science', departments: ['Science'], classes: ['SSS1 A', 'SSS2 A', 'SSS3 A'] },
-  { id: 'sub-6', name: 'Chemistry', department: 'Science', departments: ['Science'], classes: ['SSS1 A', 'SSS2 A', 'SSS3 A'] },
-  { id: 'sub-7', name: 'Physics', department: 'Science', departments: ['Science'], classes: ['SSS1 A', 'SSS2 A', 'SSS3 A'] },
-  { id: 'sub-8', name: 'Agricultural Science', department: 'JSS', departments: ['JSS', 'Science'], classes: ['JSS3 A', 'SSS1 A'] },
-  { id: 'sub-9', name: 'Economics', department: 'Humanities / Arts', departments: ['Humanities / Arts', 'Business / Commercial'], classes: ['SSS1 A', 'SSS2 A', 'SSS3 A'] },
-  { id: 'sub-10', name: 'Government', department: 'Humanities / Arts', departments: ['Humanities / Arts'], classes: ['SSS2 A', 'SSS3 A'] },
-  { id: 'sub-11', name: 'Literature', department: 'Humanities / Arts', departments: ['Humanities / Arts'], classes: ['SSS2 A', 'SSS3 A'] },
-  { id: 'sub-12', name: 'Commerce', department: 'Business / Commercial', departments: ['Business / Commercial'], classes: ['SSS1 A', 'SSS2 A', 'SSS3 A'] },
+  {
+    id: 'sub-1',
+    name: 'Mathematics',
+    department: 'Core',
+    departments: ['Core'],
+    classes: CLASS_NAMES.slice(),
+  },
+  {
+    id: 'sub-2',
+    name: 'English Language',
+    department: 'Core',
+    departments: ['Core'],
+    classes: CLASS_NAMES.slice(),
+  },
+  {
+    id: 'sub-3',
+    name: 'Basic Science',
+    department: 'JSS',
+    departments: ['JSS'],
+    classes: ['JSS1 A', 'JSS1 B', 'JSS2 A', 'JSS3 A'],
+  },
+  {
+    id: 'sub-4',
+    name: 'Igbo Language',
+    department: 'Core',
+    departments: ['Core'],
+    classes: CLASS_NAMES.slice(),
+  },
+  {
+    id: 'sub-5',
+    name: 'Biology',
+    department: 'Science',
+    departments: ['Science'],
+    classes: ['SSS1 A', 'SSS2 A', 'SSS3 A'],
+  },
+  {
+    id: 'sub-6',
+    name: 'Chemistry',
+    department: 'Science',
+    departments: ['Science'],
+    classes: ['SSS1 A', 'SSS2 A', 'SSS3 A'],
+  },
+  {
+    id: 'sub-7',
+    name: 'Physics',
+    department: 'Science',
+    departments: ['Science'],
+    classes: ['SSS1 A', 'SSS2 A', 'SSS3 A'],
+  },
+  {
+    id: 'sub-8',
+    name: 'Agricultural Science',
+    department: 'JSS',
+    departments: ['JSS', 'Science'],
+    classes: ['JSS3 A', 'SSS1 A'],
+  },
+  {
+    id: 'sub-9',
+    name: 'Economics',
+    department: 'Humanities / Arts',
+    departments: ['Humanities / Arts', 'Business / Commercial'],
+    classes: ['SSS1 A', 'SSS2 A', 'SSS3 A'],
+  },
+  {
+    id: 'sub-10',
+    name: 'Government',
+    department: 'Humanities / Arts',
+    departments: ['Humanities / Arts'],
+    classes: ['SSS2 A', 'SSS3 A'],
+  },
+  {
+    id: 'sub-11',
+    name: 'Literature',
+    department: 'Humanities / Arts',
+    departments: ['Humanities / Arts'],
+    classes: ['SSS2 A', 'SSS3 A'],
+  },
+  {
+    id: 'sub-12',
+    name: 'Commerce',
+    department: 'Business / Commercial',
+    departments: ['Business / Commercial'],
+    classes: ['SSS1 A', 'SSS2 A', 'SSS3 A'],
+  },
 ];
 
 function buildClasses() {
@@ -404,7 +832,9 @@ function liveClassNames() {
     label case-insensitively (see liveClassNames/CLASSES clash checks) —
     "JSS1 a" and "JSS1 A" are the SAME class and must be refused. */
 function parseClassLabel(raw) {
-  const text = String(raw || '').trim().replace(/\s+/g, ' ');
+  const text = String(raw || '')
+    .trim()
+    .replace(/\s+/g, ' ');
   const m = /^((?:JSS|SSS)\d)\s+([A-Za-z][A-Za-z ]{0,11})$/i.exec(text);
   if (!m) return null;
   const level = m[1].toUpperCase();
@@ -415,7 +845,9 @@ function parseClassLabel(raw) {
 /** Case-insensitive "does this class label already exist?" — used by both
     the create and rename guards so "JSS1 a" cannot sneak past "JSS1 A". */
 function classLabelExists(label, exceptId) {
-  const target = String(label || '').trim().toLowerCase();
+  const target = String(label || '')
+    .trim()
+    .toLowerCase();
   return CLASSES.some((c) => c.id !== exceptId && c.classLabel.toLowerCase() === target);
 }
 
@@ -427,8 +859,12 @@ function classLabelFormatError() {
 // teacher offset so the seeded drafts never clash with each other.
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const PERIOD_TIMES = [
-  '08:00 – 08:40', '08:45 – 09:25', '09:30 – 10:10',
-  '10:40 – 11:20', '11:25 – 12:05', '12:10 – 12:50',
+  '08:00 – 08:40',
+  '08:45 – 09:25',
+  '09:30 – 10:10',
+  '10:40 – 11:20',
+  '11:25 – 12:05',
+  '12:10 – 12:50',
 ];
 const PERIOD_START_END = PERIOD_TIMES.map((t) => {
   const [start, end] = t.split('–').map((x) => x.trim());
@@ -516,8 +952,20 @@ function slotOrderError(slots) {
 }
 
 const TIMETABLE_DRAFTS = [
-  { id: 'ttd-1', classLabel: 'JSS1 A', term: '2026/2027 · First Term', status: 'Ready to review', slots: makeSlots('JSS1 A', 5) },
-  { id: 'ttd-2', classLabel: 'JSS1 B', term: '2026/2027 · First Term', status: 'Draft', slots: makeSlots('JSS1 B', 3) },
+  {
+    id: 'ttd-1',
+    classLabel: 'JSS1 A',
+    term: '2026/2027 · First Term',
+    status: 'Ready to review',
+    slots: makeSlots('JSS1 A', 5),
+  },
+  {
+    id: 'ttd-2',
+    classLabel: 'JSS1 B',
+    term: '2026/2027 · First Term',
+    status: 'Draft',
+    slots: makeSlots('JSS1 B', 3),
+  },
 ];
 
 /** Shared rules for validating a draft: completeness, subject-class fit,
@@ -626,7 +1074,12 @@ const REGISTER_SLOTS = [
   { subject: 'Mathematics', time: '10:30' },
   { subject: 'English Language', time: '12:10' },
 ];
-const REGISTER_TEACHERS = ['Mr. Ade Okafor', 'Mrs. Grace Umeh', 'Mr. Emeka Ubah', 'Miss Halima Yusuf'];
+const REGISTER_TEACHERS = [
+  'Mr. Ade Okafor',
+  'Mrs. Grace Umeh',
+  'Mr. Emeka Ubah',
+  'Miss Halima Yusuf',
+];
 
 const ATTENDANCE_REGISTERS = (() => {
   const rows = [];
@@ -697,48 +1150,213 @@ DASHBOARD.registersSubmitted = ATTENDANCE_REGISTERS.filter((r) => r.status === '
 DASHBOARD.missingRegisters = ATTENDANCE_REGISTERS.length - DASHBOARD.registersSubmitted;
 
 const ATTENDANCE_CORRECTIONS = [
-  { id: 'cor-1', classLabel: 'JSS1 B', subject: 'Class register', teacher: 'Mrs. Grace Umeh', detail: 'Chiamaka Eze marked absent — guardian says she arrived late', status: 'Pending', requestedAt: todayLabel() },
-  { id: 'cor-2', classLabel: 'SSS3 A', subject: 'Mathematics', teacher: 'Mr. Ade Okafor', detail: 'Daniel Ogun absent but wrote the CA in the hall', status: 'Pending', requestedAt: todayLabel() },
+  {
+    id: 'cor-1',
+    classLabel: 'JSS1 B',
+    subject: 'Class register',
+    teacher: 'Mrs. Grace Umeh',
+    detail: 'Chiamaka Eze marked absent — guardian says she arrived late',
+    status: 'Pending',
+    requestedAt: todayLabel(),
+  },
+  {
+    id: 'cor-2',
+    classLabel: 'SSS3 A',
+    subject: 'Mathematics',
+    teacher: 'Mr. Ade Okafor',
+    detail: 'Daniel Ogun absent but wrote the CA in the hall',
+    status: 'Pending',
+    requestedAt: todayLabel(),
+  },
 ];
 
 /* ── AD19 — Results review (mark packages + report batches) ─────────── */
 
 const MARK_PACKAGES = [
-  { id: 'pkg-1', classLabel: 'SSS1 A', subject: 'Mathematics', termLabel: 'First Term', teacherName: 'Mr. Ade Okafor', status: 'ReturnedForCorrections', studentCount: 32, detail: 'CA totals do not match the exam sheet for 2 students', submittedAt: '2026-11-08' },
-  { id: 'pkg-2', classLabel: 'SSS2 A', subject: 'Mathematics', termLabel: 'First Term', teacherName: 'Mr. Ade Okafor', status: 'ReturnedForCorrections', studentCount: 28, detail: 'Two absences need a recorded decision', submittedAt: '2026-11-08' },
-  { id: 'pkg-3', classLabel: 'SSS1 A', subject: 'English Language', termLabel: 'First Term', teacherName: 'Mrs. Grace Umeh', status: 'Submitted', studentCount: 32, detail: 'Awaiting admin sign-off', submittedAt: '2026-11-09' },
-  { id: 'pkg-4', classLabel: 'JSS2 A', subject: 'Basic Science', termLabel: 'First Term', teacherName: 'Mr. Emeka Ubah', status: 'Approved', studentCount: 30, detail: 'Signed off', submittedAt: '2026-11-07' },
+  {
+    id: 'pkg-1',
+    classLabel: 'SSS1 A',
+    subject: 'Mathematics',
+    termLabel: 'First Term',
+    teacherName: 'Mr. Ade Okafor',
+    status: 'ReturnedForCorrections',
+    studentCount: 32,
+    detail: 'CA totals do not match the exam sheet for 2 students',
+    submittedAt: '2026-11-08',
+  },
+  {
+    id: 'pkg-2',
+    classLabel: 'SSS2 A',
+    subject: 'Mathematics',
+    termLabel: 'First Term',
+    teacherName: 'Mr. Ade Okafor',
+    status: 'ReturnedForCorrections',
+    studentCount: 28,
+    detail: 'Two absences need a recorded decision',
+    submittedAt: '2026-11-08',
+  },
+  {
+    id: 'pkg-3',
+    classLabel: 'SSS1 A',
+    subject: 'English Language',
+    termLabel: 'First Term',
+    teacherName: 'Mrs. Grace Umeh',
+    status: 'Submitted',
+    studentCount: 32,
+    detail: 'Awaiting admin sign-off',
+    submittedAt: '2026-11-09',
+  },
+  {
+    id: 'pkg-4',
+    classLabel: 'JSS2 A',
+    subject: 'Basic Science',
+    termLabel: 'First Term',
+    teacherName: 'Mr. Emeka Ubah',
+    status: 'Approved',
+    studentCount: 30,
+    detail: 'Signed off',
+    submittedAt: '2026-11-07',
+  },
 ];
 
 const REPORT_BATCHES = [
-  { id: 'batch-1', classLabel: 'SSS1 A', termLabel: 'First Term 2026/2027', status: 'ReadyToPublish', studentCount: 32, publishedAt: null },
-  { id: 'batch-2', classLabel: 'JSS1 A', termLabel: 'First Term 2026/2027', status: 'Published', studentCount: 34, publishedAt: '2026-11-05' },
-  { id: 'batch-3', classLabel: 'SSS3 A', termLabel: 'First Term 2026/2027', status: 'Draft', studentCount: 29, publishedAt: null },
+  {
+    id: 'batch-1',
+    classLabel: 'SSS1 A',
+    termLabel: 'First Term 2026/2027',
+    status: 'ReadyToPublish',
+    studentCount: 32,
+    publishedAt: null,
+  },
+  {
+    id: 'batch-2',
+    classLabel: 'JSS1 A',
+    termLabel: 'First Term 2026/2027',
+    status: 'Published',
+    studentCount: 34,
+    publishedAt: '2026-11-05',
+  },
+  {
+    id: 'batch-3',
+    classLabel: 'SSS3 A',
+    termLabel: 'First Term 2026/2027',
+    status: 'Draft',
+    studentCount: 29,
+    publishedAt: null,
+  },
 ];
 
 /* ── AD24 — Payments, Paystack settlements, reconciliation ──────────── */
 
 const SETTLEMENTS = [
-  { id: 'set-1', provider: 'Paystack', reference: 'PSK-8842-1103-A', amountLabel: '₦85,000', status: 'Unmatched', paidAt: '2026-11-08', studentName: 'Emeka Nwosu', invoiceNumber: 'INV-2026-0148' },
-  { id: 'set-2', provider: 'Paystack', reference: 'PSK-7719-1102-B', amountLabel: '₦30,000', status: 'Unmatched', paidAt: '2026-11-08', studentName: 'Daniel Ogun', invoiceNumber: 'INV-2026-0146' },
-  { id: 'set-3', provider: 'Paystack', reference: 'PSK-6620-1101-C', amountLabel: '₦85,000', status: 'Matched', paidAt: '2026-11-06', studentName: 'Zainab Musa', invoiceNumber: 'INV-2026-0147' },
+  {
+    id: 'set-1',
+    provider: 'Paystack',
+    reference: 'PSK-8842-1103-A',
+    amountLabel: '₦85,000',
+    status: 'Unmatched',
+    paidAt: '2026-11-08',
+    studentName: 'Emeka Nwosu',
+    invoiceNumber: 'INV-2026-0148',
+  },
+  {
+    id: 'set-2',
+    provider: 'Paystack',
+    reference: 'PSK-7719-1102-B',
+    amountLabel: '₦30,000',
+    status: 'Unmatched',
+    paidAt: '2026-11-08',
+    studentName: 'Daniel Ogun',
+    invoiceNumber: 'INV-2026-0146',
+  },
+  {
+    id: 'set-3',
+    provider: 'Paystack',
+    reference: 'PSK-6620-1101-C',
+    amountLabel: '₦85,000',
+    status: 'Matched',
+    paidAt: '2026-11-06',
+    studentName: 'Zainab Musa',
+    invoiceNumber: 'INV-2026-0147',
+  },
 ];
 
 const PAYMENTS = [
-  { id: 'pay-1', reference: 'PSK-8842-1103-A', studentName: 'Emeka Nwosu', channel: 'Card (Paystack)', amountLabel: '₦85,000', status: 'Unreconciled', paidAt: '2026-11-08 14:22' },
-  { id: 'pay-2', reference: 'PSK-7719-1102-B', studentName: 'Daniel Ogun', channel: 'Card (Paystack)', amountLabel: '₦30,000', status: 'Unreconciled', paidAt: '2026-11-08 09:05' },
-  { id: 'pay-3', reference: 'PSK-6620-1101-C', studentName: 'Zainab Musa', channel: 'Card (Paystack)', amountLabel: '₦85,000', status: 'Reconciled', paidAt: '2026-11-06 18:40' },
-  { id: 'pay-4', reference: 'OFF-2026-0031', studentName: 'Amara Okafor', channel: 'Cash (office)', amountLabel: '₦85,000', status: 'Reconciled', paidAt: '2026-10-30 10:15' },
-  { id: 'pay-5', reference: 'OFF-2026-0032', studentName: 'Chiamaka Eze', channel: 'Bank transfer', amountLabel: '₦40,000', status: 'RefundRequested', paidAt: '2026-11-02 11:30' },
+  {
+    id: 'pay-1',
+    reference: 'PSK-8842-1103-A',
+    studentName: 'Emeka Nwosu',
+    channel: 'Card (Paystack)',
+    amountLabel: '₦85,000',
+    status: 'Unreconciled',
+    paidAt: '2026-11-08 14:22',
+  },
+  {
+    id: 'pay-2',
+    reference: 'PSK-7719-1102-B',
+    studentName: 'Daniel Ogun',
+    channel: 'Card (Paystack)',
+    amountLabel: '₦30,000',
+    status: 'Unreconciled',
+    paidAt: '2026-11-08 09:05',
+  },
+  {
+    id: 'pay-3',
+    reference: 'PSK-6620-1101-C',
+    studentName: 'Zainab Musa',
+    channel: 'Card (Paystack)',
+    amountLabel: '₦85,000',
+    status: 'Reconciled',
+    paidAt: '2026-11-06 18:40',
+  },
+  {
+    id: 'pay-4',
+    reference: 'OFF-2026-0031',
+    studentName: 'Amara Okafor',
+    channel: 'Cash (office)',
+    amountLabel: '₦85,000',
+    status: 'Reconciled',
+    paidAt: '2026-10-30 10:15',
+  },
+  {
+    id: 'pay-5',
+    reference: 'OFF-2026-0032',
+    studentName: 'Chiamaka Eze',
+    channel: 'Bank transfer',
+    amountLabel: '₦40,000',
+    status: 'RefundRequested',
+    paidAt: '2026-11-02 11:30',
+  },
 ];
 
 const RECONCILIATIONS = [
-  { id: 'rec-1', paymentRef: 'PSK-6620-1101-C', invoiceNumber: 'INV-2026-0147', amountLabel: '₦85,000', createdBy: 'Admin', createdAt: '2026-11-06' },
-  { id: 'rec-2', paymentRef: 'OFF-2026-0031', invoiceNumber: 'INV-2026-0141', amountLabel: '₦85,000', createdBy: 'Admin', createdAt: '2026-10-30' },
+  {
+    id: 'rec-1',
+    paymentRef: 'PSK-6620-1101-C',
+    invoiceNumber: 'INV-2026-0147',
+    amountLabel: '₦85,000',
+    createdBy: 'Admin',
+    createdAt: '2026-11-06',
+  },
+  {
+    id: 'rec-2',
+    paymentRef: 'OFF-2026-0031',
+    invoiceNumber: 'INV-2026-0141',
+    amountLabel: '₦85,000',
+    createdBy: 'Admin',
+    createdAt: '2026-10-30',
+  },
 ];
 
 const PAYMENT_EXCEPTIONS = [
-  { id: 'exc-1', reference: 'PSK-5501-1030-D', detail: 'Webhook received for an unknown admission number', amountLabel: '₦25,000', status: 'Open', openedAt: '2026-10-30' },
+  {
+    id: 'exc-1',
+    reference: 'PSK-5501-1030-D',
+    detail: 'Webhook received for an unknown admission number',
+    amountLabel: '₦25,000',
+    status: 'Open',
+    openedAt: '2026-10-30',
+  },
 ];
 
 /* ── AD31/AD32 — Complaints (mutable so replies and state moves work) ── */
@@ -771,9 +1389,21 @@ const COMPLAINTS = [
     owner: 'Admin',
     openedAt: '2026-11-06',
     replies: [
-      { id: 'r-1', author: 'Admin (office)', text: 'Thank you — the dean of studies will confirm by Friday.', at: '2026-11-06' },
+      {
+        id: 'r-1',
+        author: 'Admin (office)',
+        text: 'Thank you — the dean of studies will confirm by Friday.',
+        at: '2026-11-06',
+      },
     ],
-    notes: [{ id: 'n-1', author: 'Admin', text: 'Timetable committee to decide at the staff briefing.', at: '2026-11-06' }],
+    notes: [
+      {
+        id: 'n-1',
+        author: 'Admin',
+        text: 'Timetable committee to decide at the staff briefing.',
+        at: '2026-11-06',
+      },
+    ],
     history: [
       { id: 'h-1', text: 'Complaint received (email)', at: '2026-11-06' },
       { id: 'h-2', text: 'Status → In review', at: '2026-11-06' },
@@ -790,7 +1420,14 @@ const COMPLAINTS = [
     status: 'Resolved',
     owner: 'Admin',
     openedAt: '2026-11-03',
-    replies: [{ id: 'r-1', author: 'Admin (office)', text: 'Replaced the latch on 5 November.', at: '2026-11-05' }],
+    replies: [
+      {
+        id: 'r-1',
+        author: 'Admin (office)',
+        text: 'Replaced the latch on 5 November.',
+        at: '2026-11-05',
+      },
+    ],
     notes: [],
     history: [{ id: 'h-1', text: 'Status → Resolved', at: '2026-11-05' }],
   },
@@ -818,17 +1455,48 @@ const CALENDAR = {
   termEnd: '2026-12-11',
   nextTermStart: '2027-01-11',
   keyDates: [
-    { id: 'kd-1', date: '2026-11-14', title: 'PTA general meeting', detail: '10:00 am · main hall' },
-    { id: 'kd-2', date: '2026-11-27', title: 'Continuous assessment closes', detail: 'All subjects · all classes' },
-    { id: 'kd-3', date: '2026-12-04', title: 'First-term examinations begin', detail: 'Timetable on the noticeboard' },
-    { id: 'kd-4', date: '2026-12-11', title: 'Term ends / vacation', detail: 'Collection of results from 14 December' },
-    { id: 'kd-5', date: '2027-01-11', title: 'Second term begins', detail: 'Boarders return 10 January' },
+    {
+      id: 'kd-1',
+      date: '2026-11-14',
+      title: 'PTA general meeting',
+      detail: '10:00 am · main hall',
+    },
+    {
+      id: 'kd-2',
+      date: '2026-11-27',
+      title: 'Continuous assessment closes',
+      detail: 'All subjects · all classes',
+    },
+    {
+      id: 'kd-3',
+      date: '2026-12-04',
+      title: 'First-term examinations begin',
+      detail: 'Timetable on the noticeboard',
+    },
+    {
+      id: 'kd-4',
+      date: '2026-12-11',
+      title: 'Term ends / vacation',
+      detail: 'Collection of results from 14 December',
+    },
+    {
+      id: 'kd-5',
+      date: '2027-01-11',
+      title: 'Second term begins',
+      detail: 'Boarders return 10 January',
+    },
   ],
   todaySchedule: DASHBOARD.todaySchedule,
 };
 
 const SESSIONS_LIST = [
-  { id: 'ses-1', label: '2026/2027', status: 'Active', terms: 'First: 14 Sep – 11 Dec 2026 · Second: 11 Jan – 2 Apr 2027 · Third: 26 Apr – 16 Jul 2027' },
+  {
+    id: 'ses-1',
+    label: '2026/2027',
+    status: 'Active',
+    terms:
+      'First: 14 Sep – 11 Dec 2026 · Second: 11 Jan – 2 Apr 2027 · Third: 26 Apr – 16 Jul 2027',
+  },
   { id: 'ses-2', label: '2025/2026', status: 'Archived', terms: 'Archived — see reports' },
 ];
 
@@ -843,8 +1511,18 @@ const CONVERSATIONS = [
     lastMessage: 'Thank you — she will bring the fee teller tomorrow.',
     lastAt: '2026-11-10 08:05',
     messages: [
-      { id: 'm-1', author: 'Admin (office)', text: 'Good morning — the balance on INV-2026-0141 is ₦0; nothing is owed.', at: '2026-11-09 17:20' },
-      { id: 'm-2', author: 'Mrs. Ngozi Okafor', text: 'Thank you — she will bring the fee teller tomorrow.', at: '2026-11-10 08:05' },
+      {
+        id: 'm-1',
+        author: 'Admin (office)',
+        text: 'Good morning — the balance on INV-2026-0141 is ₦0; nothing is owed.',
+        at: '2026-11-09 17:20',
+      },
+      {
+        id: 'm-2',
+        author: 'Mrs. Ngozi Okafor',
+        text: 'Thank you — she will bring the fee teller tomorrow.',
+        at: '2026-11-10 08:05',
+      },
     ],
   },
   {
@@ -855,7 +1533,12 @@ const CONVERSATIONS = [
     lastMessage: 'Is the bus running on Friday?',
     lastAt: '2026-11-10 07:12',
     messages: [
-      { id: 'm-1', author: 'Mr. Obi Nwosu', text: 'Is the bus running on Friday?', at: '2026-11-10 07:12' },
+      {
+        id: 'm-1',
+        author: 'Mr. Obi Nwosu',
+        text: 'Is the bus running on Friday?',
+        at: '2026-11-10 07:12',
+      },
     ],
   },
   {
@@ -866,13 +1549,17 @@ const CONVERSATIONS = [
     lastMessage: 'Slides for the first-term review are shared.',
     lastAt: '2026-11-09 16:45',
     messages: [
-      { id: 'm-1', author: 'Admin (office)', text: 'Slides for the first-term review are shared.', at: '2026-11-09 16:45' },
+      {
+        id: 'm-1',
+        author: 'Admin (office)',
+        text: 'Slides for the first-term review are shared.',
+        at: '2026-11-09 16:45',
+      },
     ],
   },
 ];
 
 /* ── The demo router the API client calls in demo mode ──────────────── */
-
 
 function paginate(items, page = 1, perPage = 20) {
   const p = Math.max(1, Number(page) || 1);
@@ -952,20 +1639,32 @@ const REPORT_CARDS = ['batch-1', 'batch-2'].map((batchId, i) => {
 // for their class + subjects; the detail route returns one material.
 const LEARNER_MATERIALS = [
   {
-    id: 'mat-1', classLabel: 'SSS1 A', subject: 'Mathematics', termLabel: 'First Term',
-    title: 'Quadratic equations — worked examples', type: 'Note',
+    id: 'mat-1',
+    classLabel: 'SSS1 A',
+    subject: 'Mathematics',
+    termLabel: 'First Term',
+    title: 'Quadratic equations — worked examples',
+    type: 'Note',
     summary: 'Factorisation, completing the square and the quadratic formula, with 12 examples.',
     publishedAt: '2026-09-21',
   },
   {
-    id: 'mat-2', classLabel: 'SSS1 A', subject: 'Biology', termLabel: 'First Term',
-    title: 'Cell structure — diagram pack', type: 'Diagram',
+    id: 'mat-2',
+    classLabel: 'SSS1 A',
+    subject: 'Biology',
+    termLabel: 'First Term',
+    title: 'Cell structure — diagram pack',
+    type: 'Diagram',
     summary: 'Labelled diagrams of plant and animal cells, plus organelle function cards.',
     publishedAt: '2026-09-28',
   },
   {
-    id: 'mat-3', classLabel: 'SSS1 A', subject: 'English Language', termLabel: 'First Term',
-    title: 'Comprehension passages — term 1 set', type: 'Passage',
+    id: 'mat-3',
+    classLabel: 'SSS1 A',
+    subject: 'English Language',
+    termLabel: 'First Term',
+    title: 'Comprehension passages — term 1 set',
+    type: 'Passage',
     summary: 'Five graded passages with vocabulary and inference questions.',
     publishedAt: '2026-10-05',
   },
@@ -977,26 +1676,49 @@ const LEARNER_MATERIALS = [
 // can show the student's last submission + the teacher's feedback.
 const LEARNER_ASSIGNMENTS = [
   {
-    id: 'asn-1', classLabel: 'SSS1 A', subject: 'Mathematics', termLabel: 'First Term',
-    title: 'Quadratic equations — exercise 4.2', brief: 'Solve questions 1–20 by factorisation.',
-    dueAt: '2026-11-20', status: 'Open', maxScore: 20,
+    id: 'asn-1',
+    classLabel: 'SSS1 A',
+    subject: 'Mathematics',
+    termLabel: 'First Term',
+    title: 'Quadratic equations — exercise 4.2',
+    brief: 'Solve questions 1–20 by factorisation.',
+    dueAt: '2026-11-20',
+    status: 'Open',
+    maxScore: 20,
   },
   {
-    id: 'asn-2', classLabel: 'SSS1 A', subject: 'Biology', termLabel: 'First Term',
-    title: 'Cell structure — labelled diagram', brief: 'Draw and label a plant cell. Submit a photo.',
-    dueAt: '2026-11-18', status: 'Submitted', maxScore: 10,
+    id: 'asn-2',
+    classLabel: 'SSS1 A',
+    subject: 'Biology',
+    termLabel: 'First Term',
+    title: 'Cell structure — labelled diagram',
+    brief: 'Draw and label a plant cell. Submit a photo.',
+    dueAt: '2026-11-18',
+    status: 'Submitted',
+    maxScore: 10,
     submission: {
-      id: 'sub-1', submittedAt: '2026-11-12', status: 'Submitted',
+      id: 'sub-1',
+      submittedAt: '2026-11-12',
+      status: 'Submitted',
       content: 'Photo of labelled plant cell diagram.',
-      feedback: null, score: null,
+      feedback: null,
+      score: null,
     },
   },
   {
-    id: 'asn-3', classLabel: 'SSS1 A', subject: 'English Language', termLabel: 'First Term',
-    title: 'Essay — “A person I admire”', brief: '350–400 words. Due Friday.',
-    dueAt: '2026-11-13', status: 'Graded', maxScore: 30,
+    id: 'asn-3',
+    classLabel: 'SSS1 A',
+    subject: 'English Language',
+    termLabel: 'First Term',
+    title: 'Essay — “A person I admire”',
+    brief: '350–400 words. Due Friday.',
+    dueAt: '2026-11-13',
+    status: 'Graded',
+    maxScore: 30,
     submission: {
-      id: 'sub-2', submittedAt: '2026-11-10', status: 'Graded',
+      id: 'sub-2',
+      submittedAt: '2026-11-10',
+      status: 'Graded',
       content: 'Essay on my grandmother, 388 words.',
       feedback: 'Strong opening. Watch your paragraphing and check the conclusion.',
       score: 24,
@@ -1037,8 +1759,7 @@ function learnerOverview(student) {
     name: s.name,
     department: student.classLabel.startsWith('JSS') ? null : s.department,
   }));
-  const formTeacher =
-    TEACHERS.find((t) => t.formClass === student.classLabel) || null;
+  const formTeacher = TEACHERS.find((t) => t.formClass === student.classLabel) || null;
   const openAssignments = LEARNER_ASSIGNMENTS.filter(
     (a) => a.classLabel === student.classLabel && a.status === 'Open',
   );
@@ -1053,7 +1774,10 @@ function learnerOverview(student) {
     formTeacherName: formTeacher ? formTeacher.fullName : '—',
     subjects,
     openAssignments: openAssignments.map((a) => ({
-      id: a.id, subject: a.subject, title: a.title, dueAt: a.dueAt,
+      id: a.id,
+      subject: a.subject,
+      title: a.title,
+      dueAt: a.dueAt,
     })),
     latestReport: null, // filled below if a report card exists
   };
@@ -1077,8 +1801,10 @@ function learnerProfile(student) {
     admissionDate: student.admissionDate,
     academicHistory: [
       {
-        sessionLabel: SESSION_LABEL, termLabel: 'First Term',
-        classLabel: student.classLabel, status: 'In progress',
+        sessionLabel: SESSION_LABEL,
+        termLabel: 'First Term',
+        classLabel: student.classLabel,
+        status: 'In progress',
       },
     ],
   };
@@ -1087,11 +1813,17 @@ function learnerProfile(student) {
 // Timetable (ST04) — a 5-day × 6-period week for the student's class, drawn
 // from the BASE_TIMES the timetable builder uses.
 const LEARNER_BASE_TIMES = [
-  '08:00 – 08:40', '08:45 – 09:25', '09:30 – 10:10',
-  '10:40 – 11:20', '11:25 – 12:05', '12:10 – 12:50',
+  '08:00 – 08:40',
+  '08:45 – 09:25',
+  '09:30 – 10:10',
+  '10:40 – 11:20',
+  '11:25 – 12:05',
+  '12:10 – 12:50',
 ];
 function learnerTimetable(student) {
-  const subjects = SUBJECTS.filter((s) => s.classes.includes(student.classLabel)).map((s) => s.name);
+  const subjects = SUBJECTS.filter((s) => s.classes.includes(student.classLabel)).map(
+    (s) => s.name,
+  );
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
   // Deterministic per class so the week is stable across reloads.
   const startIdx = CLASS_NAMES.indexOf(student.classLabel) * 3;
@@ -1116,14 +1848,16 @@ function makePromotionRows(classLabel, graduating) {
   // already-graduated student is NOT in the roster, so the office cannot
   // accidentally graduate a withdrawn student (the badge never flips for them
   // because they are not on the preview at all).
-  const roster = STUDENTS.filter(
-    (s) => s.classLabel === classLabel && s.status === 'Active',
-  );
+  const roster = STUDENTS.filter((s) => s.classLabel === classLabel && s.status === 'Active');
   return roster.map((s, i) => {
     const average = 38 + ((i * 17) % 50); // 38-87, deterministic per student
     const computed = graduating
-      ? average >= 40 ? 'Graduate' : 'Repeat'
-      : average >= 40 ? 'Promote' : 'Repeat';
+      ? average >= 40
+        ? 'Graduate'
+        : 'Repeat'
+      : average >= 40
+        ? 'Promote'
+        : 'Repeat';
     return { studentId: s.id, fullName: s.fullName, average, decision: computed };
   });
 }
@@ -1138,12 +1872,20 @@ function summariseRows(rows) {
 
 const PROMOTION_PREVIEWS = [
   {
-    id: 'prm-1', classLabel: 'JSS1 A', sessionLabel: '2026/2027', status: 'Draft',
-    computedAt: '2026-11-10', rows: makePromotionRows('JSS1 A', false),
+    id: 'prm-1',
+    classLabel: 'JSS1 A',
+    sessionLabel: '2026/2027',
+    status: 'Draft',
+    computedAt: '2026-11-10',
+    rows: makePromotionRows('JSS1 A', false),
   },
   {
-    id: 'prm-2', classLabel: 'SSS3 A', sessionLabel: '2026/2027', status: 'Draft',
-    computedAt: '2026-11-10', rows: makePromotionRows('SSS3 A', true),
+    id: 'prm-2',
+    classLabel: 'SSS3 A',
+    sessionLabel: '2026/2027',
+    status: 'Draft',
+    computedAt: '2026-11-10',
+    rows: makePromotionRows('SSS3 A', true),
   },
 ].map((p) => ({ ...p, summary: summariseRows(p.rows) }));
 let nextPreviewId = 3;
@@ -1151,20 +1893,118 @@ let nextPreviewId = 3;
 /* ── AD34 — school change history (who did what, when) ───────────────── */
 
 const AUDIT_LOG = [
-  { id: 'aud-1', at: '2026-11-12', actor: 'Admin (you)', category: 'Records', action: 'Corrected a register', detail: 'JSS1 A · morning — Amara Eze marked present' },
-  { id: 'aud-2', at: '2026-11-11', actor: 'Mrs. Ifeoma Eze', category: 'Academics', action: 'Sent results for review', detail: 'SSS1 A · Biology · first term' },
-  { id: 'aud-3', at: '2026-11-11', actor: 'Admin (you)', category: 'Finance', action: 'Issued fee bills', detail: 'JSS1 A · 34 bills · ₦85,000 each' },
-  { id: 'aud-4', at: '2026-11-10', actor: 'Admin (you)', category: 'Staff', action: 'Registered a teacher', detail: 'Mr. Chidi Nwachukwu · Mathematics' },
-  { id: 'aud-5', at: '2026-11-10', actor: 'Admin (you)', category: 'Academics', action: 'Published a timetable', detail: 'JSS1 A · first term week' },
-  { id: 'aud-6', at: '2026-11-09', actor: 'Mr. Danladi Yusuf', category: 'Academics', action: 'Submitted marks', detail: 'JSS2 A · Mathematics · CA 2' },
-  { id: 'aud-7', at: '2026-11-09', actor: 'Admin (you)', category: 'Records', action: 'Enrolled a student', detail: 'Kelechi Nwosu · JSS1 B' },
-  { id: 'aud-8', at: '2026-11-08', actor: 'Admin (you)', category: 'Staff', action: 'Changed a teacher\'s subjects', detail: 'Mrs. Ifeoma Eze · + Government' },
-  { id: 'aud-9', at: '2026-11-07', actor: 'Admin (you)', category: 'Finance', action: 'Recorded a payment', detail: 'INV-1042 · ₦85,000 · Paystack' },
-  { id: 'aud-10', at: '2026-11-06', actor: 'Admin (you)', category: 'Academics', action: 'Locked the grading rules', detail: 'Pass mark 40 · CA 30 / exam 70' },
-  { id: 'aud-11', at: '2026-11-05', actor: 'Admin (you)', category: 'Records', action: 'Published report batches', detail: 'JSS1 A · first term' },
-  { id: 'aud-12', at: '2026-11-04', actor: 'Mrs. Bisi Adeoye', category: 'Staff', action: 'Signed in', detail: 'Admin app · Android' },
-  { id: 'aud-13', at: '2026-11-03', actor: 'Admin (you)', category: 'Records', action: 'Promoted a transfer student', detail: 'From JSS2 B to JSS2 A' },
-  { id: 'aud-14', at: '2026-11-02', actor: 'Admin (you)', category: 'Finance', action: 'Updated a fee plan', detail: 'SSS3 · boarding added · ₦40,000' },
+  {
+    id: 'aud-1',
+    at: '2026-11-12',
+    actor: 'Admin (you)',
+    category: 'Records',
+    action: 'Corrected a register',
+    detail: 'JSS1 A · morning — Amara Eze marked present',
+  },
+  {
+    id: 'aud-2',
+    at: '2026-11-11',
+    actor: 'Mrs. Ifeoma Eze',
+    category: 'Academics',
+    action: 'Sent results for review',
+    detail: 'SSS1 A · Biology · first term',
+  },
+  {
+    id: 'aud-3',
+    at: '2026-11-11',
+    actor: 'Admin (you)',
+    category: 'Finance',
+    action: 'Issued fee bills',
+    detail: 'JSS1 A · 34 bills · ₦85,000 each',
+  },
+  {
+    id: 'aud-4',
+    at: '2026-11-10',
+    actor: 'Admin (you)',
+    category: 'Staff',
+    action: 'Registered a teacher',
+    detail: 'Mr. Chidi Nwachukwu · Mathematics',
+  },
+  {
+    id: 'aud-5',
+    at: '2026-11-10',
+    actor: 'Admin (you)',
+    category: 'Academics',
+    action: 'Published a timetable',
+    detail: 'JSS1 A · first term week',
+  },
+  {
+    id: 'aud-6',
+    at: '2026-11-09',
+    actor: 'Mr. Danladi Yusuf',
+    category: 'Academics',
+    action: 'Submitted marks',
+    detail: 'JSS2 A · Mathematics · CA 2',
+  },
+  {
+    id: 'aud-7',
+    at: '2026-11-09',
+    actor: 'Admin (you)',
+    category: 'Records',
+    action: 'Enrolled a student',
+    detail: 'Kelechi Nwosu · JSS1 B',
+  },
+  {
+    id: 'aud-8',
+    at: '2026-11-08',
+    actor: 'Admin (you)',
+    category: 'Staff',
+    action: "Changed a teacher's subjects",
+    detail: 'Mrs. Ifeoma Eze · + Government',
+  },
+  {
+    id: 'aud-9',
+    at: '2026-11-07',
+    actor: 'Admin (you)',
+    category: 'Finance',
+    action: 'Recorded a payment',
+    detail: 'INV-1042 · ₦85,000 · Paystack',
+  },
+  {
+    id: 'aud-10',
+    at: '2026-11-06',
+    actor: 'Admin (you)',
+    category: 'Academics',
+    action: 'Locked the grading rules',
+    detail: 'Pass mark 40 · CA 30 / exam 70',
+  },
+  {
+    id: 'aud-11',
+    at: '2026-11-05',
+    actor: 'Admin (you)',
+    category: 'Records',
+    action: 'Published report batches',
+    detail: 'JSS1 A · first term',
+  },
+  {
+    id: 'aud-12',
+    at: '2026-11-04',
+    actor: 'Mrs. Bisi Adeoye',
+    category: 'Staff',
+    action: 'Signed in',
+    detail: 'Admin app · Android',
+  },
+  {
+    id: 'aud-13',
+    at: '2026-11-03',
+    actor: 'Admin (you)',
+    category: 'Records',
+    action: 'Promoted a transfer student',
+    detail: 'From JSS2 B to JSS2 A',
+  },
+  {
+    id: 'aud-14',
+    at: '2026-11-02',
+    actor: 'Admin (you)',
+    category: 'Finance',
+    action: 'Updated a fee plan',
+    detail: 'SSS3 · boarding added · ₦40,000',
+  },
 ];
 
 /* Subject rules shared by create and edit: Core spans both levels; JSS is
@@ -1200,9 +2040,7 @@ function syncSubjectTeachers(subject, teacherNames) {
 
 /** Refuse a teachers list that names somebody who is not active staff. */
 function unknownTeacherProblem(teacherNames) {
-  const bad = (teacherNames || []).find(
-    (n) => !ACTIVE_TEACHERS().some((t) => t.fullName === n),
-  );
+  const bad = (teacherNames || []).find((n) => !ACTIVE_TEACHERS().some((t) => t.fullName === n));
   return bad ? `${bad} is not an active teacher.` : null;
 }
 
@@ -1232,7 +2070,9 @@ function nextStaffNumber() {
     the CSV import — names the existing teacher so the office knows what to
     do (open their profile instead of registering a twin). */
 function teacherDuplicates(b, excludeId) {
-  const emailKey = String(b.email || '').trim().toLowerCase();
+  const emailKey = String(b.email || '')
+    .trim()
+    .toLowerCase();
   // Phones compare in the ONE canonical +234 form, so "0810 444 5050" and
   // "+234 810 444 5050" are the same number — format differences can no
   // longer sneak a duplicate past this check.
@@ -1243,9 +2083,7 @@ function teacherDuplicates(b, excludeId) {
       )
     : null;
   const phoneTwin = phoneKey
-    ? TEACHERS.find(
-        (t) => t.id !== excludeId && t.phone && canonicalPhone(t.phone) === phoneKey,
-      )
+    ? TEACHERS.find((t) => t.id !== excludeId && t.phone && canonicalPhone(t.phone) === phoneKey)
     : null;
   if (emailTwin && phoneTwin) {
     return `A teacher already exists with the same email and phone number — ${emailTwin.fullName} (${emailTwin.staffNumber}). Use different details, or open that teacher's profile.`;
@@ -1325,9 +2163,30 @@ const SETTINGS = {
 const ADMIN_ROLES = ['Principal', 'Vice Principal', 'Admin', 'Bursar', 'Exams Officer'];
 
 const ADMIN_MEMBERSHIPS = [
-  { id: 'adm-1', fullName: 'Admin (you)', email: 'admin@greenfield.edu.ng', role: 'Principal', status: 'Active', lastLogin: 'Today · 07:40' },
-  { id: 'adm-2', fullName: 'Mrs. Grace Nwankwo', email: 'grace.nwankwo@greenfield.edu.ng', role: 'Vice Principal', status: 'Active', lastLogin: 'Yesterday · 16:05' },
-  { id: 'adm-3', fullName: 'Mr. Samuel Ojo', email: 'samuel.ojo@greenfield.edu.ng', role: 'Exams Officer', status: 'Suspended', lastLogin: '2 weeks ago' },
+  {
+    id: 'adm-1',
+    fullName: 'Admin (you)',
+    email: 'admin@greenfield.edu.ng',
+    role: 'Principal',
+    status: 'Active',
+    lastLogin: 'Today · 07:40',
+  },
+  {
+    id: 'adm-2',
+    fullName: 'Mrs. Grace Nwankwo',
+    email: 'grace.nwankwo@greenfield.edu.ng',
+    role: 'Vice Principal',
+    status: 'Active',
+    lastLogin: 'Yesterday · 16:05',
+  },
+  {
+    id: 'adm-3',
+    fullName: 'Mr. Samuel Ojo',
+    email: 'samuel.ojo@greenfield.edu.ng',
+    role: 'Exams Officer',
+    status: 'Suspended',
+    lastLogin: '2 weeks ago',
+  },
 ];
 let nextAdminId = 4;
 
@@ -1336,7 +2195,9 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
   const m = String(method || 'GET').toUpperCase();
   // The client URL-encodes path params (e.g. "JSS1 A" → "JSS1%20A") — decode
   // before splitting, or class lookups by label miss and say "Class not found".
-  const seg = decodeURIComponent(String(route || '')).split('/').filter(Boolean);
+  const seg = decodeURIComponent(String(route || ''))
+    .split('/')
+    .filter(Boolean);
 
   // AD01 — dashboard
   if (seg[0] === 'dashboard' && m === 'GET') {
@@ -1363,7 +2224,10 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
     const phone = normalizePhone((body && body.guardianPhone) || '');
     const email = normalizeEmail((body && body.guardianEmail) || '');
     if (!phone && !email) {
-      return { ok: false, error: 'Enter a guardian phone or email to search for an existing account.' };
+      return {
+        ok: false,
+        error: 'Enter a guardian phone or email to search for an existing account.',
+      };
     }
     const matches = GUARDIANS.filter((g) => {
       const samePhone = phone && normalizePhone(g.phone) === phone;
@@ -1413,11 +2277,22 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
     const newLast = cleanText(body && body.lastName).toLowerCase();
     const dupStudent = STUDENTS.find((s) => {
       const sFirst = (s.firstName || String(s.fullName || '').split(' ')[0] || '').toLowerCase();
-      const sLast = (s.lastName || String(s.fullName || '').split(' ').slice(1).join(' ') || '').toLowerCase();
+      const sLast = (
+        s.lastName ||
+        String(s.fullName || '')
+          .split(' ')
+          .slice(1)
+          .join(' ') ||
+        ''
+      ).toLowerCase();
       const sPhone = normalizePhone(s.guardianPhone || '');
       const sEmail = normalizeEmail(s.guardianEmail || '');
       const sameNameClass =
-        newFirst && newLast && newFirst === sFirst && newLast === sLast && cls === (s.classLabel || '');
+        newFirst &&
+        newLast &&
+        newFirst === sFirst &&
+        newLast === sLast &&
+        cls === (s.classLabel || '');
       const samePhone = guardianPhone && sPhone && sPhone === guardianPhone;
       const sameEmail = guardianEmail && sEmail && sEmail === guardianEmail;
       // A shared guardian is allowed when the office explicitly linked the
@@ -1533,7 +2408,8 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
         if (student.status === 'Withdrawn') {
           return {
             ok: false,
-            error: 'Withdrawn students are read-only — readmit the student before editing their record.',
+            error:
+              'Withdrawn students are read-only — readmit the student before editing their record.',
           };
         }
         const b = body || {};
@@ -1543,14 +2419,21 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
             b.lastName || oldParts.slice(1).join(' ') || ''
           }`.trim();
         }
-        ['gender', 'dateOfBirth', 'guardianName', 'guardianPhone', 'guardianEmail', 'address'].forEach(
-          (key) => {
-            if (b[key] !== undefined) student[key] = b[key];
-          },
-        );
+        [
+          'gender',
+          'dateOfBirth',
+          'guardianName',
+          'guardianPhone',
+          'guardianEmail',
+          'address',
+        ].forEach((key) => {
+          if (b[key] !== undefined) student[key] = b[key];
+        });
         if (b.classLabel) {
           student.classLabel = b.classLabel;
-          student.department = b.classLabel.startsWith('JSS') ? null : b.department || student.department;
+          student.department = b.classLabel.startsWith('JSS')
+            ? null
+            : b.department || student.department;
         } else if (b.department !== undefined) {
           student.department = b.department;
         }
@@ -1565,7 +2448,10 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
         const target = cleanText(body.targetClassId);
         // Only classes that actually exist — a made-up label is refused.
         if (!liveClassNames().includes(target)) {
-          return { ok: false, error: `${target || 'That class'} is not a class in this school — pick from the list.` };
+          return {
+            ok: false,
+            error: `${target || 'That class'} is not a class in this school — pick from the list.`,
+          };
         }
         const from = student.classLabel;
         student.classLabel = target;
@@ -1694,7 +2580,10 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
     };
   }
   if (seg[0] === 'classes' && seg.length === 3 && seg[2] === 'roster' && m === 'GET') {
-    return paginate(STUDENTS.filter((s) => s.classLabel === seg[1]), query.page);
+    return paginate(
+      STUDENTS.filter((s) => s.classLabel === seg[1]),
+      query.page,
+    );
   }
   if (seg[0] === 'subjects' && seg.length === 1) {
     if (m === 'GET') return paginate(SUBJECTS, query.page);
@@ -1707,7 +2596,13 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
         ? body.classes.filter((c) => liveClassNames().includes(c))
         : [];
       const teachers = Array.isArray(body && body.teachers) ? body.teachers : [];
-      const KNOWN_DEPARTMENTS = ['Core', 'JSS', 'Science', 'Humanities / Arts', 'Business / Commercial'];
+      const KNOWN_DEPARTMENTS = [
+        'Core',
+        'JSS',
+        'Science',
+        'Humanities / Arts',
+        'Business / Commercial',
+      ];
       const unknownDept = departments.find((d) => !KNOWN_DEPARTMENTS.includes(d));
       if (unknownDept) {
         return { ok: false, error: `${unknownDept} is not one of the school's departments.` };
@@ -1764,9 +2659,16 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
       const classes = Array.isArray(b.classes)
         ? b.classes.filter((c) => liveClassNames().includes(c))
         : subject.classes;
-      const KNOWN_DEPARTMENTS = ['Core', 'JSS', 'Science', 'Humanities / Arts', 'Business / Commercial'];
+      const KNOWN_DEPARTMENTS = [
+        'Core',
+        'JSS',
+        'Science',
+        'Humanities / Arts',
+        'Business / Commercial',
+      ];
       const unknownDept = departments.find((d) => !KNOWN_DEPARTMENTS.includes(d));
-      if (unknownDept) return { ok: false, error: `${unknownDept} is not one of the school's departments.` };
+      if (unknownDept)
+        return { ok: false, error: `${unknownDept} is not one of the school's departments.` };
       if (departments.length === 0) {
         return { ok: false, error: 'Tag at least one department it belongs to.' };
       }
@@ -1819,7 +2721,14 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
     };
     TEACHERS.push(teacher);
     syncTeacherSubjects(teacher, subjects);
-    return { ok: true, teacher, provisioning: { status: 'Queued', detail: 'We are creating the staff account — tap Retry if it stays queued.' } };
+    return {
+      ok: true,
+      teacher,
+      provisioning: {
+        status: 'Queued',
+        detail: 'We are creating the staff account — tap Retry if it stays queued.',
+      },
+    };
   }
   // AD08 — the staff number the next new teacher will get (shown read-only
   // in the form; the server assigns the same one on create).
@@ -1834,7 +2743,8 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
     if (!rows.length) {
       return {
         ok: false,
-        error: 'No rows to import — paste one teacher per line: Full name, Email, Phone, Subjects (| separated), Form class.',
+        error:
+          'No rows to import — paste one teacher per line: Full name, Email, Phone, Subjects (| separated), Form class.',
       };
     }
     const imported = [];
@@ -1842,7 +2752,11 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
     rows.forEach((row, i) => {
       const problem = validateTeacherRow(row);
       if (problem) {
-        failed.push({ row: i + 1, name: cleanText(row.fullName) || `(line ${i + 1})`, error: problem });
+        failed.push({
+          row: i + 1,
+          name: cleanText(row.fullName) || `(line ${i + 1})`,
+          error: problem,
+        });
         return;
       }
       const teacher = {
@@ -1878,7 +2792,7 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
     if (m === 'PATCH') {
       const b = body || {};
       if (b.fullName !== undefined && !cleanText(b.fullName)) {
-        return { ok: false, error: 'Enter the teacher\'s full name.' };
+        return { ok: false, error: "Enter the teacher's full name." };
       }
       const emailProblem = emailError(b.email);
       if (emailProblem) return { ok: false, error: emailProblem };
@@ -1897,7 +2811,8 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
       if (b.phone !== undefined) teacher.phone = canonicalPhone(b.phone);
       if (b.email !== undefined) teacher.email = cleanText(b.email);
       if (b.formClass !== undefined) {
-        teacher.formClass = b.formClass && liveClassNames().includes(b.formClass) ? b.formClass : null;
+        teacher.formClass =
+          b.formClass && liveClassNames().includes(b.formClass) ? b.formClass : null;
       }
       if (b.status !== undefined && teacher.status !== b.status) {
         const prevStatus = teacher.status;
@@ -1927,11 +2842,22 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
       })),
     };
   }
-  if (seg[0] === 'teachers' && seg.length === 3 && seg[2] === 'retry-provisioning' && m === 'POST') {
+  if (
+    seg[0] === 'teachers' &&
+    seg.length === 3 &&
+    seg[2] === 'retry-provisioning' &&
+    m === 'POST'
+  ) {
     const teacher = TEACHERS.find((t) => t.id === seg[1]);
     if (!teacher) return { ok: false, error: 'Teacher not found.' };
     teacher.provisioning = 'Provisioned';
-    return { ok: true, provisioning: { status: 'Provisioned', detail: `${teacher.fullName}'s staff account is ready.` } };
+    return {
+      ok: true,
+      provisioning: {
+        status: 'Provisioned',
+        detail: `${teacher.fullName}'s staff account is ready.`,
+      },
+    };
   }
   if (seg[0] === 'teachers' && seg.length === 3 && seg[2] === 'access-change' && m === 'POST') {
     const teacher = TEACHERS.find((t) => t.id === seg[1]);
@@ -1960,7 +2886,12 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
     if (!email.includes('@')) return { ok: false, error: 'Enter a valid email to invite.' };
     return {
       ok: true,
-      invitation: { id: `inv-${Date.now()}`, email, role: (body && body.role) || 'Teacher', status: 'Invited' },
+      invitation: {
+        id: `inv-${Date.now()}`,
+        email,
+        role: (body && body.role) || 'Teacher',
+        status: 'Invited',
+      },
     };
   }
 
@@ -1985,7 +2916,10 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
       }
       SETTINGS.sessionLabel = session;
     }
-    if (b.termLabel !== undefined && !['First Term', 'Second Term', 'Third Term'].includes(b.termLabel)) {
+    if (
+      b.termLabel !== undefined &&
+      !['First Term', 'Second Term', 'Third Term'].includes(b.termLabel)
+    ) {
       return { ok: false, error: 'Pick First, Second or Third Term.' };
     }
     const settingsEmailProblem = emailError(b.email);
@@ -2010,13 +2944,13 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
     const b = body || {};
     const fullName = cleanText(b.fullName);
     const email = cleanText(b.email);
-    if (!fullName) return { ok: false, error: 'Enter the admin\'s full name.' };
+    if (!fullName) return { ok: false, error: "Enter the admin's full name." };
     if (!email.includes('@')) return { ok: false, error: 'Enter a valid email address.' };
     if (ADMIN_MEMBERSHIPS.some((a) => a.email.toLowerCase() === email.toLowerCase())) {
       return { ok: false, error: `${email} already has an admin account.` };
     }
     if (!ADMIN_ROLES.includes(b.role)) {
-      return { ok: false, error: 'Pick one of the school\'s admin roles.' };
+      return { ok: false, error: "Pick one of the school's admin roles." };
     }
     const membership = {
       id: `adm-${nextAdminId++}`,
@@ -2034,7 +2968,7 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
     if (!membership) return { ok: false, error: 'Admin account not found.' };
     const b = body || {};
     if (b.role !== undefined && !ADMIN_ROLES.includes(b.role)) {
-      return { ok: false, error: 'Pick one of the school\'s admin roles.' };
+      return { ok: false, error: "Pick one of the school's admin roles." };
     }
     if (b.status !== undefined && !['Active', 'Suspended'].includes(b.status)) {
       return { ok: false, error: 'An admin account is Active or Suspended.' };
@@ -2071,9 +3005,7 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
         (d) => d.classLabel === classLabel && d.status === 'Published',
       );
       const seed = Array.isArray(body && body.seedSlots) && body.seedSlots.length > 0;
-      const slots = seed
-        ? body.seedSlots.map((s) => ({ ...s }))
-        : makeSlots(classLabel, 0);
+      const slots = seed ? body.seedSlots.map((s) => ({ ...s })) : makeSlots(classLabel, 0);
       const draft = {
         id: `ttd-${Date.now()}`,
         classLabel,
@@ -2123,7 +3055,11 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
             }
             // A subject only enters the classes that offer it — Physics never
             // lands on a JSS timetable by accident.
-            if (!SUBJECTS.some((sub) => sub.name === s.subject && sub.classes.includes(draft.classLabel))) {
+            if (
+              !SUBJECTS.some(
+                (sub) => sub.name === s.subject && sub.classes.includes(draft.classLabel),
+              )
+            ) {
               return {
                 ok: false,
                 error: `${s.day}, period ${s.period}: ${s.subject} is not offered in ${draft.classLabel} — pick one of the class's own subjects.`,
@@ -2155,7 +3091,12 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
     if (problem) return { ok: false, error: problem };
     return { ok: true, conflicts: [] };
   }
-  if (seg[0] === 'timetable-drafts' && seg.length === 3 && seg[2] === 'request-review' && m === 'POST') {
+  if (
+    seg[0] === 'timetable-drafts' &&
+    seg.length === 3 &&
+    seg[2] === 'request-review' &&
+    m === 'POST'
+  ) {
     const draft = TIMETABLE_DRAFTS.find((d) => d.id === seg[1]);
     if (!draft) return { ok: false, error: 'Timetable draft not found.' };
     if (draft.status === 'Published') {
@@ -2215,15 +3156,19 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
     };
   }
   if (
-    seg[0] === 'attendance' && seg[1] === 'registers' && seg.length === 4 &&
-    seg[3] === 'corrections' && m === 'POST'
+    seg[0] === 'attendance' &&
+    seg[1] === 'registers' &&
+    seg.length === 4 &&
+    seg[3] === 'corrections' &&
+    m === 'POST'
   ) {
     const register = ATTENDANCE_REGISTERS.find((r) => r.id === seg[2]);
     if (!register) return { ok: false, error: 'Register not found.' };
     if (register.status !== 'Submitted') {
       return {
         ok: false,
-        error: 'That register was never submitted — the teacher has to submit it before corrections.',
+        error:
+          'That register was never submitted — the teacher has to submit it before corrections.',
       };
     }
     const status = (body && body.status) || '';
@@ -2279,9 +3224,7 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
       return { ok: true, policy: ASSESSMENT_POLICY };
     }
   }
-  if (
-    seg[0] === 'assessment-policies' && seg.length === 3 && seg[2] === 'lock' && m === 'POST'
-  ) {
+  if (seg[0] === 'assessment-policies' && seg.length === 3 && seg[2] === 'lock' && m === 'POST') {
     // Locking a wrong policy would freeze the mistakes for the whole term —
     // the arithmetic must be right first.
     const lockProblem = policyArithmeticError(ASSESSMENT_POLICY);
@@ -2299,9 +3242,7 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
     });
     return { ok: true, policy: ASSESSMENT_POLICY };
   }
-  if (
-    seg[0] === 'assessment-policies' && seg.length === 3 && seg[2] === 'unlock' && m === 'POST'
-  ) {
+  if (seg[0] === 'assessment-policies' && seg.length === 3 && seg[2] === 'unlock' && m === 'POST') {
     if (!ASSESSMENT_POLICY.locked) {
       return { ok: false, error: 'The grading rules are not locked.' };
     }
@@ -2352,9 +3293,8 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
         amountLabel: naira(amount),
         dueDate: (body && body.dueDate) || '2026-12-31',
         status: 'Draft',
-        studentsCount: STUDENTS.filter(
-          (s) => s.classLabel === classLabel && s.status === 'Active',
-        ).length,
+        studentsCount: STUDENTS.filter((s) => s.classLabel === classLabel && s.status === 'Active')
+          .length,
       };
       FEE_PLANS.unshift(plan);
       return { ok: true, plan };
@@ -2431,7 +3371,12 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
           `Bill ${invoice.number} still has ${naira(balance)} outstanding — enter ${naira(balance)} or less.`,
       };
     }
-    const result = applyInvoicePayment(invoice, amount, (body && body.method) || 'Cash', body && body.reference);
+    const result = applyInvoicePayment(
+      invoice,
+      amount,
+      (body && body.method) || 'Cash',
+      body && body.reference,
+    );
     return { ok: true, applied: result.applied, balanceAfter: invoice.amount - invoice.paid };
   }
 
@@ -2555,7 +3500,9 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
     const report = REPORT_CARDS.find((r) => String(r.studentId) === String(student.id));
     if (report) {
       overview.latestReport = {
-        id: report.id, termLabel: report.termLabel, average: report.average,
+        id: report.id,
+        termLabel: report.termLabel,
+        average: report.average,
         position: report.position,
       };
     }
@@ -2605,9 +3552,7 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
   }
 
   // ST06 — one assignment's detail (brief + the student's last submission).
-  if (
-    seg[0] === 'learners' && seg.length === 4 && seg[2] === 'assignments' && m === 'GET'
-  ) {
+  if (seg[0] === 'learners' && seg.length === 4 && seg[2] === 'assignments' && m === 'GET') {
     const student = findLearner(seg[1]);
     if (!student) return { ok: false, error: 'Learner not found.' };
     const assignment = LEARNER_ASSIGNMENTS.find(
@@ -2620,8 +3565,10 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
   // ST08 — list the student's submissions for one assignment (the last
   // submission + any feedback). ST07 (POST) appends a new submission.
   if (
-    seg[0] === 'learners' && seg.length === 5 && seg[2] === 'assignments'
-    && seg[4] === 'submissions'
+    seg[0] === 'learners' &&
+    seg.length === 5 &&
+    seg[2] === 'assignments' &&
+    seg[4] === 'submissions'
   ) {
     const student = findLearner(seg[1]);
     if (!student) return { ok: false, error: 'Learner not found.' };
@@ -2682,7 +3629,12 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
     // empty state with the “add via the admin office” note.
     return { ok: true, items: [] };
   }
-  if (seg[0] === 'learners' && seg.length === 3 && seg[2] === 'historical-report-attachments' && m === 'GET') {
+  if (
+    seg[0] === 'learners' &&
+    seg.length === 3 &&
+    seg[2] === 'historical-report-attachments' &&
+    m === 'GET'
+  ) {
     const student = findLearner(seg[1]);
     if (!student) return { ok: false, error: 'Learner not found.' };
     return { ok: true, items: [] };
@@ -2723,7 +3675,12 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
     if (!preview) return { ok: false, error: 'Promotion preview not found.' };
     return { ok: true, preview };
   }
-  if (seg[0] === 'promotion-previews' && seg.length === 3 && seg[2] === 'decisions' && m === 'PUT') {
+  if (
+    seg[0] === 'promotion-previews' &&
+    seg.length === 3 &&
+    seg[2] === 'decisions' &&
+    m === 'PUT'
+  ) {
     const preview = PROMOTION_PREVIEWS.find((p) => p.id === seg[1]);
     if (!preview) return { ok: false, error: 'Promotion preview not found.' };
     if (preview.status === 'Confirmed') {
@@ -2740,21 +3697,36 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
     preview.status = 'Decisions Saved';
     return { ok: true, preview };
   }
-  if (seg[0] === 'promotion-previews' && seg.length === 3 && seg[2] === 'validate' && m === 'POST') {
+  if (
+    seg[0] === 'promotion-previews' &&
+    seg.length === 3 &&
+    seg[2] === 'validate' &&
+    m === 'POST'
+  ) {
     const preview = PROMOTION_PREVIEWS.find((p) => p.id === seg[1]);
     if (!preview) return { ok: false, error: 'Promotion preview not found.' };
-    const undecided = preview.rows.filter((r) => !['Promote', 'Repeat', 'Graduate'].includes(r.decision));
+    const undecided = preview.rows.filter(
+      (r) => !['Promote', 'Repeat', 'Graduate'].includes(r.decision),
+    );
     if (undecided.length) {
-      return { ok: false, error: `${undecided.length} student(s) still need a decision before validation.` };
+      return {
+        ok: false,
+        error: `${undecided.length} student(s) still need a decision before validation.`,
+      };
     }
     return { ok: true, problems: [] };
   }
   if (seg[0] === 'promotion-previews' && seg.length === 3 && seg[2] === 'confirm' && m === 'POST') {
     const preview = PROMOTION_PREVIEWS.find((p) => p.id === seg[1]);
     if (!preview) return { ok: false, error: 'Promotion preview not found.' };
-    const undecided = preview.rows.filter((r) => !['Promote', 'Repeat', 'Graduate'].includes(r.decision));
+    const undecided = preview.rows.filter(
+      (r) => !['Promote', 'Repeat', 'Graduate'].includes(r.decision),
+    );
     if (undecided.length) {
-      return { ok: false, error: `${undecided.length} student(s) still need a decision before confirming.` };
+      return {
+        ok: false,
+        error: `${undecided.length} student(s) still need a decision before confirming.`,
+      };
     }
     preview.status = 'Confirmed';
     // Confirming ACTS on every student: promote changes their class (so the
@@ -2870,7 +3842,7 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
   // does not match is reported in `unlinked` so the office can fix the name.
   if (seg[0] === 'guardians' && seg.length === 1 && m === 'POST') {
     const fullName = cleanText(body && body.fullName);
-    if (!fullName) return { ok: false, error: 'Enter the guardian\'s full name.' };
+    if (!fullName) return { ok: false, error: "Enter the guardian's full name." };
     const phone = normalizePhone((body && body.phone) || '');
     const email = normalizeEmail((body && body.email) || '');
     if (!phone && !email) {
@@ -3020,7 +3992,8 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
       return complaint;
     }
   }
-  const complaint = seg[0] === 'complaints' && seg[1] ? COMPLAINTS.find((c) => c.id === seg[1]) : null;
+  const complaint =
+    seg[0] === 'complaints' && seg[1] ? COMPLAINTS.find((c) => c.id === seg[1]) : null;
   if (complaint && seg.length === 2 && m === 'GET') return complaint;
   if (complaint && seg[2] === 'replies') {
     if (m === 'GET') return { items: complaint.replies };
@@ -3035,7 +4008,11 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
       text: (body && body.text) || '',
       at: todayLabel(),
     });
-    complaint.history.push({ id: `h-${complaint.history.length + 1}`, text: 'Reply sent to guardian', at: todayLabel() });
+    complaint.history.push({
+      id: `h-${complaint.history.length + 1}`,
+      text: 'Reply sent to guardian',
+      at: todayLabel(),
+    });
     return { ok: true };
   }
   if (complaint && seg[2] === 'internal-notes') {
@@ -3055,7 +4032,7 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
       close: 'Closed',
       reopen: 'In review',
     };
-    const next = actions[(body && body.action)];
+    const next = actions[body && body.action];
     if (next) {
       complaint.status = next;
       if (next === 'In review' && complaint.owner === 'Unassigned') complaint.owner = 'Admin';
@@ -3146,7 +4123,9 @@ export async function demoRequest({ path: route, method = 'GET', query = {}, bod
   // AD11 — plan the next session (2027/2028…). The CURRENT session stays
   // automatic — this is for looking ahead.
   if (seg[0] === 'sessions' && seg.length === 1 && m === 'POST') {
-    const label = String((body && body.label) || '').trim().replace(/\s+/g, '');
+    const label = String((body && body.label) || '')
+      .trim()
+      .replace(/\s+/g, '');
     const years = /^(\d{4})\/(\d{4})$/.exec(label);
     if (!years || Number(years[2]) !== Number(years[1]) + 1) {
       return { ok: false, error: 'Sessions look like 2027/2028 — a year and the year after it.' };

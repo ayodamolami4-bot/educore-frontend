@@ -8,7 +8,12 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import StudentScaffold from '../components/StudentScaffold';
 import RecordList from '../components/RecordList';
-import { LoadingView, ErrorState, EmptyState, useActionErrorAlert } from '../components/FeedbackViews';
+import {
+  LoadingView,
+  ErrorState,
+  EmptyState,
+  useActionErrorAlert,
+} from '../components/FeedbackViews';
 import { StudentReportsPresenter } from '../../presenters/StudentReportsPresenter';
 import { StudentModel } from '../../models';
 import { colors, typography, spacing } from '../theme';
@@ -22,7 +27,6 @@ export default function ReportsScreen({ route }) {
     presenter.attach(setState);
     presenter.load(studentId);
     return () => presenter.detach();
-     
   }, [presenter, studentId]);
 
   useActionErrorAlert(state.errorText);
@@ -33,7 +37,9 @@ export default function ReportsScreen({ route }) {
     <StudentScaffold
       eyebrow="Results"
       title={report ? report.termLabel : 'My results'}
-      subtitle={report ? `${report.classLabel} · average ${report.average}%` : 'Published report cards'}
+      subtitle={
+        report ? `${report.classLabel} · average ${report.average}%` : 'Published report cards'
+      }
     >
       {state.status === 'loading' && !report ? <LoadingView label="Loading your results…" /> : null}
       {state.status === 'error' ? (
@@ -62,8 +68,12 @@ export default function ReportsScreen({ route }) {
           <Pressable style={styles.backLink} onPress={() => presenter.closeReport()}>
             <Text style={styles.backText}>‹ All results</Text>
           </Pressable>
-          <Text style={styles.section}>{report.termLabel} · {report.classLabel}</Text>
-          <Text style={styles.meta}>Average: {report.average}% · Position: {report.position}</Text>
+          <Text style={styles.section}>
+            {report.termLabel} · {report.classLabel}
+          </Text>
+          <Text style={styles.meta}>
+            Average: {report.average}% · Position: {report.position}
+          </Text>
           <Text style={styles.meta}>Form teacher: {report.formTeacherName}</Text>
           <Text style={styles.remark}>{report.overallRemark}</Text>
 
@@ -119,7 +129,11 @@ const styles = StyleSheet.create({
   },
   tableHeader: { flexDirection: 'row', backgroundColor: colors.surface },
   tableHeadCell: { fontWeight: '700', color: colors.muted },
-  tableRow: { flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
+  tableRow: {
+    flexDirection: 'row',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
   tableCell: { ...typography.label, flex: 1, padding: spacing.sm },
   exportBtn: {
     backgroundColor: colors.primary,

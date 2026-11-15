@@ -6,7 +6,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Alert } from 'react-native';
 import AdminScaffold from '../components/AdminScaffold';
 import RecordList from '../components/RecordList';
-import { LoadingView, ErrorState, EmptyState, useActionErrorAlert } from '../components/FeedbackViews';
+import {
+  LoadingView,
+  ErrorState,
+  EmptyState,
+  useActionErrorAlert,
+} from '../components/FeedbackViews';
 import { PrimaryButton, SecondaryButton } from './AdminHomeView';
 import { TimetablePublishPresenter } from '../../presenters/TimetablePublishPresenter';
 import { TimetableModel } from '../../models';
@@ -36,9 +41,7 @@ export default function TimetablePublishView({ navigation }) {
   useActionErrorAlert(state.errorText);
 
   const draft = state.draft;
-  const filledCount = draft
-    ? draft.slots.filter((s) => s.subject || s.activity).length
-    : 0;
+  const filledCount = draft ? draft.slots.filter((s) => s.subject || s.activity).length : 0;
 
   const confirmPublish = () => {
     Alert.alert(
@@ -138,10 +141,7 @@ export default function TimetablePublishView({ navigation }) {
                 />
               </>
             ) : (
-              <SecondaryButton
-                label="Back to drafts"
-                onPress={() => presenter.backToList()}
-              />
+              <SecondaryButton label="Back to drafts" onPress={() => presenter.backToList()} />
             )}
             {draft.status !== 'Published' ? (
               <SecondaryButton label="Back to drafts" onPress={() => presenter.backToList()} />

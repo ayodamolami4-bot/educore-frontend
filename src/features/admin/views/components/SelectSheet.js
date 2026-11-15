@@ -72,13 +72,20 @@ export default function SelectSheet({
             <>
               {extraAction ? (
                 <Pressable
-                  style={({ pressed }) => [styles.done, styles.extraAction, pressed && { opacity: 0.7 }]}
+                  style={({ pressed }) => [
+                    styles.done,
+                    styles.extraAction,
+                    pressed && { opacity: 0.7 },
+                  ]}
                   onPress={extraAction.onPress}
                 >
                   <Text style={styles.doneText}>{extraAction.label}</Text>
                 </Pressable>
               ) : null}
-              <Pressable style={({ pressed }) => [styles.done, pressed && { opacity: 0.7 }]} onPress={handleDone}>
+              <Pressable
+                style={({ pressed }) => [styles.done, pressed && { opacity: 0.7 }]}
+                onPress={handleDone}
+              >
                 <Text style={styles.doneText}>Done{picked ? ` (${picked} selected)` : ''}</Text>
               </Pressable>
             </>

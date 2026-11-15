@@ -55,8 +55,16 @@ export default function AdminScaffold({
       </View>
 
       <View style={styles.header}>
-        {eyebrow ? <Text style={styles.eyebrow} numberOfLines={1} ellipsizeMode="tail">{eyebrow}</Text> : null}
-        {title ? <Text style={styles.title} numberOfLines={2} ellipsizeMode="tail">{title}</Text> : null}
+        {eyebrow ? (
+          <Text style={styles.eyebrow} numberOfLines={1} ellipsizeMode="tail">
+            {eyebrow}
+          </Text>
+        ) : null}
+        {title ? (
+          <Text style={styles.title} numberOfLines={2} ellipsizeMode="tail">
+            {title}
+          </Text>
+        ) : null}
         {subtitle ? (
           <Text style={styles.subtitle} numberOfLines={2} ellipsizeMode="tail">
             {subtitle}

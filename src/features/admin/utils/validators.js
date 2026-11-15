@@ -15,7 +15,9 @@ import { phoneError as sharedPhoneError } from '../api/validation.js';
 
 /** Collapse runs of spaces and trim — the shape every stored text takes. */
 export function cleanText(value) {
-  return String(value ?? '').replace(/\s+/g, ' ').trim();
+  return String(value ?? '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /** Digits only — number pads still allow PASTED text, so every numeric
@@ -76,7 +78,10 @@ export const CLASS_LABELS = ['JSS1 A', 'JSS1 B', 'JSS2 A', 'JSS3 A', 'SSS1 A', '
 
 /** "jss3 a" / "JSS 3A" / "jss3a" → "JSS3 A"; anything else comes back trimmed. */
 export function normalizeClassLabel(value) {
-  const squashed = String(value ?? '').trim().toUpperCase().replace(/\s+/g, '');
+  const squashed = String(value ?? '')
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, '');
   const match = /^(JSS|SSS)(\d)([A-Z])$/.exec(squashed);
   return match ? `${match[1]}${match[2]} ${match[3]}` : String(value ?? '').trim();
 }

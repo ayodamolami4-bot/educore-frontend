@@ -92,7 +92,8 @@ export class RegisterReviewPresenter {
   /** A missing register can't be corrected — surface why as a popup. */
   refuseMissing() {
     this._setState({
-      errorText: 'That register was never submitted — the teacher has to submit it before you can correct it.',
+      errorText:
+        'That register was never submitted — the teacher has to submit it before you can correct it.',
     });
   }
 

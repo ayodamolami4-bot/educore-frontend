@@ -122,7 +122,9 @@ export default function StudentProfileView({ route, navigation }) {
                 displayValue={targetClass || ''}
                 onPress={() => setClassSheet(true)}
               />
-              {state.classMoveError ? <Text style={styles.error}>{state.classMoveError}</Text> : null}
+              {state.classMoveError ? (
+                <Text style={styles.error}>{state.classMoveError}</Text>
+              ) : null}
               {state.classMoveNotice ? (
                 <Text style={styles.moveNotice}>{state.classMoveNotice}</Text>
               ) : null}
@@ -149,7 +151,9 @@ export default function StudentProfileView({ route, navigation }) {
           ) : (
             <>
               <Text style={styles.section}>Withdraw student</Text>
-              {state.withdrawalError ? <Text style={styles.error}>{state.withdrawalError}</Text> : null}
+              {state.withdrawalError ? (
+                <Text style={styles.error}>{state.withdrawalError}</Text>
+              ) : null}
               <PrimaryButton
                 label={
                   state.withdrawalState === 'saving'

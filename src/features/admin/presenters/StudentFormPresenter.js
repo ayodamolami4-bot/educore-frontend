@@ -135,9 +135,7 @@ export class StudentFormPresenter {
       if (field === 'guardianEmail') {
         const text = cleanText(val);
         if (!text) return null; // optional — empty is not an error live
-        return isValidEmail(text)
-          ? null
-          : 'Enter a valid email, e.g. ngozi.okafor@example.com.';
+        return isValidEmail(text) ? null : 'Enter a valid email, e.g. ngozi.okafor@example.com.';
       }
       return null;
     };
@@ -211,7 +209,12 @@ export class StudentFormPresenter {
     this._setState({
       linkGuardianId: guardianId,
       values,
-      errors: { ...this.state.errors, guardianName: undefined, guardianPhone: undefined, guardianEmail: undefined },
+      errors: {
+        ...this.state.errors,
+        guardianName: undefined,
+        guardianPhone: undefined,
+        guardianEmail: undefined,
+      },
     });
   }
 
@@ -230,15 +233,13 @@ export class StudentFormPresenter {
     if (!cleanText(v.guardianPhone)) {
       errors.guardianPhone = 'A guardian phone number is required.';
     } else if (!isValidPhone(v.guardianPhone)) {
-      errors.guardianPhone =
-        'Enter a valid number, e.g. +234 803 111 2233 or 08031112233.';
+      errors.guardianPhone = 'Enter a valid number, e.g. +234 803 111 2233 or 08031112233.';
     }
     if (cleanText(v.guardianEmail) && !isValidEmail(v.guardianEmail)) {
       errors.guardianEmail = 'Enter a valid email, e.g. ngozi.okafor@example.com.';
     }
     if (cleanText(v.dateOfBirth) && !isValidDateOfBirth(v.dateOfBirth)) {
-      errors.dateOfBirth =
-        'Use a real date in YYYY-MM-DD format (not in the future).';
+      errors.dateOfBirth = 'Use a real date in YYYY-MM-DD format (not in the future).';
     }
     // Enrol mode only: when the live search found existing guardian matches,
     // the office MUST pick one — phone/email are account IDs, so a second

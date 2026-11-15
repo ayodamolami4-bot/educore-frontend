@@ -10,7 +10,12 @@ import AdminScaffold from '../components/AdminScaffold';
 import RecordList from '../components/RecordList';
 import LabelledField from '../components/LabelledField';
 import SelectSheet from '../components/SelectSheet';
-import { LoadingView, EmptyState, ErrorState, useActionErrorAlert } from '../components/FeedbackViews';
+import {
+  LoadingView,
+  EmptyState,
+  ErrorState,
+  useActionErrorAlert,
+} from '../components/FeedbackViews';
 import { PrimaryButton } from './AdminHomeView';
 import { NoticesPresenter } from '../../presenters/NoticesPresenter';
 import { NoticesModel } from '../../models';

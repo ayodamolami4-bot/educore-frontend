@@ -100,7 +100,9 @@ const PARENT_TEMPLATE_COLUMNS = ['fullName', 'phone', 'email', 'relationship', '
 // Split a single "fullName" cell ("Amara Okafor") into first/last the same way
 // the enrol form does — the first token is the first name, the rest is last.
 function splitFullName(full) {
-  const parts = String(full || '').trim().split(/\s+/);
+  const parts = String(full || '')
+    .trim()
+    .split(/\s+/);
   return { firstName: parts[0] || '', lastName: parts.slice(1).join(' ') || '' };
 }
 
@@ -162,14 +164,29 @@ function buildHeaderMap(cells, kind) {
       ? TEACHER_TEMPLATE_COLUMNS
       : kind === 'parents'
         ? PARENT_TEMPLATE_COLUMNS
-        : [...MANUAL_TEMPLATE_COLUMNS, 'fullName', 'admissionNumber', 'classLabel', 'class', 'status']
+        : [
+            ...MANUAL_TEMPLATE_COLUMNS,
+            'fullName',
+            'admissionNumber',
+            'classLabel',
+            'class',
+            'status',
+          ]
     ).map((s) => s.toLowerCase()),
   );
-  const matches = cells.filter((c) => base.has(String(c || '').trim().toLowerCase()));
+  const matches = cells.filter((c) =>
+    base.has(
+      String(c || '')
+        .trim()
+        .toLowerCase(),
+    ),
+  );
   if (matches.length < 2) return null; // not enough column names to be a header
   const map = new Map();
   cells.forEach((cell, idx) => {
-    const name = String(cell || '').trim().toLowerCase();
+    const name = String(cell || '')
+      .trim()
+      .toLowerCase();
     if (base.has(name)) map.set(name, idx);
   });
   return map;
@@ -207,7 +224,10 @@ function fieldsToTeacher(fields, headerMap) {
   };
   const subjectsRaw = cleanText(get('subjects'));
   const subjects = subjectsRaw
-    ? subjectsRaw.split('|').map((s) => cleanText(s)).filter(Boolean)
+    ? subjectsRaw
+        .split('|')
+        .map((s) => cleanText(s))
+        .filter(Boolean)
     : [];
   return {
     fullName: cleanText(get('fullName')),
@@ -270,7 +290,8 @@ function fieldsToParent(fields, headerMap) {
 function validateParentRow(p) {
   if (!p.fullName) return 'fullName is empty';
   if (!p.phone && !p.email) return 'enter at least a phone or an email';
-  if (p.phone && !isValidPhone(p.phone)) return 'phone must be a valid number, e.g. +234 803 111 2233';
+  if (p.phone && !isValidPhone(p.phone))
+    return 'phone must be a valid number, e.g. +234 803 111 2233';
   if (p.email && !isValidEmail(p.email)) return 'email must be a valid email address';
   return null;
 }
@@ -470,9 +491,10 @@ export class ImportsExportsPresenter {
       const exPhone = normalizePhone(ex.guardianPhone || '');
       const exEmail = normalizeEmail(ex.guardianEmail || '');
       const exClass = ex.classLabel || ex.className || '';
-      const sameName = firstName && lastName
-        ? (firstName === exFirst && lastName === exLast)
-        : `${firstName} ${lastName}`.trim() === exName;
+      const sameName =
+        firstName && lastName
+          ? firstName === exFirst && lastName === exLast
+          : `${firstName} ${lastName}`.trim() === exName;
       if (phone && exPhone && exPhone === phone) {
         return 'duplicate student/data — a student with this guardian phone already exists';
       }
@@ -671,8 +693,7 @@ export class ImportsExportsPresenter {
             pasted: '',
             rows: [],
             problems: bad.map((b) => ({ rowNumber: b.row, problem: b.error })),
-            notice:
-              `Imported ${imported} teachers — ${bad.length} row(s) were rejected by the server.`,
+            notice: `Imported ${imported} teachers — ${bad.length} row(s) were rejected by the server.`,
             errorText: null,
           });
           return;
@@ -733,7 +754,8 @@ export class ImportsExportsPresenter {
         notice: `Imported ${imported} students — they are at the END of the student list (last pages).`,
       });
     } catch (error) {
-      const label = this.kind === 'teachers' ? 'teachers' : this.kind === 'parents' ? 'parents' : 'students';
+      const label =
+        this.kind === 'teachers' ? 'teachers' : this.kind === 'parents' ? 'parents' : 'students';
       this._setState({
         importing: false,
         errorText:

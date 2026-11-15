@@ -41,7 +41,10 @@ export class CalendarPresenter {
   async load() {
     this._setState({ status: 'loading', errorText: null });
     try {
-      const [calendar, sessions] = await Promise.all([this.model.calendar(), this.model.sessions()]);
+      const [calendar, sessions] = await Promise.all([
+        this.model.calendar(),
+        this.model.sessions(),
+      ]);
       this._setState({
         status: 'content',
         calendar: calendar || {},

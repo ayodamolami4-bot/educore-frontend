@@ -83,7 +83,9 @@ export class PaymentsBoardPresenter {
     if (this.state.busyId) return;
     const payment = this.state.payments.find((p) => p.reference === settlement.reference);
     if (!payment) {
-      this._setState({ notice: 'No ledger row matches this reference — open an exception instead.' });
+      this._setState({
+        notice: 'No ledger row matches this reference — open an exception instead.',
+      });
       return;
     }
     this._setState({ busyId: payment.id, errorText: null, notice: null });

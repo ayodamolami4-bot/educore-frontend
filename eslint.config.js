@@ -7,7 +7,10 @@ export default defineConfig([
   {
     files: ['**/*.js', '**/*.jsx', '**/*.mjs'],
     rules: {
-      'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+      ],
     },
   },
 ]);

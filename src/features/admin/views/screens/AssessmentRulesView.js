@@ -41,9 +41,7 @@ export default function AssessmentRulesView({ navigation }) {
     setCaText(String(policy.caWeight));
     setExamText(String(policy.examWeight));
     setPassText(String(policy.passMark));
-    setBandTexts(
-      Object.fromEntries(policy.grades.map((g) => [g.grade, String(g.minScore)])),
-    );
+    setBandTexts(Object.fromEntries(policy.grades.map((g) => [g.grade, String(g.minScore)])));
   }
 
   // Live range hints: the weights are percentages of the WHOLE term, so a
@@ -134,11 +132,11 @@ export default function AssessmentRulesView({ navigation }) {
         </View>
       </View>
       <Text style={styles.hint}>The two weights must add up to exactly 100.</Text>
-          {over100(caText) || over100(examText) ? (
-            <Text style={styles.fieldError}>
-              A weight above 100 cannot be right — the CA and exam together are always 100%.
-            </Text>
-          ) : null}
+      {over100(caText) || over100(examText) ? (
+        <Text style={styles.fieldError}>
+          A weight above 100 cannot be right — the CA and exam together are always 100%.
+        </Text>
+      ) : null}
 
       <Text style={styles.section}>Pass mark</Text>
       <TextInput
@@ -153,7 +151,9 @@ export default function AssessmentRulesView({ navigation }) {
       {passOutOfRange(passText) ? (
         <Text style={styles.fieldError}>The pass mark must be between 34 and 100.</Text>
       ) : null}
-      <Text style={styles.hint}>Must be above 33 — the school&apos;s floor is 34%, and 100 at most.</Text>
+      <Text style={styles.hint}>
+        Must be above 33 — the school&apos;s floor is 34%, and 100 at most.
+      </Text>
 
       <Text style={styles.section}>Grade bands — the score each grade starts at</Text>
       {policy.grades.map((g) => (
@@ -176,7 +176,9 @@ export default function AssessmentRulesView({ navigation }) {
           Band scores are percentages — 0 to 100, each grade starting above the one below it.
         </Text>
       ) : null}
-      <Text style={styles.hint}>A starts at 70, B below it, and so on — each band must start lower than the one above.</Text>
+      <Text style={styles.hint}>
+        A starts at 70, B below it, and so on — each band must start lower than the one above.
+      </Text>
 
       <View style={styles.actions}>
         <PrimaryButton

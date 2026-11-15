@@ -8,7 +8,12 @@ import { View, Text, StyleSheet } from 'react-native';
 import AdminScaffold from '../components/AdminScaffold';
 import RecordList from '../components/RecordList';
 import SelectSheet from '../components/SelectSheet';
-import { LoadingView, ErrorState, EmptyState, useActionErrorAlert } from '../components/FeedbackViews';
+import {
+  LoadingView,
+  ErrorState,
+  EmptyState,
+  useActionErrorAlert,
+} from '../components/FeedbackViews';
 import { SecondaryButton } from './AdminHomeView';
 import { RegisterReviewPresenter } from '../../presenters/RegisterReviewPresenter';
 import { AttendanceModel, AcademicStructureModel } from '../../models';
@@ -17,7 +22,9 @@ import { colors, typography, spacing } from '../theme';
 const STATUSES = ['Present', 'Absent', 'Late', 'Excused'].map((s) => ({ label: s, value: s }));
 
 export default function RegisterReviewView({ navigation, route }) {
-  const [presenter] = useState(() => new RegisterReviewPresenter(AttendanceModel, AcademicStructureModel));
+  const [presenter] = useState(
+    () => new RegisterReviewPresenter(AttendanceModel, AcademicStructureModel),
+  );
   const [state, setState] = useState(presenter.initialState);
   const loadedOnce = useRef(false);
   const [pickerOpen, setPickerOpen] = useState(!route.params?.classId); // no class in the route → open the picker straight away
@@ -63,9 +70,10 @@ export default function RegisterReviewView({ navigation, route }) {
     : state.registers.map((r) => ({
         id: r.id,
         title: `${r.subject} · ${r.time}`,
-        meta: r.status === 'Submitted'
-          ? `Taken by ${r.teacher} · ${r.absentCount} absent · ${r.lateCount} late`
-          : 'Never submitted',
+        meta:
+          r.status === 'Submitted'
+            ? `Taken by ${r.teacher} · ${r.absentCount} absent · ${r.lateCount} late`
+            : 'Never submitted',
         status: r.status,
         raw: r,
       }));

@@ -73,7 +73,9 @@ export default function PaymentsBoardView({ navigation }) {
           {state.notice ? <Text style={styles.notice}>{state.notice}</Text> : null}
 
           <Text style={styles.section}>Paystack settlements</Text>
-          <Text style={styles.hint}>Tap an unmatched settlement to reconcile it to its invoice.</Text>
+          <Text style={styles.hint}>
+            Tap an unmatched settlement to reconcile it to its invoice.
+          </Text>
           <RecordList
             items={state.settlements.map((s) => ({
               id: s.id,
@@ -103,7 +105,9 @@ export default function PaymentsBoardView({ navigation }) {
           />
 
           <Text style={styles.section}>Exceptions</Text>
-          <Text style={styles.hint}>Tap an open exception to resolve it or flag it for refund.</Text>
+          <Text style={styles.hint}>
+            Tap an open exception to resolve it or flag it for refund.
+          </Text>
           <RecordList
             items={state.exceptions.map((e) => ({
               id: e.id,

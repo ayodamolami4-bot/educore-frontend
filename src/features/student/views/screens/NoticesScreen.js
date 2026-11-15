@@ -6,12 +6,17 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import StudentScaffold from '../components/StudentScaffold';
 import RecordList from '../components/RecordList';
-import { LoadingView, ErrorState, EmptyState, useActionErrorAlert } from '../components/FeedbackViews';
+import {
+  LoadingView,
+  ErrorState,
+  EmptyState,
+  useActionErrorAlert,
+} from '../components/FeedbackViews';
 import { StudentNoticesPresenter } from '../../presenters/StudentReadPresenters';
 import { StudentModel } from '../../models';
 import { colors, typography, spacing } from '../theme';
 
-export default function NoticesScreen({ route }) {
+export default function NoticesScreen({ route: _route }) {
   const [presenter] = useState(() => new StudentNoticesPresenter(StudentModel));
   const [state, setState] = useState(presenter.initialState);
 
@@ -19,7 +24,6 @@ export default function NoticesScreen({ route }) {
     presenter.attach(setState);
     presenter.load();
     return () => presenter.detach();
-     
   }, [presenter]);
 
   useActionErrorAlert(state.errorText);
@@ -30,7 +34,13 @@ export default function NoticesScreen({ route }) {
     <StudentScaffold
       eyebrow="Notices"
       title={notice ? notice.title : 'School notices'}
-      subtitle={notice ? (notice.publishedAt ? `Published ${notice.publishedAt}` : '') : 'Announcements from the school'}
+      subtitle={
+        notice
+          ? notice.publishedAt
+            ? `Published ${notice.publishedAt}`
+            : ''
+          : 'Announcements from the school'
+      }
     >
       {!notice && state.status === 'loading' ? <LoadingView label="Loading notices…" /> : null}
       {state.status === 'error' ? (

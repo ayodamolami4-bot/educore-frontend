@@ -9,7 +9,12 @@ import AdminScaffold from '../components/AdminScaffold';
 import RecordList from '../components/RecordList';
 import StatusBadge from '../components/StatusBadge';
 import SelectSheet from '../components/SelectSheet';
-import { LoadingView, EmptyState, ErrorState, useActionErrorAlert } from '../components/FeedbackViews';
+import {
+  LoadingView,
+  EmptyState,
+  ErrorState,
+  useActionErrorAlert,
+} from '../components/FeedbackViews';
 import { PrimaryButton } from './AdminHomeView';
 import { InvoiceDetailPresenter } from '../../presenters/InvoiceDetailPresenter';
 import { FinanceModel } from '../../models';

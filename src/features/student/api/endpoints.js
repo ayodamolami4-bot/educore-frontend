@@ -54,8 +54,7 @@ export const endpoints = {
   // ST05/ST06/ST07/ST08 — assignments.
   assignments: 'learners/{studentId}/assignments', // GET — list
   assignmentById: 'learners/{studentId}/assignments/{assignmentId}', // GET — detail
-  submissions:
-    'learners/{studentId}/assignments/{assignmentId}/submissions', // GET (ST08) + POST (ST07)
+  submissions: 'learners/{studentId}/assignments/{assignmentId}/submissions', // GET (ST08) + POST (ST07)
 
   // ST09/ST10 — results / report cards.
   reports: 'learners/{studentId}/reports', // GET — list (ST09)

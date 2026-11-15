@@ -65,8 +65,7 @@ export class ResultsReviewPresenter {
       await this.load();
     } catch (error) {
       this._setState({
-        errorText:
-          error instanceof ApiError ? error.message : 'The package could not be returned.',
+        errorText: error instanceof ApiError ? error.message : 'The package could not be returned.',
       });
     } finally {
       if (this._alive) this._setState({ busyId: null });
@@ -84,8 +83,7 @@ export class ResultsReviewPresenter {
       await this.load();
     } catch (error) {
       this._setState({
-        errorText:
-          error instanceof ApiError ? error.message : 'The package could not be approved.',
+        errorText: error instanceof ApiError ? error.message : 'The package could not be approved.',
       });
     } finally {
       if (this._alive) this._setState({ busyId: null });

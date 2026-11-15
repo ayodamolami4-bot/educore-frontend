@@ -11,15 +11,21 @@ import RecordList from '../components/RecordList';
 import SelectSheet from '../components/SelectSheet';
 import { LoadingView, ErrorState, useActionErrorAlert } from '../components/FeedbackViews';
 import { PrimaryButton, SecondaryButton } from './AdminHomeView';
-import { TimetableBuilderPresenter, MAX_PERIODS_PER_DAY } from '../../presenters/TimetableBuilderPresenter';
+import {
+  TimetableBuilderPresenter,
+  MAX_PERIODS_PER_DAY,
+} from '../../presenters/TimetableBuilderPresenter';
 import { TimetableModel, AcademicStructureModel } from '../../models';
 import { colors, typography, spacing } from '../theme';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const ACTIVITIES = ['Break', 'Sports / PE', 'Study Time', 'Assembly', 'Clubs & Societies'].map(
   (a) => ({ label: a, value: a }),
-);export default function TimetableBuilderView({ navigation, route }) {
-  const [presenter] = useState(() => new TimetableBuilderPresenter(TimetableModel, AcademicStructureModel));
+);
+export default function TimetableBuilderView({ navigation, route }) {
+  const [presenter] = useState(
+    () => new TimetableBuilderPresenter(TimetableModel, AcademicStructureModel),
+  );
   const [state, setState] = useState(presenter.initialState);
   const loadedOnce = useRef(false);
   const [pickerOpen, setPickerOpen] = useState(!route.params?.classId); // no class in the route → open the picker straight away
@@ -60,16 +66,16 @@ const ACTIVITIES = ['Break', 'Sports / PE', 'Study Time', 'Assembly', 'Clubs & S
   useActionErrorAlert(state.errorText);
 
   const draft = state.draft;
-  const filledCount = draft
-    ? draft.slots.filter((s) => s.subject || s.activity).length
-    : 0;
+  const filledCount = draft ? draft.slots.filter((s) => s.subject || s.activity).length : 0;
 
   const openTimeEditor = (slot) => {
     // Prefill from the structured times, else split the label "08:00 – 08:40".
     let start = slot.start || '';
     let end = slot.end || '';
     if ((!start || !end) && slot.time) {
-      const parts = String(slot.time).split(/[–-]/).map((x) => x.trim());
+      const parts = String(slot.time)
+        .split(/[–-]/)
+        .map((x) => x.trim());
       if (parts.length === 2) {
         start = start || parts[0];
         end = end || parts[1];
@@ -363,15 +369,17 @@ const ACTIVITIES = ['Break', 'Sports / PE', 'Study Time', 'Assembly', 'Clubs & S
         options={[
           { label: 'Change time', value: 'time' },
           {
-            label: slotActionSheet && slotActionSheet.slot.subject
-              ? 'Change to another subject'
-              : 'Change to a subject',
+            label:
+              slotActionSheet && slotActionSheet.slot.subject
+                ? 'Change to another subject'
+                : 'Change to a subject',
             value: 'subject',
           },
           {
-            label: slotActionSheet && slotActionSheet.slot.activity
-              ? 'Change to another activity'
-              : 'Change to an activity',
+            label:
+              slotActionSheet && slotActionSheet.slot.activity
+                ? 'Change to another activity'
+                : 'Change to an activity',
             value: 'activity',
           },
           { label: 'Remove this period', value: 'remove' },
@@ -390,8 +398,8 @@ const ACTIVITIES = ['Break', 'Sports / PE', 'Study Time', 'Assembly', 'Clubs & S
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Period time</Text>
             <Text style={styles.modalHint}>
-              24-hour clock — start and end, e.g. 08:00 and 08:40. A period may
-              never start at or before the previous one ends.
+              24-hour clock — start and end, e.g. 08:00 and 08:40. A period may never start at or
+              before the previous one ends.
             </Text>
             <View style={styles.timeRow}>
               <View style={styles.timeField}>

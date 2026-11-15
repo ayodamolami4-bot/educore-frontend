@@ -210,7 +210,12 @@ export default function CalendarView({ navigation }) {
 const styles = StyleSheet.create({
   section: { ...typography.sectionTitle, marginTop: spacing.lg, marginBottom: spacing.sm },
   termLine: { ...typography.body, color: typography.body.color },
-  formLabel: { ...typography.label, color: colors.muted, marginTop: spacing.md, marginBottom: spacing.xs },
+  formLabel: {
+    ...typography.label,
+    color: colors.muted,
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+  },
   fieldError: { ...typography.label, color: '#a33a2a', marginBottom: spacing.xs },
   input: {
     ...typography.input,

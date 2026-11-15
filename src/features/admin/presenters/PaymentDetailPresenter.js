@@ -75,7 +75,10 @@ export class PaymentDetailPresenter {
     }
     this._setState({ saving: 'request', errorText: null, notice: null });
     try {
-      const result = await this.model.requestRefund({ paymentId: this._paymentId, reason: trimmed });
+      const result = await this.model.requestRefund({
+        paymentId: this._paymentId,
+        reason: trimmed,
+      });
       if (result && result.ok === false) {
         this._setState({ errorText: result.error || 'The refund request could not be raised.' });
         return;
@@ -138,7 +141,8 @@ export class PaymentDetailPresenter {
       this._setState({ notice: 'Marked as refunded (manual confirmation).' });
     } catch (error) {
       this._setState({
-        errorText: error instanceof ApiError ? error.message : 'The confirmation could not be saved.',
+        errorText:
+          error instanceof ApiError ? error.message : 'The confirmation could not be saved.',
       });
     } finally {
       if (this._alive) this._setState({ saving: null });

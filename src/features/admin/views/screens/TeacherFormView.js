@@ -16,7 +16,9 @@ import { phoneError } from '../../api/validation';
 import { colors, typography, spacing } from '../theme';
 
 export default function TeacherFormView({ navigation, route }) {
-  const [presenter] = useState(() => new TeacherFormPresenter(TeacherModel, AcademicStructureModel));
+  const [presenter] = useState(
+    () => new TeacherFormPresenter(TeacherModel, AcademicStructureModel),
+  );
   const [state, setState] = useState(presenter.initialState);
   const [fullName, setFullName] = useState('');
   const [staffNumber, setStaffNumber] = useState('');
@@ -77,9 +79,7 @@ export default function TeacherFormView({ navigation, route }) {
           {state.notice ? <Text style={styles.notice}>{state.notice}</Text> : null}
           {state.provisioning && state.provisioning.status === 'Queued' ? (
             <View style={styles.provisioning}>
-              <Text style={styles.provisioningText}>
-                Staff account provisioning is queued.
-              </Text>
+              <Text style={styles.provisioningText}>Staff account provisioning is queued.</Text>
               <SecondaryButton
                 label="Retry provisioning"
                 disabled={state.saving}
@@ -151,7 +151,13 @@ export default function TeacherFormView({ navigation, route }) {
 
           <View style={styles.actionsWrap}>
             <PrimaryButton
-              label={state.saving ? 'Saving…' : state.mode === 'edit' ? 'Save changes' : 'Register teacher'}
+              label={
+                state.saving
+                  ? 'Saving…'
+                  : state.mode === 'edit'
+                    ? 'Save changes'
+                    : 'Register teacher'
+              }
               disabled={state.saving}
               onPress={save}
             />
@@ -190,8 +196,18 @@ export default function TeacherFormView({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  fieldError: { ...typography.label, color: '#a33a2a', marginTop: -spacing.xs, marginBottom: spacing.sm },
-  fieldHint: { ...typography.label, color: colors.muted, marginTop: -spacing.xs, marginBottom: spacing.sm },
+  fieldError: {
+    ...typography.label,
+    color: '#a33a2a',
+    marginTop: -spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  fieldHint: {
+    ...typography.label,
+    color: colors.muted,
+    marginTop: -spacing.xs,
+    marginBottom: spacing.sm,
+  },
   notice: { ...typography.body, color: colors.primary, marginBottom: spacing.sm },
   actionsWrap: { marginTop: spacing.md },
   provisioning: {

@@ -34,7 +34,11 @@ function studentIdFromSession(services) {
   // transport seeds it as 1 (Amara Okafor) so the student app shares the
   // admin demo roster. When the real backend is wired, the identity →
   // academics linkage returns the learner id on the context.
-  const ctx = services && services.session && services.session.getSnapshot && services.session.getSnapshot().context;
+  const ctx =
+    services &&
+    services.session &&
+    services.session.getSnapshot &&
+    services.session.getSnapshot().context;
   if (ctx && ctx.studentId != null) return ctx.studentId;
   return 1;
 }
@@ -58,7 +62,11 @@ function AssignmentsStack() {
   const studentId = useMemo(() => studentIdFromSession(services), [services]);
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Assignments" component={AssignmentsScreen} initialParams={{ studentId }} />
+      <Stack.Screen
+        name="Assignments"
+        component={AssignmentsScreen}
+        initialParams={{ studentId }}
+      />
       <Stack.Screen name="AssignmentDetail" component={AssignmentDetailScreen} />
     </Stack.Navigator>
   );
@@ -92,7 +100,7 @@ function ProfileStack() {
   );
 }
 
-export default function StudentNavigator({ navigation }) {
+export default function StudentNavigator({ navigation: _navigation }) {
   return (
     <Tabs.Navigator
       screenOptions={{
@@ -131,4 +139,3 @@ export default function StudentNavigator({ navigation }) {
     </Tabs.Navigator>
   );
 }
-

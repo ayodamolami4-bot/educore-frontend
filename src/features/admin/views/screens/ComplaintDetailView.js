@@ -78,9 +78,7 @@ export default function ComplaintDetailView({ route, navigation }) {
           </View>
 
           <Text style={styles.section}>What the guardian said</Text>
-          <Text style={styles.body}>
-            {c.detail || 'No detail recorded — see the office log.'}
-          </Text>
+          <Text style={styles.body}>{c.detail || 'No detail recorded — see the office log.'}</Text>
           <Text style={styles.meta}>
             Student: {c.studentName || '—'} ({c.classLabel || '—'}) · Channel: {c.channel}
           </Text>
@@ -200,7 +198,13 @@ const styles = StyleSheet.create({
   line: { ...typography.body, marginBottom: spacing.xs },
   muted: { ...typography.body, color: colors.muted },
   hint: { ...typography.label, marginBottom: spacing.sm },
-  closedHint: { ...typography.label, color: colors.muted, marginTop: spacing.sm, marginBottom: spacing.sm, fontStyle: 'italic' },
+  closedHint: {
+    ...typography.label,
+    color: colors.muted,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+    fontStyle: 'italic',
+  },
   error: { ...typography.label, color: '#a33a2a', marginBottom: spacing.sm },
   input: {
     ...typography.input,

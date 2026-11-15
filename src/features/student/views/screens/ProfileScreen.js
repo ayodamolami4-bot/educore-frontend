@@ -7,7 +7,12 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import StudentScaffold from '../components/StudentScaffold';
-import { LoadingView, ErrorState, EmptyState, useActionErrorAlert } from '../components/FeedbackViews';
+import {
+  LoadingView,
+  ErrorState,
+  EmptyState,
+  useActionErrorAlert,
+} from '../components/FeedbackViews';
 import { StudentProfilePresenter } from '../../presenters/StudentReadPresenters';
 import { StudentModel } from '../../models';
 import { colors, typography, spacing } from '../theme';
@@ -30,7 +35,6 @@ export default function ProfileScreen({ route }) {
     presenter.attach(setState);
     presenter.load(studentId);
     return () => presenter.detach();
-     
   }, [presenter, studentId]);
 
   useActionErrorAlert(state.errorText);
@@ -82,19 +86,27 @@ export default function ProfileScreen({ route }) {
 
           <Text style={styles.section}>External results</Text>
           {state.externalResults.length === 0 ? (
-            <EmptyState title="No external results" hint="WAEC/NECO results appear here once recorded by the office." />
+            <EmptyState
+              title="No external results"
+              hint="WAEC/NECO results appear here once recorded by the office."
+            />
           ) : (
             state.externalResults.map((r) => (
               <View key={r.id} style={styles.historyRow}>
                 <Text style={styles.historyTerm}>{r.examName}</Text>
-                <Text style={styles.historyMeta}>{r.subjects} subjects · {r.grade}</Text>
+                <Text style={styles.historyMeta}>
+                  {r.subjects} subjects · {r.grade}
+                </Text>
               </View>
             ))
           )}
 
           <Text style={styles.section}>Historical report attachments</Text>
           {state.historicalReports.length === 0 ? (
-            <EmptyState title="No historical attachments" hint="Past report cards the office attaches appear here." />
+            <EmptyState
+              title="No historical attachments"
+              hint="Past report cards the office attaches appear here."
+            />
           ) : (
             state.historicalReports.map((r) => (
               <View key={r.id} style={styles.historyRow}>

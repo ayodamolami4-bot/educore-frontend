@@ -73,8 +73,7 @@ export class ConversationPresenter {
     } catch (error) {
       this._setState({
         status: 'error',
-        errorText:
-          error instanceof ApiError ? error.message : 'Could not open this conversation.',
+        errorText: error instanceof ApiError ? error.message : 'Could not open this conversation.',
       });
     }
   }
@@ -121,7 +120,11 @@ export class ConversationPresenter {
         ...this.state.conversation,
         closed: true,
       };
-      this._setState({ savingThread: false, conversation, notice: 'Thread closed — replies are blocked.' });
+      this._setState({
+        savingThread: false,
+        conversation,
+        notice: 'Thread closed — replies are blocked.',
+      });
     } catch (error) {
       this._setState({
         savingThread: false,
@@ -140,7 +143,11 @@ export class ConversationPresenter {
         ...this.state.conversation,
         closed: false,
       };
-      this._setState({ savingThread: false, conversation, notice: 'Thread reopened — replies are accepted again.' });
+      this._setState({
+        savingThread: false,
+        conversation,
+        notice: 'Thread reopened — replies are accepted again.',
+      });
     } catch (error) {
       this._setState({
         savingThread: false,

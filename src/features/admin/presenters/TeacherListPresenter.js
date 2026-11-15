@@ -130,7 +130,10 @@ export class TeacherListPresenter {
       this._setState({
         importing: false,
         notice: null,
-        errorText: error instanceof ApiError ? error.message : 'The import did not run — check the lines and try again.',
+        errorText:
+          error instanceof ApiError
+            ? error.message
+            : 'The import did not run — check the lines and try again.',
       });
       return false;
     }

@@ -135,7 +135,9 @@ export class SettingsPresenter {
       this._setState({ notice: null, errorText: "Enter the admin's full name." });
       return false;
     }
-    const inviteEmail = emailError(fields.email) || (!fields.email ? 'Enter the email the invitation goes to.' : null);
+    const inviteEmail =
+      emailError(fields.email) ||
+      (!fields.email ? 'Enter the email the invitation goes to.' : null);
     if (inviteEmail) {
       this._setState({ notice: null, errorText: inviteEmail });
       return false;

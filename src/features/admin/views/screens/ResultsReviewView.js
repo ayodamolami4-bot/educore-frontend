@@ -47,8 +47,7 @@ export default function ResultsReviewView({ navigation }) {
         {
           text: 'Return for corrections',
           style: 'destructive',
-          onPress: () =>
-            presenter.returnPackage(pkg.id, 'Check the flagged sheets and resubmit.'),
+          onPress: () => presenter.returnPackage(pkg.id, 'Check the flagged sheets and resubmit.'),
         },
         {
           text: 'Approve',
@@ -70,7 +69,8 @@ export default function ResultsReviewView({ navigation }) {
         {
           text: 'Send back again',
           style: 'destructive',
-          onPress: () => presenter.returnPackage(pkg.id, 'Still needs corrections — see the notes.'),
+          onPress: () =>
+            presenter.returnPackage(pkg.id, 'Still needs corrections — see the notes.'),
         },
       ],
     );
@@ -144,7 +144,6 @@ export default function ResultsReviewView({ navigation }) {
 
       {state.status === 'content' ? (
         <>
-
           <Text style={styles.section}>Mark packages</Text>
           <Text style={styles.hint}>
             Teachers submit a mark package when their sheets are done. The admin office (you) is the

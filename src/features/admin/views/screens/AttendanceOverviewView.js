@@ -72,7 +72,8 @@ export default function AttendanceOverviewView({ navigation }) {
             />
           </View>
           <Text style={styles.hint}>
-            Totals use submitted registers only. {(o.correctionRequests ?? 0) > 0
+            Totals use submitted registers only.{' '}
+            {(o.correctionRequests ?? 0) > 0
               ? `${o.correctionRequests} register corrections are waiting for your decision.`
               : 'No register corrections are waiting.'}
           </Text>

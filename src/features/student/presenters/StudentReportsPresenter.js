@@ -71,11 +71,15 @@ export class StudentReportsPresenter {
     this._setState({ exporting: true, exportNotice: null });
     try {
       await this.model.exportReport({ studentId, reportId, format: 'pdf' });
-      this._setState({ exporting: false, exportNotice: 'Export requested — check your downloads shortly.' });
+      this._setState({
+        exporting: false,
+        exportNotice: 'Export requested — check your downloads shortly.',
+      });
     } catch (error) {
       this._setState({
         exporting: false,
-        exportNotice: error instanceof ApiError ? error.message : 'The export could not be requested.',
+        exportNotice:
+          error instanceof ApiError ? error.message : 'The export could not be requested.',
       });
     }
   }

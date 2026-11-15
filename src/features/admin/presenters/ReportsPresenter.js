@@ -47,7 +47,8 @@ export class ReportsPresenter {
     } catch (error) {
       this._setState({
         status: 'error',
-        errorText: error instanceof ApiError ? error.message : 'Could not load the reports catalogue.',
+        errorText:
+          error instanceof ApiError ? error.message : 'Could not load the reports catalogue.',
       });
     }
   }
@@ -58,7 +59,9 @@ export class ReportsPresenter {
 
   async openReport(batch) {
     if (!batch.sampleReportId) {
-      this._setState({ notice: 'Draft batches have no report cards yet — publish the batch first.' });
+      this._setState({
+        notice: 'Draft batches have no report cards yet — publish the batch first.',
+      });
       return;
     }
     this._setState({ working: true, notice: null, errorText: null });
@@ -95,7 +98,10 @@ export class ReportsPresenter {
         `Average,${report.average}`,
         `Position,${report.position}`,
       ];
-      const fileName = `${report.classLabel}-${report.studentName}-report-card.csv`.replace(/\s+/g, '-');
+      const fileName = `${report.classLabel}-${report.studentName}-report-card.csv`.replace(
+        /\s+/g,
+        '-',
+      );
       return { fileName, csv: lines.join('\n') };
     }
     const lines = [

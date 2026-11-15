@@ -24,11 +24,7 @@ export default function StudentScaffold({
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       {canGoBack ? (
-        <Pressable
-          style={styles.backRow}
-          onPress={() => navigation.goBack()}
-          hitSlop={12}
-        >
+        <Pressable style={styles.backRow} onPress={() => navigation.goBack()} hitSlop={12}>
           <Text style={styles.backText}>‹ Back</Text>
         </Pressable>
       ) : null}

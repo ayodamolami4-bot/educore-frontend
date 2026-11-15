@@ -7,7 +7,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Alert } from 'react-native';
 import AdminScaffold from '../components/AdminScaffold';
 import StatusBadge from '../components/StatusBadge';
-import { LoadingView, EmptyState, ErrorState, useActionErrorAlert } from '../components/FeedbackViews';
+import {
+  LoadingView,
+  EmptyState,
+  ErrorState,
+  useActionErrorAlert,
+} from '../components/FeedbackViews';
 import { PrimaryButton, SecondaryButton } from './AdminHomeView';
 import { PaymentDetailPresenter } from '../../presenters/PaymentDetailPresenter';
 import { FinanceModel } from '../../models';
@@ -115,7 +120,9 @@ export default function PaymentDetailView({ route, navigation }) {
                   <StatusBadge label={r.status} tone={statusTone[r.status] || 'muted'} />
                 </View>
                 <Text style={styles.refundReason}>{r.reason}</Text>
-                <Text style={styles.refundMeta}>Raised {r.createdAt} · {r.reference}</Text>
+                <Text style={styles.refundMeta}>
+                  Raised {r.createdAt} · {r.reference}
+                </Text>
                 {r.status === 'Pending' ? (
                   <View style={styles.refundActions}>
                     <SecondaryButton
@@ -133,12 +140,16 @@ export default function PaymentDetailView({ route, navigation }) {
                 {r.status === 'Approved' ? (
                   <View style={styles.refundActions}>
                     <SecondaryButton
-                      label={state.saving === `execute:${r.id}` ? 'Working…' : 'Execute via Paystack'}
+                      label={
+                        state.saving === `execute:${r.id}` ? 'Working…' : 'Execute via Paystack'
+                      }
                       disabled={Boolean(state.saving)}
                       onPress={() => confirmExecute(r)}
                     />
                     <SecondaryButton
-                      label={state.saving === `confirm:${r.id}` ? 'Saving…' : 'Mark refunded (manual)'}
+                      label={
+                        state.saving === `confirm:${r.id}` ? 'Saving…' : 'Mark refunded (manual)'
+                      }
                       disabled={Boolean(state.saving)}
                       onPress={() => presenter.onConfirmManual(r)}
                     />

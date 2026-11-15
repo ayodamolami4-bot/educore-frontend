@@ -26,7 +26,6 @@ export default function AttendanceScreen({ route }) {
     presenter.attach(setState);
     presenter.load(studentId);
     return () => presenter.detach();
-     
   }, [presenter, studentId]);
 
   useActionErrorAlert(state.errorText);
@@ -51,7 +50,9 @@ export default function AttendanceScreen({ route }) {
               <Text style={styles.summaryLabel}>Present</Text>
             </View>
             <View style={styles.summaryTile}>
-              <Text style={[styles.summaryValue, { color: colors.danger }]}>{att.summary.absent}</Text>
+              <Text style={[styles.summaryValue, { color: colors.danger }]}>
+                {att.summary.absent}
+              </Text>
               <Text style={styles.summaryLabel}>Absent</Text>
             </View>
             <View style={styles.summaryTile}>

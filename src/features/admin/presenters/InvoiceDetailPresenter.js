@@ -121,8 +121,7 @@ export class InvoiceDetailPresenter {
       });
     } catch (error) {
       this._setState({
-        errorText:
-          error instanceof ApiError ? error.message : 'The payment could not be recorded.',
+        errorText: error instanceof ApiError ? error.message : 'The payment could not be recorded.',
       });
     } finally {
       if (this._alive) this._setState({ saving: false });

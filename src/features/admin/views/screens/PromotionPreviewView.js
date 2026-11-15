@@ -18,7 +18,9 @@ import { destinationLabel } from '../../utils/validators';
 import { colors, typography, spacing } from '../theme';
 
 export default function PromotionPreviewView({ navigation }) {
-  const [presenter] = useState(() => new PromotionPreviewPresenter(PromotionModel, AcademicStructureModel));
+  const [presenter] = useState(
+    () => new PromotionPreviewPresenter(PromotionModel, AcademicStructureModel),
+  );
   const [state, setState] = useState(presenter.initialState);
   const [classLabel, setClassLabel] = useState('');
   const [classSheet, setClassSheet] = useState(false);
@@ -100,7 +102,10 @@ export default function PromotionPreviewView({ navigation }) {
         <View>
           {state.notice ? <Text style={styles.notice}>{state.notice}</Text> : null}
           <View style={styles.badgeRow}>
-            <StatusBadge label={preview.status} tone={preview.status === 'Confirmed' ? 'positive' : 'info'} />
+            <StatusBadge
+              label={preview.status}
+              tone={preview.status === 'Confirmed' ? 'positive' : 'info'}
+            />
             <Text style={styles.badgeMeta}>
               Promote {preview.summary.promote} · repeat {preview.summary.repeat} · graduate{' '}
               {preview.summary.graduate}
@@ -127,10 +132,10 @@ export default function PromotionPreviewView({ navigation }) {
             <Text style={styles.hint}>This preview is confirmed — decisions are frozen.</Text>
           ) : (
             <Text style={styles.hint}>
-              Tap a student to see their full details and change their
-              decision, then Save decisions. Students only move when this
-              preview is confirmed in &quot;Approve promotion and graduation&quot;
-              — JSS1 becomes JSS2, JSS3 becomes SSS1, and SSS3 graduates.
+              Tap a student to see their full details and change their decision, then Save
+              decisions. Students only move when this preview is confirmed in &quot;Approve
+              promotion and graduation&quot; — JSS1 becomes JSS2, JSS3 becomes SSS1, and SSS3
+              graduates.
             </Text>
           )}
 
@@ -143,7 +148,10 @@ export default function PromotionPreviewView({ navigation }) {
               />
             ) : null}
             <View style={styles.secondaryWrap}>
-              <SecondaryButton label="Back to all previews" onPress={() => presenter.closePreview()} />
+              <SecondaryButton
+                label="Back to all previews"
+                onPress={() => presenter.closePreview()}
+              />
             </View>
           </View>
         </View>
@@ -161,7 +169,12 @@ export default function PromotionPreviewView({ navigation }) {
       />
 
       {/* Full-details popup for one student in the preview. */}
-      <Modal visible={Boolean(detailsRow)} transparent animationType="fade" onRequestClose={() => setDetailsRow(null)}>
+      <Modal
+        visible={Boolean(detailsRow)}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDetailsRow(null)}
+      >
         <View style={styles.detailsBackdrop}>
           <Pressable style={styles.detailsBackdropTouch} onPress={() => setDetailsRow(null)} />
           <View style={styles.detailsCard}>
@@ -176,7 +189,9 @@ export default function PromotionPreviewView({ navigation }) {
               Decision now: {detailsRow ? detailsRow.decision : '—'}
             </Text>
             <Text style={styles.detailsLine}>
-              {detailsRow && preview ? destinationLabel(preview.classLabel, detailsRow.decision) : ''}
+              {detailsRow && preview
+                ? destinationLabel(preview.classLabel, detailsRow.decision)
+                : ''}
             </Text>
             {preview && preview.status !== 'Confirmed' ? (
               <View style={styles.detailsActions}>
@@ -194,7 +209,10 @@ export default function PromotionPreviewView({ navigation }) {
                 <Pressable
                   style={styles.detailsButton}
                   onPress={() => {
-                    presenter.setDecision(detailsRow.studentId, graduating ? 'Graduate' : 'Promote');
+                    presenter.setDecision(
+                      detailsRow.studentId,
+                      graduating ? 'Graduate' : 'Promote',
+                    );
                     setDetailsRow(null);
                   }}
                 >
@@ -221,22 +239,54 @@ export default function PromotionPreviewView({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  detailsBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', padding: spacing.md },
+  detailsBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.md,
+  },
   detailsBackdropTouch: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 },
-  detailsCard: { backgroundColor: colors.white, borderRadius: 14, borderWidth: 2, borderColor: colors.primary, padding: spacing.md, width: '100%', maxWidth: 480 },
+  detailsCard: {
+    backgroundColor: colors.white,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    padding: spacing.md,
+    width: '100%',
+    maxWidth: 480,
+  },
   detailsName: { ...typography.title, marginBottom: 2 },
   detailsMeta: { ...typography.label, color: colors.muted, marginBottom: spacing.sm },
   detailsLine: { ...typography.body, marginBottom: 2 },
   detailsActions: { marginTop: spacing.md, gap: spacing.sm },
-  detailsButton: { minHeight: 44, borderRadius: 10, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  detailsButton: {
+    minHeight: 44,
+    borderRadius: 10,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
   detailsSecondary: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  detailsButtonText: { ...typography.body, fontWeight: '700', color: colors.text, textAlign: 'center' },
+  detailsButtonText: {
+    ...typography.body,
+    fontWeight: '700',
+    color: colors.text,
+    textAlign: 'center',
+  },
   detailsClose: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   detailsCloseText: { ...typography.label, color: colors.muted },
   notice: { ...typography.body, color: colors.primary, marginBottom: spacing.sm },
   hint: { ...typography.label, color: colors.muted, marginTop: spacing.sm },
   section: { ...typography.sectionTitle, marginTop: spacing.md, marginBottom: spacing.sm },
-  badgeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
   badgeMeta: { ...typography.label, color: colors.muted, flex: 1 },
   actionsWrap: { marginTop: spacing.md },
   secondaryWrap: { marginTop: spacing.xs },

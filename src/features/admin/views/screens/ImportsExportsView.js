@@ -44,7 +44,8 @@ const KIND_COPY = {
     noun: 'teachers',
   },
   parents: {
-    exportHelp: 'Send the current parent/guardian records as a CSV file to email, Drive or WhatsApp.',
+    exportHelp:
+      'Send the current parent/guardian records as a CSV file to email, Drive or WhatsApp.',
     exportBtn: 'Export parents (CSV)',
     importHelp:
       'Paste CSV rows below — with or without the header line. Required: fullName and at least a phone or an email. Optional: relationship, children (pipe-separated "Name,Class" pairs).',
@@ -87,8 +88,8 @@ export default function ImportsExportsView() {
     >
       <Text style={styles.section}>Record kind</Text>
       <Text style={styles.bodyText}>
-        Pick which records to export or import. The CSV columns and the import rules change with
-        the kind.
+        Pick which records to export or import. The CSV columns and the import rules change with the
+        kind.
       </Text>
       <SecondaryButton
         label={KIND_OPTIONS.find((o) => o.value === kind).label}

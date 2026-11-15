@@ -133,10 +133,7 @@ export default function StudentFormView({ route, navigation }) {
           {state.guardianMatches.map((g) => (
             <Pressable
               key={g.id}
-              style={[
-                styles.matchRow,
-                state.linkGuardianId === g.id && styles.matchRowActive,
-              ]}
+              style={[styles.matchRow, state.linkGuardianId === g.id && styles.matchRowActive]}
               onPress={() => presenter.onLinkGuardian(g.id)}
             >
               <View style={styles.matchMain}>

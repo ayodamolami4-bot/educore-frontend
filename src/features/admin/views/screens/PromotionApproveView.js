@@ -130,7 +130,12 @@ export default function PromotionApproveView({ navigation }) {
 const styles = StyleSheet.create({
   notice: { ...typography.body, color: colors.primary, marginBottom: spacing.sm },
   hint: { ...typography.label, color: colors.muted, marginTop: spacing.sm },
-  badgeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
   badgeMeta: { ...typography.label, color: colors.muted, flex: 1 },
   actionsWrap: { marginTop: spacing.md },
   secondaryWrap: { marginTop: spacing.xs },

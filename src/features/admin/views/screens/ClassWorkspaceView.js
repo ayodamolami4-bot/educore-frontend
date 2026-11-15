@@ -27,7 +27,8 @@ export default function ClassWorkspaceView({ navigation, route }) {
       presenter.pickClass();
     }
     const unsubscribe = navigation.addListener('focus', () => {
-      if (loadedOnce.current && state.cls) presenter.load(state.cls.classLabel, { showLoading: false });
+      if (loadedOnce.current && state.cls)
+        presenter.load(state.cls.classLabel, { showLoading: false });
       loadedOnce.current = true;
     });
     return () => {
@@ -76,9 +77,7 @@ export default function ClassWorkspaceView({ navigation, route }) {
           <Text style={styles.section}>Students in this class</Text>
           <RecordList
             items={studentRows}
-            onPressItem={(row) =>
-              navigation.navigate('StudentProfile', { studentId: row.raw.id })
-            }
+            onPressItem={(row) => navigation.navigate('StudentProfile', { studentId: row.raw.id })}
             emptyText="No students in this class yet."
           />
 

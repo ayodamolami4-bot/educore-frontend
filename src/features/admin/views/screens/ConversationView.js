@@ -13,7 +13,7 @@ import { ConversationPresenter } from '../../presenters/ConversationPresenter';
 import { MessagesModel } from '../../models';
 import { colors, typography, spacing } from '../theme';
 
-export default function ConversationView({ route, navigation }) {
+export default function ConversationView({ route, navigation: _navigation }) {
   const [presenter] = useState(() => new ConversationPresenter(MessagesModel));
   const [state, setState] = useState(presenter.initialState);
   const [replyText, setReplyText] = useState('');

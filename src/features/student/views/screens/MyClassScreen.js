@@ -26,7 +26,6 @@ export default function MyClassScreen({ route }) {
       unsubscribe?.remove?.();
       presenter.detach();
     };
-     
   }, [presenter, navigation, studentId]);
 
   useActionErrorAlert(state.errorText);

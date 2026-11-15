@@ -90,12 +90,14 @@ export default function TeacherListView({ navigation }) {
 
           <Text style={styles.section}>Import teachers from CSV</Text>
           <Text style={styles.hint}>
-            One teacher per line: Full name, Email, Phone, Subjects (| separated), Form class.
-            Every line is checked with the same rules as the form.
+            One teacher per line: Full name, Email, Phone, Subjects (| separated), Form class. Every
+            line is checked with the same rules as the form.
           </Text>
           <TextInput
             style={[styles.search, styles.csvBox]}
-            placeholder={'Mr. Emeka Obi, emeka.obi@gmail.com, 0810 123 4567, Mathematics|Basic Science, JSS2 A'}
+            placeholder={
+              'Mr. Emeka Obi, emeka.obi@gmail.com, 0810 123 4567, Mathematics|Basic Science, JSS2 A'
+            }
             placeholderTextColor={colors.muted}
             value={csvText}
             onChangeText={setCsvText}

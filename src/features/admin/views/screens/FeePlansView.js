@@ -143,9 +143,9 @@ export default function FeePlansView({ navigation }) {
             }
           />
           <Text style={styles.hint}>
-            One draft plan is created per selected class. Issuing a plan creates one bill per
-            ACTIVE student in that class — it never bills withdrawn or graduated students, and
-            never bills a class twice.
+            One draft plan is created per selected class. Issuing a plan creates one bill per ACTIVE
+            student in that class — it never bills withdrawn or graduated students, and never bills
+            a class twice.
           </Text>
 
           <SelectSheet

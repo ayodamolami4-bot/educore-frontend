@@ -17,7 +17,11 @@ function Tile({ label, value, onPress, accent }) {
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.tile, pressed && { opacity: 0.7 }, accent && styles.tileAccent]}
+      style={({ pressed }) => [
+        styles.tile,
+        pressed && { opacity: 0.7 },
+        accent && styles.tileAccent,
+      ]}
     >
       <Text style={styles.tileValue}>{value}</Text>
       <Text style={styles.tileLabel}>{label}</Text>
@@ -39,7 +43,6 @@ export default function StudentHomeScreen({ route }) {
       unsubscribe?.remove?.();
       presenter.detach();
     };
-     
   }, [presenter, navigation, studentId]);
 
   useActionErrorAlert(state.errorText);
@@ -62,11 +65,7 @@ export default function StudentHomeScreen({ route }) {
       {state.status === 'content' && ov ? (
         <View>
           <View style={styles.tiles}>
-            <Tile
-              label="Subjects"
-              value={ov.subjects.length}
-              onPress={() => go('MyClass')}
-            />
+            <Tile label="Subjects" value={ov.subjects.length} onPress={() => go('MyClass')} />
             <Tile
               label="Open tasks"
               value={ov.openAssignments.length}
@@ -92,7 +91,9 @@ export default function StudentHomeScreen({ route }) {
               >
                 <View style={styles.rowMain}>
                   <Text style={styles.rowTitle}>{a.title}</Text>
-                  <Text style={styles.rowMeta}>{a.subject} · due {a.dueAt}</Text>
+                  <Text style={styles.rowMeta}>
+                    {a.subject} · due {a.dueAt}
+                  </Text>
                 </View>
                 <Text style={styles.chevron}>›</Text>
               </Pressable>

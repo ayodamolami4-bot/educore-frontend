@@ -50,7 +50,9 @@ export default function AuditTrailView({ navigation }) {
                 style={[styles.chip, state.category === c && styles.chipOn]}
                 onPress={() => presenter.onFilterCategory(c)}
               >
-                <Text style={[styles.chipText, state.category === c && styles.chipTextOn]}>{c}</Text>
+                <Text style={[styles.chipText, state.category === c && styles.chipTextOn]}>
+                  {c}
+                </Text>
               </Pressable>
             ))}
           </View>

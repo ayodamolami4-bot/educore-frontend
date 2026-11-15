@@ -203,7 +203,8 @@ export class StudentLearningPresenter {
     } catch (error) {
       this._setState({
         status: 'error',
-        errorText: error instanceof ApiError ? error.message : 'Could not load your learning materials.',
+        errorText:
+          error instanceof ApiError ? error.message : 'Could not load your learning materials.',
       });
     }
   }

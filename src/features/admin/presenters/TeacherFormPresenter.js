@@ -71,8 +71,7 @@ export class TeacherFormPresenter {
     } catch (error) {
       this._setState({
         status: 'error',
-        errorText:
-          error instanceof ApiError ? error.message : 'Could not load the teacher form.',
+        errorText: error instanceof ApiError ? error.message : 'Could not load the teacher form.',
       });
     }
   }

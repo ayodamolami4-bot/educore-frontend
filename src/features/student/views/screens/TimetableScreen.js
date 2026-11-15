@@ -25,7 +25,6 @@ export default function TimetableScreen({ route }) {
       unsubscribe?.remove?.();
       presenter.detach();
     };
-     
   }, [presenter, navigation, studentId]);
 
   useActionErrorAlert(state.errorText);

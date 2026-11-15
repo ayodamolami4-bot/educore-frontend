@@ -91,8 +91,18 @@ function AcademicsMenu() {
   return (
     <MenuScreen
       adCodes={[
-        'AD11', 'AD12', 'AD13', 'AD14', 'AD15', 'AD16', 'AD17',
-        'AD18', 'AD19', 'AD20', 'AD26', 'AD27',
+        'AD11',
+        'AD12',
+        'AD13',
+        'AD14',
+        'AD15',
+        'AD16',
+        'AD17',
+        'AD18',
+        'AD19',
+        'AD20',
+        'AD26',
+        'AD27',
       ]}
     />
   );
@@ -109,17 +119,7 @@ function MoreMenu() {
   // AD32 (one complaint) open from their inboxes — same rule.
   return (
     <MenuScreen
-      adCodes={[
-        'AD05',
-        'AD07',
-        'AD08',
-        'AD10',
-        'AD28',
-        'AD29',
-        'AD31',
-        'AD33',
-        'AD34',
-      ]}
+      adCodes={['AD05', 'AD07', 'AD08', 'AD10', 'AD28', 'AD29', 'AD31', 'AD33', 'AD34']}
     />
   );
 }
@@ -162,7 +162,10 @@ function AdminTabs() {
       <Tabs.Screen
         name="MoreTab"
         component={MoreMenu}
-        options={{ title: 'More', tabBarIcon: tabIcon('ellipsis-horizontal', 'ellipsis-horizontal') }}
+        options={{
+          title: 'More',
+          tabBarIcon: tabIcon('ellipsis-horizontal', 'ellipsis-horizontal'),
+        }}
       />
     </Tabs.Navigator>
   );

@@ -13,7 +13,12 @@ import { View } from 'react-native';
 import AdminScaffold from '../components/AdminScaffold';
 import RecordList from '../components/RecordList';
 import SelectSheet from '../components/SelectSheet';
-import { LoadingView, EmptyState, ErrorState, useActionErrorAlert } from '../components/FeedbackViews';
+import {
+  LoadingView,
+  EmptyState,
+  ErrorState,
+  useActionErrorAlert,
+} from '../components/FeedbackViews';
 import { PrimaryButton } from './AdminHomeView';
 import { MessageInboxPresenter } from '../../presenters/MessageInboxPresenter';
 import { MessagesModel } from '../../models';
@@ -67,7 +72,7 @@ export default function MessageInboxView({ navigation }) {
 
   // Individuals sheet: "Done" sends to the ticked people, "Send to all" to
   // everyone the sheet shows.
-  const sendIndividuals = (sendAll) => {
+  const sendIndividuals = (_sendAll) => {
     const values = state.people.map((p) => p.value);
     const allTitle =
       currentGroup === 'group:all-teachers'
@@ -127,7 +132,9 @@ export default function MessageInboxView({ navigation }) {
       {/* Step 2a — one class: its teachers, its guardians, or both. */}
       <SelectSheet
         visible={classSheet}
-        label={currentGroup ? `Message which group in ${labelOf(currentGroup)}` : 'Message which group?'}
+        label={
+          currentGroup ? `Message which group in ${labelOf(currentGroup)}` : 'Message which group?'
+        }
         options={state.people.map((p) => ({ label: p.label, value: p.value }))}
         value={null}
         onSelect={(v) => {
@@ -152,7 +159,10 @@ export default function MessageInboxView({ navigation }) {
         }
         extraAction={
           state.people.length
-            ? { label: `Send to all (${state.people.length})`, onPress: () => sendIndividuals(true) }
+            ? {
+                label: `Send to all (${state.people.length})`,
+                onPress: () => sendIndividuals(true),
+              }
             : null
         }
         onDone={() => sendIndividuals(false)}

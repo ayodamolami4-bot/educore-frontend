@@ -19,7 +19,9 @@ const DEPARTMENTS = ['Core', 'JSS', 'Science', 'Humanities / Arts', 'Business / 
   (d) => ({ label: d, value: d }),
 );
 export default function AcademicStructureView({ navigation }) {
-  const [presenter] = useState(() => new AcademicStructurePresenter(AcademicStructureModel, TeacherModel));
+  const [presenter] = useState(
+    () => new AcademicStructurePresenter(AcademicStructureModel, TeacherModel),
+  );
   const [state, setState] = useState(presenter.initialState);
   const loadedOnce = useRef(false);
   const [subjectName, setSubjectName] = useState('');
@@ -39,9 +41,7 @@ export default function AcademicStructureView({ navigation }) {
   // junior; the named departments are senior-only. With nothing ticked the
   // whole list shows.
   const allowJss =
-    subjectDepts.length === 0 ||
-    subjectDepts.includes('Core') ||
-    subjectDepts.includes('JSS');
+    subjectDepts.length === 0 || subjectDepts.includes('Core') || subjectDepts.includes('JSS');
   const allowSss =
     subjectDepts.length === 0 ||
     subjectDepts.includes('Core') ||
@@ -167,7 +167,8 @@ export default function AcademicStructureView({ navigation }) {
                 },
                 {
                   text: 'Open workspace',
-                  onPress: () => navigation.navigate('ClassWorkspace', { classId: row.raw.classLabel }),
+                  onPress: () =>
+                    navigation.navigate('ClassWorkspace', { classId: row.raw.classLabel }),
                 },
               ])
             }
@@ -194,10 +195,7 @@ export default function AcademicStructureView({ navigation }) {
                 onPress={async () => {
                   const suffix = newClassSuffix.trim();
                   const level = renamingClass.classLabel.split(' ')[0];
-                  const ok = await presenter.renameClass(
-                    renamingClass.id,
-                    `${level} ${suffix}`,
-                  );
+                  const ok = await presenter.renameClass(renamingClass.id, `${level} ${suffix}`);
                   if (ok) setRenamingClass(null);
                 }}
               />
@@ -297,13 +295,19 @@ export default function AcademicStructureView({ navigation }) {
             onPress={() => setTeacherSheet(true)}
           />
           <SecondaryButton
-            label={state.savingSubject ? 'Saving…' : editingSubject ? 'Save changes' : 'Add subject'}
+            label={
+              state.savingSubject ? 'Saving…' : editingSubject ? 'Save changes' : 'Add subject'
+            }
             disabled={state.savingSubject}
             onPress={saveSubjectForm}
           />
           {editingSubject ? (
             <View style={styles.cancelWrap}>
-              <SecondaryButton label="Cancel editing" disabled={state.savingSubject} onPress={clearSubjectForm} />
+              <SecondaryButton
+                label="Cancel editing"
+                disabled={state.savingSubject}
+                onPress={clearSubjectForm}
+              />
             </View>
           ) : null}
 

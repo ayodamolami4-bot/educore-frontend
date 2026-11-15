@@ -77,7 +77,8 @@ export default function ReportsView({ navigation }) {
             emptyText="No report batches yet."
           />
           <Text style={styles.hint}>
-            Draft batches have no report cards yet. Published batches open a sample learner&apos;s card.
+            Draft batches have no report cards yet. Published batches open a sample learner&apos;s
+            card.
           </Text>
         </View>
       ) : null}
@@ -107,7 +108,8 @@ export default function ReportsView({ navigation }) {
           />
 
           <Text style={styles.summary}>
-            Average {report.average}% · Position {report.position} · &quot;{report.overallRemark}&quot;
+            Average {report.average}% · Position {report.position} · &quot;{report.overallRemark}
+            &quot;
           </Text>
 
           <View style={styles.actionsWrap}>
@@ -117,7 +119,10 @@ export default function ReportsView({ navigation }) {
               onPress={onExport}
             />
             <View style={styles.secondaryWrap}>
-              <SecondaryButton label="Back to the catalogue" onPress={() => presenter.closeReport()} />
+              <SecondaryButton
+                label="Back to the catalogue"
+                onPress={() => presenter.closeReport()}
+              />
             </View>
           </View>
         </View>

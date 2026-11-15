@@ -51,7 +51,9 @@ export default function GuardianProfileView({ route, navigation }) {
     <AdminScaffold
       eyebrow="People"
       title={g ? g.fullName : 'Guardian profile'}
-      subtitle={g ? `${g.relationship} of the linked student${g.childrenCount > 1 ? 's' : ''}` : undefined}
+      subtitle={
+        g ? `${g.relationship} of the linked student${g.childrenCount > 1 ? 's' : ''}` : undefined
+      }
     >
       {state.status === 'loading' ? <LoadingView label="Loading the guardian…" /> : null}
       {state.status === 'error' ? (

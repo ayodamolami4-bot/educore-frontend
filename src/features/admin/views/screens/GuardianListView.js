@@ -70,12 +70,7 @@ export default function GuardianListView({ navigation }) {
                 style={[styles.chip, state.query.status === s && styles.chipOn]}
                 onPress={() => presenter.onFilterStatus(s)}
               >
-                <Text
-                  style={[
-                    styles.chipText,
-                    state.query.status === s && styles.chipTextOn,
-                  ]}
-                >
+                <Text style={[styles.chipText, state.query.status === s && styles.chipTextOn]}>
                   {s === 'all' ? 'All' : s}
                 </Text>
               </Pressable>
