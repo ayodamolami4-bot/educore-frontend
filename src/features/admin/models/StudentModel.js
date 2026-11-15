@@ -15,15 +15,23 @@ const itemsOf = (payload) => {
 const classLabel = (item) =>
   [item?.level, item?.arm].filter(Boolean).join(' ') || item?.classLabel || '';
 
+function displayStatus(value) {
+  const status = String(value ?? '').toUpperCase();
+  if (status === 'WITHDRAWN') return 'Withdrawn';
+  if (status === 'GRADUATED') return 'Graduated';
+  if (status === 'ACTIVE') return 'Active';
+  return value ?? '';
+}
+
 function toListItem(raw, classesById = new Map()) {
-  const placement = raw.enrolments?.[0] ?? null;
+  const placement = raw.enrolments?.find((item) => !item.endsOn) ?? raw.enrolments?.[0] ?? null;
   return {
     id: raw.id,
     name: raw.fullName || raw.name || '',
     admissionNumber: raw.admissionNumber || '',
-    classLabel: raw.classLabel || classLabel(classesById.get(placement?.classId)),
+    classLabel: raw.classLabel || classLabel(classesById.get(placement?.classId)) || classLabel(placement),
     department: placement?.department ?? raw.department ?? null,
-    status: raw.status || '',
+    status: displayStatus(raw.status),
     version: raw.version,
   };
 }
@@ -118,12 +126,22 @@ export const StudentModel = {
     const raw = await api.get('students/{studentId}', { studentId });
     const enrolments = Array.isArray(raw.enrolments) ? raw.enrolments : [];
     const current = enrolments.find((item) => !item.endsOn) ?? enrolments[0] ?? null;
+    const primaryGuardian = (raw.guardians ?? []).find((item) => item.active !== false) ?? raw.guardians?.[0] ?? null;
     return {
       ...toListItem({ ...raw, enrolments }),
       ...raw,
+      status: displayStatus(raw.status),
       classLabel: classLabel(current),
       department: current?.department ?? null,
-      enrolments,
+      guardianName: primaryGuardian?.fullName ?? '',
+      guardianPhone: primaryGuardian?.phone ?? '',
+      guardianEmail: primaryGuardian?.email ?? '',
+      enrolments: enrolments.map((item) => ({
+        ...item,
+        classLabel: classLabel(item),
+        sessionLabel: item.sessionLabel ?? '',
+        status: item.endsOn ? 'Previous placement' : 'Current placement',
+      })),
       guardians: Array.isArray(raw.guardians) ? raw.guardians : [],
     };
   },
