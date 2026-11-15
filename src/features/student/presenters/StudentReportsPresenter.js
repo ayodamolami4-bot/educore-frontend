@@ -5,6 +5,7 @@
  * export (POST /exports) the student can request.
  */
 import { ApiError } from '../../admin/api/ApiError';
+import { deliverReportPdf } from '../views/reportDocuments';
 
 export class StudentReportsPresenter {
   constructor(studentModel) {
@@ -70,10 +71,15 @@ export class StudentReportsPresenter {
     if (this.state.exporting) return;
     this._setState({ exporting: true, exportNotice: null });
     try {
-      await this.model.exportReport({ studentId, reportId, format: 'pdf' });
+      const pdf = await this.model.exportReport({ studentId, reportId, format: 'pdf' });
+      await deliverReportPdf(
+        pdf,
+        `EduCore-report-${String(reportId).replace(/[^A-Za-z0-9_-]/g, '')}.pdf`,
+        () => this._alive,
+      );
       this._setState({
         exporting: false,
-        exportNotice: 'Export requested — check your downloads shortly.',
+        exportNotice: 'Your report PDF is ready.',
       });
     } catch (error) {
       this._setState({
