@@ -1,10 +1,15 @@
 /**
- * AD11 — School calendar. One screen for the term window, the key dates
- * families ask about, and today's schedule (the same slots the home shows).
- * The office can ADD to all three: key dates, today's activities, and the
- * next session (the CURRENT session stays automatic and locked).
+ * AD11 — School calendar Presenter.
+ * Reads actual academic sessions, terms, published examination events and
+ * the daily schedule. Only creates sessions/terms through implemented routes.
  */
 import { ApiError } from '../api/ApiError';
+
+function validDate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value ?? ''))) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
 
 export class CalendarPresenter {
   constructor(calendarModel) {
@@ -12,9 +17,10 @@ export class CalendarPresenter {
     this._render = null;
     this._alive = false;
     this.initialState = {
-      status: 'loading', // loading | content | error
+      status: 'loading',
       calendar: null,
       sessions: [],
+      terms: [],
       saving: false,
       notice: null,
       errorText: null,
@@ -38,22 +44,22 @@ export class CalendarPresenter {
     this._render(this.state);
   }
 
-  async load() {
-    this._setState({ status: 'loading', errorText: null });
+  async load(notice = null) {
+    this._setState({ status: 'loading', errorText: null, notice });
     try {
-      const [calendar, sessions] = await Promise.all([
-        this.model.calendar(),
-        this.model.sessions(),
-      ]);
+      const snapshot = await this.model.snapshot();
       this._setState({
         status: 'content',
-        calendar: calendar || {},
-        sessions: (sessions && sessions.items) || [],
+        calendar: snapshot,
+        sessions: snapshot.sessions,
+        terms: snapshot.terms,
+        errorText: null,
+        notice,
       });
     } catch (error) {
       this._setState({
         status: 'error',
-        errorText: error instanceof ApiError ? error.message : 'Could not load the calendar.',
+        errorText: error instanceof ApiError ? error.message : 'Could not load the school calendar.',
       });
     }
   }
@@ -62,71 +68,65 @@ export class CalendarPresenter {
     return this.load();
   }
 
-  /** Add a key date. Returns true when it saved so the view can clear the form. */
-  async addKeyDate(fields) {
+  async addSession(fields) {
     if (this.state.saving) return false;
-    this._setState({ saving: true, notice: null, errorText: null });
+    const name = String(fields.name ?? '').trim();
+    const startsOn = String(fields.startsOn ?? '').trim();
+    const endsOn = String(fields.endsOn ?? '').trim();
+    if (name.length < 4 || name.length > 40) {
+      this._setState({ errorText: 'Enter an academic session name (4–40 characters).' });
+      return false;
+    }
+    if (!validDate(startsOn) || !validDate(endsOn) || startsOn >= endsOn) {
+      this._setState({ errorText: 'Enter valid session dates; the start must precede the end.' });
+      return false;
+    }
+    this._setState({ saving: true, errorText: null, notice: null });
     try {
-      const result = await this.model.addKeyDate(fields);
-      this._setState({
-        saving: false,
-        calendar: result.calendar,
-        notice: `${fields.title} added to the key dates.`,
-      });
+      await this.model.createSession({ name, startsOn, endsOn });
+      await this.load(`${name} created.`);
       return true;
     } catch (error) {
       this._setState({
         saving: false,
-        notice: null,
-        errorText: error instanceof ApiError ? error.message : 'The key date was not saved.',
+        errorText: error instanceof ApiError ? error.message : 'The academic session was not created.',
       });
       return false;
     }
   }
 
-  /** Add an activity to "Today at school". */
-  async addTodayItem(fields) {
+  async addTerm(fields) {
     if (this.state.saving) return false;
-    this._setState({ saving: true, notice: null, errorText: null });
-    try {
-      const result = await this.model.addTodayItem(fields);
-      this._setState({
-        saving: false,
-        calendar: result.calendar,
-        notice: `${fields.subject} added to today's schedule.`,
-      });
-      return true;
-    } catch (error) {
-      this._setState({
-        saving: false,
-        notice: null,
-        errorText: error instanceof ApiError ? error.message : 'The activity was not saved.',
-      });
+    const session = this.state.sessions.find((item) => item.id === fields.sessionId);
+    const number = Number(fields.number);
+    const startsOn = String(fields.startsOn ?? '').trim();
+    const endsOn = String(fields.endsOn ?? '').trim();
+    if (!session) {
+      this._setState({ errorText: 'Choose an existing academic session.' });
       return false;
     }
-  }
-
-  /** Plan the next session — the label is computed from the newest entry, so
-      the office just taps Add ("2027/2028"). The CURRENT session stays
-      automatic and cannot be changed here or in the settings. */
-  async addNextSession() {
-    if (this.state.saving) return false;
-    const newest = Math.max(...this.state.sessions.map((s) => Number(s.label.split('/')[0])));
-    const label = `${newest + 1}/${newest + 2}`;
-    this._setState({ saving: true, notice: null, errorText: null });
+    if (!Number.isInteger(number) || number < 1 || number > 3) {
+      this._setState({ errorText: 'Choose Term 1, 2 or 3.' });
+      return false;
+    }
+    if (!validDate(startsOn) || !validDate(endsOn) || startsOn >= endsOn ||
+      startsOn < session.startsOn || endsOn > session.endsOn) {
+      this._setState({ errorText: 'Term dates must be valid and fall within the selected academic session.' });
+      return false;
+    }
+    if (session.terms.some((term) => Number(term.number) === number)) {
+      this._setState({ errorText: `Term ${number} already exists in ${session.name}.` });
+      return false;
+    }
+    this._setState({ saving: true, errorText: null, notice: null });
     try {
-      const result = await this.model.createSession({ label });
-      this._setState({
-        saving: false,
-        sessions: result.sessions || this.state.sessions,
-        notice: `${label} planned — set its term dates when the ministry releases them.`,
-      });
+      await this.model.createTerm({ sessionId: session.id, number, startsOn, endsOn });
+      await this.load(`Term ${number} added to ${session.name}.`);
       return true;
     } catch (error) {
       this._setState({
         saving: false,
-        notice: null,
-        errorText: error instanceof ApiError ? error.message : 'The session was not added.',
+        errorText: error instanceof ApiError ? error.message : 'The term was not created.',
       });
       return false;
     }
