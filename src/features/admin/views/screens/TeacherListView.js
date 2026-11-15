@@ -12,7 +12,7 @@ import { TeacherListPresenter } from '../../presenters/TeacherListPresenter';
 import { TeacherModel } from '../../models';
 import { colors, typography, spacing } from '../theme';
 
-const STATUSES = ['all', 'Active', 'On Leave', 'Inactive'];
+const STATUSES = ['all', 'Active', 'Inactive'];
 
 export default function TeacherListView({ navigation }) {
   const [presenter] = useState(() => new TeacherListPresenter(TeacherModel));
@@ -64,7 +64,7 @@ export default function TeacherListView({ navigation }) {
         <View>
           <TextInput
             style={styles.search}
-            placeholder="Search name, staff number or subject"
+            placeholder="Search teacher name or staff number"
             placeholderTextColor={colors.muted}
             value={state.query.q}
             onChangeText={(t) => presenter.onSearch(t)}
@@ -88,32 +88,10 @@ export default function TeacherListView({ navigation }) {
             emptyText="No teachers match — try clearing the search or filter."
           />
 
-          <Text style={styles.section}>Import teachers from CSV</Text>
           <Text style={styles.hint}>
-            One teacher per line: Full name, Email, Phone, Subjects (| separated), Form class. Every
-            line is checked with the same rules as the form.
+            Bulk imports use the school Imports workflow. Register one teacher here when a new class-and-subject assignment is required.
           </Text>
-          <TextInput
-            style={[styles.search, styles.csvBox]}
-            placeholder={
-              'Mr. Emeka Obi, emeka.obi@gmail.com, 0810 123 4567, Mathematics|Basic Science, JSS2 A'
-            }
-            placeholderTextColor={colors.muted}
-            value={csvText}
-            onChangeText={setCsvText}
-            multiline
-            autoCapitalize="none"
-          />
-          <View style={styles.importWrap}>
-            <PrimaryButton
-              label={state.importing ? 'Importing…' : 'Import these lines'}
-              disabled={state.importing || !csvText.trim()}
-              onPress={async () => {
-                const ok = await presenter.importCsv(csvText);
-                if (ok) setCsvText('');
-              }}
-            />
-          </View>
+        </View>
           {state.notice ? <Text style={styles.notice}>{state.notice}</Text> : null}
           {state.errorText ? <Text style={styles.inlineError}>{state.errorText}</Text> : null}
           {state.importResult && state.importResult.failed.length ? (
