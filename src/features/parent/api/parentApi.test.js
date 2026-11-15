@@ -21,8 +21,6 @@ test('complaint categories use the selected school communication endpoint', asyn
 
   const result = await api.complaintMetadata();
 
-  assert.deepEqual(result.categories, [
-    { code: 'FEES', label: 'Fees and payments' },
-  ]);
+  assert.deepEqual(result.categories, [{ code: 'FEES', label: 'Fees and payments' }]);
   assert.deepEqual(requests, [['/schools/school_demo_01/complaints/metadata']]);
 });

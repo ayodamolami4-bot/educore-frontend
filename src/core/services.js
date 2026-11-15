@@ -22,7 +22,7 @@ export function createServices() {
     const client = new ApiClient(
       environment.demo ? 'https://demo.educore.invalid/api/v1' : environment.apiBaseUrl,
       vault,
-      environment.demo ? createDemoTransport() : fetch,
+      environment.demo ? createDemoTransport() : fetch.bind(globalThis),
     );
     const shared = new SharedModel(client, uuid);
     return {

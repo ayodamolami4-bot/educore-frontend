@@ -344,8 +344,7 @@ export class ParentModel {
     const registerIds = [...new Set(records.map((item) => item.registerId).filter(Boolean))];
     // Correction history is supplementary. Older API clients may not expose the
     // endpoint yet; keep the parent's attendance records available in that case.
-    const correctionHistoryAvailable =
-      typeof this.api.attendanceCorrectionHistory === 'function';
+    const correctionHistoryAvailable = typeof this.api.attendanceCorrectionHistory === 'function';
     const corrections = correctionHistoryAvailable
       ? await Promise.all(
           registerIds.map(async (registerId) => ({
@@ -399,8 +398,7 @@ export class ParentModel {
       : Array.isArray(contactContext?.contacts)
         ? [...contactContext.contacts]
         : [];
-    const classTeacherId =
-      contactContext?.classTeacherId ?? contactContext?.classTeacher?.id;
+    const classTeacherId = contactContext?.classTeacherId ?? contactContext?.classTeacher?.id;
     const hasClassTeacher = contacts.some((item) => item.target === 'CLASS_TEACHER');
     if (classTeacherId && !hasClassTeacher) {
       contacts.push({

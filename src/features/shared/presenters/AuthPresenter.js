@@ -36,9 +36,15 @@ export class AuthPresenter extends Store {
     this.patch({ busy: true, error: '', notice: '' });
     try {
       return await action();
-    } catch (error) {
-      this.patch({ error: errorMessage(error) });
-    } finally {
+    }catch (error) {
+  console.error('[EduCore sign-in diagnostic]', {
+    name: error?.name,
+    message: error?.message,
+    stack: error?.stack,
+  });
+
+  this.patch({ error: errorMessage(error) });
+}finally {
       this.patch({ busy: false });
     }
   }

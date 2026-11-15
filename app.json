@@ -16,14 +16,34 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.educore.schoolapp"
     },
     "web": {
       "favicon": "./assets/favicon.png",
       "name": "EduCore",
       "shortName": "EduCore"
     },
-    "plugins": ["expo-secure-store", "expo-font", "expo-sharing", "expo-web-browser"],
-    "scheme": "educore"
+    "plugins": [
+      "expo-secure-store",
+      "expo-font",
+      "expo-sharing",
+      "expo-web-browser",
+      "expo-status-bar",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
+    ],
+    "scheme": "educore",
+    "extra": {
+      "eas": {
+        "projectId": "d61b5282-d150-4aa9-917d-4cfa43d20459"
+      }
+    }
   }
 }

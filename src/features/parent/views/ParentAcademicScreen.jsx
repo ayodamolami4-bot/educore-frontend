@@ -67,7 +67,9 @@ function assignmentSubmissionLabel(state) {
     GRADED: 'Graded',
     RETURNED: 'Returned for changes',
   };
-  return labels[state] || (state ? state.replaceAll('_', ' ').toLowerCase() : 'No submission recorded');
+  return (
+    labels[state] || (state ? state.replaceAll('_', ' ').toLowerCase() : 'No submission recorded')
+  );
 }
 
 function AssignmentRevisionRows({ records }) {
@@ -114,11 +116,16 @@ function AssignmentReviewRows({ records, maximumScore }) {
     return (
       <View key={String(index)} style={ui.gap}>
         <Text style={[ui.text, { fontWeight: '700' }]}>
-          {action === 'GRADE' ? 'Graded' : action === 'RETURN' ? 'Returned for changes' : 'Teacher review'}
+          {action === 'GRADE'
+            ? 'Graded'
+            : action === 'RETURN'
+              ? 'Returned for changes'
+              : 'Teacher review'}
         </Text>
         {score !== '' ? (
           <Text style={ui.text}>
-            Score: {score}{maximumScore ? '/' + maximumScore : ''}
+            Score: {score}
+            {maximumScore ? '/' + maximumScore : ''}
           </Text>
         ) : null}
         {feedback ? <Text style={ui.text}>{feedback}</Text> : null}
@@ -250,7 +257,7 @@ export function ParentAcademicScreen({ screenId, context, model, navigation, rou
       default:
         return null;
     }
-  }, [assignmentId, documentId, materialId, model, recordId, reportId, screenId]);
+ }, [documentId, materialId, model, recordId, screenId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -453,7 +460,8 @@ export function ParentAcademicScreen({ screenId, context, model, navigation, rou
             </Text>
             {assignment.submission ? (
               <Text style={ui.text}>
-                Submission status: {assignmentSubmissionLabel(value(assignment.submission, 'state'))}
+                Submission status:{' '}
+                {assignmentSubmissionLabel(value(assignment.submission, 'state'))}
               </Text>
             ) : null}
           </Card>
@@ -522,7 +530,9 @@ export function ParentAcademicScreen({ screenId, context, model, navigation, rou
           >
             <Text style={ui.text}>Session: {value(report, 'sessionName', 'session')}</Text>
             <Text style={ui.text}>
-              Term: {value(report, 'termName', 'term') || (report.termNumber ? 'Term ' + report.termNumber : '')}
+              Term:{' '}
+              {value(report, 'termName', 'term') ||
+                (report.termNumber ? 'Term ' + report.termNumber : '')}
             </Text>
             <Text style={ui.text}>
               Published: {formatDateTime(value(report, 'publishedAt', 'issuedAt'))}

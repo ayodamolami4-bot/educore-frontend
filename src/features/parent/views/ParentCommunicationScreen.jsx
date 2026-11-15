@@ -380,7 +380,28 @@ export function ParentCommunicationScreen({ screenId, context, model, navigation
               .filter(Boolean)
               .join(' · ')}
           >
-            <Text style={ui.text}>{textOf(complaint, 'body', 'description')}</Text>
+          {rows(complaint.entries).length ? (
+  <View style={ui.gap}>
+    <Text style={[ui.text, { fontWeight: '700' }]}>Conversation</Text>
+    {rows(complaint.entries).map((entry, index) => (
+      <View
+        key={textOf(entry, 'id') || String(index)}
+        style={ui.gap}
+      >
+        <Text style={ui.text}>{textOf(entry, 'body', 'message')}</Text>
+        <Text style={ui.muted}>
+          {textOf(entry, 'createdAt')
+            ? new Date(textOf(entry, 'createdAt')).toLocaleString()
+            : ''}
+        </Text>
+      </View>
+    ))}
+  </View>
+) : (
+  <Text style={ui.text}>
+    {textOf(complaint, 'body', 'description') || 'No messages are available yet.'}
+  </Text>
+)}
             <Text style={ui.muted}>Created: {textOf(complaint, 'createdAt')}</Text>
             <RecordHistory records={rows(data.history)} />
           </Card>

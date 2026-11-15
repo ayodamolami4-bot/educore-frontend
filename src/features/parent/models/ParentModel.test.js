@@ -43,9 +43,7 @@ test('parent messaging maps the server class-teacher context to a permitted reci
   );
 
   const result = await model.communicationOverview();
-  assert.deepEqual(result.contacts, [
-    { target: 'CLASS_TEACHER', displayName: 'Ibrahim Demo' },
-  ]);
+  assert.deepEqual(result.contacts, [{ target: 'CLASS_TEACHER', displayName: 'Ibrahim Demo' }]);
 });
 
 test('parent complaint detail includes public conversation entries and account identity', async () => {
