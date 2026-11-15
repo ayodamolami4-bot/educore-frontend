@@ -1,10 +1,8 @@
 /**
- * AD03 — Register or edit a student. One form, two modes:
- *   • enrol (no studentId) → POST student-enrolments, then jump to the
- *     new student's profile so the admin sees the record was created;
- *   • edit (studentId)     → PATCH students/{id}, then show "Saved".
- * Safe submission states: draft → saving → accepted/failed, with inline
- * validation errors so nothing the admin typed is lost on a failed submit.
+ * AD03 — Student enrolment and core-record edit.
+ * This Presenter sends the exact SchoolService.EnrolInput / StudentEdit
+ * contracts. It never invents admission numbers, class identifiers,
+ * metadata versions or guardian verification evidence.
  */
 import { ApiError } from '../api/ApiError';
 import {
@@ -22,12 +20,38 @@ const EMPTY_VALUES = {
   lastName: '',
   gender: '',
   dateOfBirth: '',
+  classId: '',
   classLabel: '',
   department: '',
+  startsOn: '',
   guardianName: '',
   guardianPhone: '',
   guardianEmail: '',
+  guardianRelationship: 'PARENT/GUARDIAN',
+  guardianVerificationReference: '',
+  reason: '',
+  fields: {},
 };
+
+function todayInLagos() {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Africa/Lagos',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(new Date()).map((part) => [part.type, part.value]),
+  );
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function enrolmentDateFor(classOption) {
+  if (!classOption?.session?.startsOn || !classOption?.session?.endsOn) return '';
+  const today = todayInLagos();
+  return today >= classOption.session.startsOn && today <= classOption.session.endsOn
+    ? today
+    : classOption.session.startsOn;
+}
 
 export class StudentFormPresenter {
   constructor(studentModel) {
@@ -36,21 +60,21 @@ export class StudentFormPresenter {
     this._navigation = null;
     this._alive = false;
     this._studentId = null;
-    this._guardianSearchSeq = 0; // ignore stale guardian-match responses
+    this._guardianSearchSeq = 0;
+    this._metadata = null;
     this.initialState = {
-      status: 'draft', // draft | saving | accepted | failed
-      mode: 'enrol', // enrol | edit
-      values: { ...EMPTY_VALUES },
+      status: 'loading',
+      mode: 'enrol',
+      values: { ...EMPTY_VALUES, fields: {} },
       errors: {},
       errorText: null,
       notice: null,
-      // Existing-guardian lookup (enrol mode only): once the office types a
-      // phone or email we ask the backend for matching accounts so they can
-      // LINK this student to an existing guardian instead of creating a
-      // duplicate one with the same name.
       guardianMatches: [],
-      guardianSearchState: 'idle', // idle | searching | done
-      linkGuardianId: null, // chosen existing guardian id, or null to create
+      guardianSearchState: 'idle',
+      linkGuardianId: null,
+      classOptions: [],
+      metadataFields: [],
+      metadataVersion: null,
     };
     this.state = this.initialState;
   }
@@ -71,38 +95,61 @@ export class StudentFormPresenter {
     this._render(this.state);
   }
 
-  /** Edit mode: load the student and prefill the form. */
   async load(studentId) {
-    if (!studentId) return; // enrol mode — nothing to load
-    this._studentId = studentId;
+    this._studentId = studentId ?? null;
     this._setState({
-      mode: 'edit',
+      status: 'loading',
+      mode: studentId ? 'edit' : 'enrol',
       errorText: null,
       guardianMatches: [],
       guardianSearchState: 'idle',
       linkGuardianId: null,
     });
     try {
-      const student = await this.model.byId(studentId);
-      const nameParts = String(student.name || '').split(' ');
-      const [firstName, ...rest] = nameParts;
+      const [form, student] = await Promise.all([
+        this.model.enrolmentForm(),
+        studentId ? this.model.byId(studentId) : Promise.resolve(null),
+      ]);
+      this._metadata = form;
+      const metadataFields = Array.isArray(form.definition?.studentFields)
+        ? form.definition.studentFields
+        : [];
+      const classOptions = Array.isArray(form.classes) ? form.classes : [];
+      const fields = Object.fromEntries(
+        metadataFields.map((definition) => [definition.key, student?.fields?.[definition.key] ?? '']),
+      );
+      let values = { ...EMPTY_VALUES, fields };
+      if (student) {
+        const [firstName, ...lastName] = String(student.fullName ?? student.name ?? '').split(' ');
+        const current = student.enrolments?.find((item) => !item.endsOn) ?? student.enrolments?.[0] ?? null;
+        values = {
+          ...values,
+          firstName: firstName ?? '',
+          lastName: lastName.join(' '),
+          gender: String(student.sex ?? '').toUpperCase(),
+          dateOfBirth: student.dateOfBirth ?? '',
+          classId: current?.classId ?? '',
+          classLabel: [current?.level, current?.arm].filter(Boolean).join(' '),
+          department: current?.department ?? '',
+        };
+      } else {
+        values.startsOn = enrolmentDateFor(classOptions.find((item) => item.sessionId === form.activeSessionId) ?? classOptions[0]);
+      }
       this._setState({
-        values: {
-          firstName: student.firstName || firstName || '',
-          lastName: student.lastName || rest.join(' ') || '',
-          gender: student.gender || '',
-          dateOfBirth: student.dateOfBirth || '',
-          classLabel: student.classLabel || '',
-          department: student.department || '',
-          guardianName: student.guardianName || '',
-          guardianPhone: student.guardianPhone || '',
-          guardianEmail: student.guardianEmail || '',
-        },
+        status: 'ready',
+        mode: studentId ? 'edit' : 'enrol',
+        values,
+        classOptions,
+        metadataFields,
+        metadataVersion: form.metadataVersion,
+        student,
+        errors: {},
+        errorText: null,
       });
     } catch (error) {
       this._setState({
-        errorText:
-          error instanceof ApiError ? error.message : 'Could not load this student for editing.',
+        status: 'error',
+        errorText: error instanceof ApiError ? error.message : 'Could not load the school enrolment form.',
       });
     }
   }
@@ -110,149 +157,140 @@ export class StudentFormPresenter {
   onValueChange(key, value) {
     const values = { ...this.state.values, [key]: value };
     const errors = { ...this.state.errors };
-    // LIVE validation for format-checkable fields: dateOfBirth, guardianPhone,
-    // guardianEmail. The error appears the moment a bad value is typed and
-    // clears the moment it is fixed — the office does not have to wait for
-    // submit to see "dateOfBirth must be a real date" or "guardianPhone is
-    // invalid". Required-field checks (firstName, lastName, guardianName,
-    // classLabel) stay on submit: an empty field does NOT flash red before
-    // the office types anything.
-    const liveFieldError = (field, val) => {
-      if (field === 'dateOfBirth') {
-        const text = cleanText(val);
-        if (!text) return null; // optional — empty is not an error live
-        return isValidDateOfBirth(text)
-          ? null
-          : 'Use a real date in YYYY-MM-DD format (not in the future).';
-      }
-      if (field === 'guardianPhone') {
-        const text = cleanText(val);
-        if (!text) return null; // required — flagged on submit, not live
-        return isValidPhone(text)
-          ? null
-          : 'Enter a valid number, e.g. +234 803 111 2233 or 08031112233.';
-      }
-      if (field === 'guardianEmail') {
-        const text = cleanText(val);
-        if (!text) return null; // optional — empty is not an error live
-        return isValidEmail(text) ? null : 'Enter a valid email, e.g. ngozi.okafor@example.com.';
-      }
-      return null;
-    };
-    const liveErr = liveFieldError(key, value);
-    if (liveErr) errors[key] = liveErr;
-    else delete errors[key]; // typing again clears the old complaint
-    // Editing guardian phone/email (or clearing the chosen link) re-runs the
-    // existing-guardian lookup so the office always sees the current matches.
+
+    if (key === 'classId') {
+      const selected = this.state.classOptions.find((item) => item.id === value);
+      values.classLabel = selected?.label ?? '';
+      values.department = selected?.level?.startsWith('JSS') ? '' : values.department;
+      values.startsOn = enrolmentDateFor(selected);
+    }
+    if (key.startsWith('field:')) {
+      const fieldKey = key.slice('field:'.length);
+      values.fields = { ...values.fields, [fieldKey]: value };
+      delete errors[fieldKey];
+    }
+
+    if (key === 'dateOfBirth' && cleanText(value) && !isValidDateOfBirth(value)) {
+      errors.dateOfBirth = 'Use a real date in YYYY-MM-DD format (not in the future).';
+    } else if (key === 'dateOfBirth') {
+      delete errors.dateOfBirth;
+    }
+
+    if (key === 'guardianPhone' && cleanText(value) && !isValidPhone(value)) {
+      errors.guardianPhone = 'Enter a valid guardian phone number.';
+    } else if (key === 'guardianPhone') {
+      delete errors.guardianPhone;
+    }
+
+    if (key === 'guardianEmail' && cleanText(value) && !isValidEmail(value)) {
+      errors.guardianEmail = 'Enter a valid email address.';
+    } else if (key === 'guardianEmail') {
+      delete errors.guardianEmail;
+    }
+
     const patch = { values, errors };
-    if (this.state.mode === 'enrol' && (key === 'guardianPhone' || key === 'guardianEmail')) {
-      patch.linkGuardianId = null; // a new search supersedes a manual pick
+    if (this.state.mode === 'enrol' && ['guardianPhone', 'guardianEmail'].includes(key)) {
+      patch.linkGuardianId = null;
       patch.guardianMatches = [];
       patch.guardianSearchState = 'idle';
     }
     this._setState(patch);
-    if (this.state.mode === 'enrol' && (key === 'guardianPhone' || key === 'guardianEmail')) {
-      this._searchGuardianMatches(values);
+
+    if (this.state.mode === 'enrol' && ['guardianPhone', 'guardianEmail'].includes(key)) {
+      void this._searchGuardianMatches(values);
     }
   }
 
-  /** Look up existing guardian accounts matching the typed phone/email. The
-      office can then link this student to one of them (Bug: two students with
-      the same parent were creating duplicate guardians of the same name). */
   async _searchGuardianMatches(values) {
     const seq = ++this._guardianSearchSeq;
     const phone = normalizePhone(values.guardianPhone || '');
     const email = normalizeEmail(values.guardianEmail || '');
-    if (!phone && !email) {
-      if (seq === this._guardianSearchSeq) {
-        this._setState({ guardianMatches: [], guardianSearchState: 'idle', linkGuardianId: null });
-      }
+    const search = phone || email;
+    if (!search || (phone && phone.replace(/\D/g, '').length < 7)) {
+      this._setState({ guardianMatches: [], guardianSearchState: 'idle', linkGuardianId: null });
       return;
     }
-    // Only search once the phone looks long enough to be real, so we do not
-    // fire a request on every digit.
-    if (phone && phone.replace(/\D/g, '').length < 7) return;
     this._setState({ guardianSearchState: 'searching' });
     try {
       const result = await this.model.findGuardianMatches({
         guardianPhone: phone || undefined,
         guardianEmail: email || undefined,
       });
-      if (seq !== this._guardianSearchSeq || !this._alive) return; // a newer search won
-      const matches = (result && result.matches) || [];
-      // Auto-link when there is exactly one match and the office has not
-      // typed a conflicting guardian name — fewer taps for the common case.
-      const autoLink = matches.length === 1 ? matches[0].id : null;
+      if (!this._alive || seq !== this._guardianSearchSeq) return;
+      const matches = result.matches ?? [];
       this._setState({
         guardianMatches: matches,
         guardianSearchState: 'done',
-        linkGuardianId: this.state.linkGuardianId || autoLink,
+        linkGuardianId: matches.length === 1 ? matches[0].id : null,
       });
     } catch {
-      if (seq === this._guardianSearchSeq) {
-        this._setState({ guardianMatches: [], guardianSearchState: 'done' });
+      if (this._alive && seq === this._guardianSearchSeq) {
+        this._setState({ guardianMatches: [], guardianSearchState: 'error' });
       }
     }
   }
 
-  /** The office explicitly chose an existing guardian from the picker. */
   onLinkGuardian(guardianId) {
-    const match = this.state.guardianMatches.find((g) => g.id === guardianId) || null;
-    const values = { ...this.state.values };
-    if (match) {
-      // Prefill the guardian fields from the linked account so the form shows
-      // the canonical name/phone/email of the existing guardian.
-      values.guardianName = match.fullName;
-      values.guardianPhone = match.phone;
-      values.guardianEmail = match.email;
-    }
+    const match = this.state.guardianMatches.find((item) => item.id === guardianId);
+    if (!match) return;
     this._setState({
       linkGuardianId: guardianId,
-      values,
-      errors: {
-        ...this.state.errors,
-        guardianName: undefined,
-        guardianPhone: undefined,
-        guardianEmail: undefined,
+      values: {
+        ...this.state.values,
+        guardianName: match.fullName,
+        guardianPhone: match.phone,
+        guardianEmail: match.email,
       },
+      errors: {},
     });
-  }
-
-  /** The office chose "create a new guardian account" instead of linking. */
-  onCreateNewGuardian() {
-    this._setState({ linkGuardianId: null });
   }
 
   validate() {
     const errors = {};
-    const v = this.state.values;
-    if (!cleanText(v.firstName)) errors.firstName = 'First name is required.';
-    if (!cleanText(v.lastName)) errors.lastName = 'Last name is required.';
-    if (!v.classLabel) errors.classLabel = 'Choose a class.';
-    if (!cleanText(v.guardianName)) errors.guardianName = 'A guardian name is required.';
-    if (!cleanText(v.guardianPhone)) {
-      errors.guardianPhone = 'A guardian phone number is required.';
-    } else if (!isValidPhone(v.guardianPhone)) {
-      errors.guardianPhone = 'Enter a valid number, e.g. +234 803 111 2233 or 08031112233.';
+    const value = this.state.values;
+    const metadataFields = this.state.metadataFields ?? [];
+
+    if (!cleanText(value.firstName)) errors.firstName = 'First name is required.';
+    if (!cleanText(value.lastName)) errors.lastName = 'Last name is required.';
+    if (!value.dateOfBirth || !isValidDateOfBirth(value.dateOfBirth)) {
+      errors.dateOfBirth = 'A valid date of birth is required.';
     }
-    if (cleanText(v.guardianEmail) && !isValidEmail(v.guardianEmail)) {
-      errors.guardianEmail = 'Enter a valid email, e.g. ngozi.okafor@example.com.';
+    if (!value.gender || !['MALE', 'FEMALE'].includes(value.gender.toUpperCase())) {
+      errors.gender = 'Select the recorded sex.';
     }
-    if (cleanText(v.dateOfBirth) && !isValidDateOfBirth(v.dateOfBirth)) {
-      errors.dateOfBirth = 'Use a real date in YYYY-MM-DD format (not in the future).';
+    if (this.state.mode === 'enrol') {
+      const selectedClass = this.state.classOptions.find((item) => item.id === value.classId);
+      if (!selectedClass) errors.classId = 'Choose an actual class from the current school session.';
+      if (!value.startsOn) errors.startsOn = 'Choose an enrolment start date.';
+      else if (selectedClass?.session && (
+        value.startsOn < selectedClass.session.startsOn ||
+        value.startsOn > selectedClass.session.endsOn
+      )) errors.startsOn = 'The enrolment date must fall within the selected class session.';
+      if (!cleanText(value.guardianName)) errors.guardianName = 'A guardian name is required.';
+      if (!value.guardianPhone || !isValidPhone(value.guardianPhone)) {
+        errors.guardianPhone = 'A valid guardian phone number is required.';
+      }
+      if (cleanText(value.guardianEmail) && !isValidEmail(value.guardianEmail)) {
+        errors.guardianEmail = 'Enter a valid guardian email address.';
+      }
+      if (!this.state.linkGuardianId && cleanText(value.guardianVerificationReference).length < 4) {
+        errors.guardianVerificationReference = 'Record the in-person relationship verification reference.';
+      }
+      if (!cleanText(value.guardianRelationship)) {
+        errors.guardianRelationship = 'Enter the guardian relationship.';
+      }
+    } else if (cleanText(value.reason).length < 5) {
+      errors.reason = 'A reason of at least five characters is required for this record change.';
     }
-    // Enrol mode only: when the live search found existing guardian matches,
-    // the office MUST pick one — phone/email are account IDs, so a second
-    // account with the same ID is never created. The "create a brand-new
-    // guardian" escape hatch was removed for the same reason.
-    if (
-      this.state.mode === 'enrol' &&
-      this.state.guardianSearchState === 'done' &&
-      this.state.guardianMatches.length > 0 &&
-      !this.state.linkGuardianId
-    ) {
-      errors.guardianPhone =
-        'An existing guardian matches this phone/email — pick one above to link this student to their account.';
+
+    for (const definition of metadataFields) {
+      const fieldValue = value.fields?.[definition.key];
+      if (definition.required && !cleanText(fieldValue)) {
+        errors[definition.key] = `${definition.key} is required by the current school enrolment form.`;
+      }
+      if (fieldValue != null && String(fieldValue).length > definition.maxLength) {
+        errors[definition.key] = `${definition.key} exceeds the school limit of ${definition.maxLength} characters.`;
+      }
     }
     return errors;
   }
@@ -260,59 +298,77 @@ export class StudentFormPresenter {
   async onSubmit() {
     if (this.state.status === 'saving') return;
     const errors = this.validate();
-    if (Object.keys(errors).length > 0) {
+    if (Object.keys(errors).length) {
       this._setState({ errors, notice: null });
       return;
     }
 
     this._setState({ status: 'saving', errorText: null, notice: null });
-    const v = this.state.values;
-    // Everything is trimmed/normalized here so the server never sees
-    // "  Amara ", "0803 111  2233" or an email with stray capitals.
-    const body = {
-      firstName: cleanText(v.firstName),
-      lastName: cleanText(v.lastName),
-      gender: v.gender || undefined,
-      dateOfBirth: normalizeDateOfBirth(v.dateOfBirth) || undefined,
-      classLabel: v.classLabel,
-      // JSS classes have no department (AD02 list already shows this rule).
-      department: v.classLabel.startsWith('JSS') ? null : v.department || null,
-      guardianName: cleanText(v.guardianName),
-      guardianPhone: normalizePhone(v.guardianPhone),
-      guardianEmail: normalizeEmail(v.guardianEmail) || undefined,
-    };
-    // Enrol mode only: link this student to an existing guardian account when
-    // the office picked one (or when the auto-search found a single match),
-    // instead of creating a duplicate guardian with the same name.
-    if (this.state.mode === 'enrol' && this.state.linkGuardianId) {
-      body.linkGuardianId = this.state.linkGuardianId;
-    }
+    const value = this.state.values;
+    const fullName = `${cleanText(value.firstName)} ${cleanText(value.lastName)}`;
+    const sex = value.gender.toUpperCase();
 
     try {
       if (this.state.mode === 'edit') {
-        await this.model.update(this._studentId, body);
-        this._setState({ status: 'accepted', notice: 'Changes saved — go back to the profile.' });
-      } else {
-        const created = await this.model.enrol(body);
-        this._setState({
-          status: 'accepted',
-          notice: created
-            ? `${created.fullName || body.firstName} enrolled as ${created.admissionNumber}.`
-            : 'Enrolment accepted.',
-        });
-        // Land on the new profile so the admin can confirm the record.
-        if (this._navigation && created && created.id) {
-          const replace = this._navigation.replace || this._navigation.navigate;
-          replace.call(this._navigation, 'StudentProfile', { studentId: created.id });
-        }
+        const saved = await this.model.update(
+          this._studentId,
+          {
+            fullName,
+            dateOfBirth: normalizeDateOfBirth(value.dateOfBirth),
+            sex,
+            fields: value.fields ?? {},
+            metadataVersion: this.state.metadataVersion,
+            reason: cleanText(value.reason),
+          },
+          this.state.student?.version,
+        );
+        this._setState({ status: 'accepted', student: saved, notice: 'Student record updated.' });
+        return;
+      }
+
+      const selectedClass = this.state.classOptions.find((item) => item.id === value.classId);
+      const guardian = this.state.linkGuardianId
+        ? {
+            existingGuardianId: this.state.linkGuardianId,
+            relationship: cleanText(value.guardianRelationship),
+          }
+        : {
+            fullName: cleanText(value.guardianName),
+            phone: normalizePhone(value.guardianPhone),
+            email: normalizeEmail(value.guardianEmail) || null,
+            relationshipVerified: true,
+            verificationReference: cleanText(value.guardianVerificationReference),
+            relationship: cleanText(value.guardianRelationship),
+          };
+
+      const created = await this.model.enrol({
+        fullName,
+        dateOfBirth: normalizeDateOfBirth(value.dateOfBirth),
+        sex,
+        classId: selectedClass.id,
+        startsOn: value.startsOn,
+        department: selectedClass.level?.startsWith('JSS') ? null : value.department || null,
+        metadataVersion: this.state.metadataVersion,
+        fields: value.fields ?? {},
+        guardian,
+        admissionType: 'FRESH',
+        subjectIds: [],
+      });
+
+      this._setState({
+        status: 'accepted',
+        notice: `${created.fullName} enrolled as ${created.admissionNumber}. Account provisioning has been queued.`,
+      });
+      if (this._navigation && created?.id) {
+        const replace = this._navigation.replace || this._navigation.navigate;
+        replace.call(this._navigation, 'StudentProfile', { studentId: created.id });
       }
     } catch (error) {
       this._setState({
         status: 'failed',
-        errorText:
-          error instanceof ApiError
-            ? error.message
-            : 'The school server did not accept the form. Try again.',
+        errorText: error instanceof ApiError
+          ? error.message
+          : 'The school server did not accept the student record. Review the fields and try again.',
       });
     }
   }
