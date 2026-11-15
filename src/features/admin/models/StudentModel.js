@@ -95,6 +95,45 @@ export const StudentModel = {
     };
   },
 
+  async subjectChoiceOptions(classId, department) {
+    const classesPage = await api.get('classes');
+    const classItem = itemsOf(classesPage).find((item) => item.id === classId);
+    if (!classItem) throw new Error('The selected class is no longer available.');
+
+    const [curriculaPage, subjectsPage] = await Promise.all([
+      api.get('curricula', null, { sessionId: classItem.sessionId }),
+      api.get('subjects'),
+    ]);
+    const subjectNames = new Map(itemsOf(subjectsPage).map((item) => [item.id, item.name]));
+    const candidates = itemsOf(curriculaPage)
+      .filter((item) =>
+        item.state === 'PUBLISHED' &&
+        item.level === classItem.level &&
+        (item.department ?? null) === (department || null),
+      )
+      .sort((a, b) => Number(b.revision ?? 0) - Number(a.revision ?? 0));
+
+    if (!candidates.length) return [];
+    const curriculum = await api.get('curricula/{curriculumId}', {
+      curriculumId: candidates[0].id,
+    });
+    const groups = new Map();
+    for (const item of itemsOf({ items: curriculum.subjects })) {
+      if (item.required || !item.choiceGroup) continue;
+      const group = String(item.choiceGroup);
+      if (!groups.has(group)) groups.set(group, []);
+      groups.get(group).push({
+        id: item.subjectId,
+        name: subjectNames.get(item.subjectId) ?? item.subjectId,
+      });
+    }
+    return [...groups.entries()].map(([key, options]) => ({
+      key,
+      label: key,
+      options,
+    }));
+  },
+
   async findGuardianMatches({ guardianPhone, guardianEmail } = {}) {
     const search = String(guardianPhone || guardianEmail || '').trim();
     if (!search) return { matches: [] };
