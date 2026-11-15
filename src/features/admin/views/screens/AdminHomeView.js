@@ -59,40 +59,54 @@ export default function AdminHomeView({ navigation }) {
 
       {state.status === 'content' ? (
         <>
-          <Text style={styles.section}>Attendance</Text>
-          {/* flexBasis caps the row at three tiles — four cards wrap to a
-              second row instead of squeezing into one. */}
-          <View style={styles.grid}>
-            <SummaryCard
-              value={`${a.registersSubmitted ?? 0} / ${a.registersExpected ?? 0}`}
-              label="Registers submitted"
-              icon="checkmark-circle-outline"
-              style={styles.card}
-              onPress={() => presenter.onViewAttendance()}
-            />
-            <SummaryCard
-              value={a.missingRegisters ?? 0}
-              label="Missing register"
-              icon="alert-circle-outline"
-              style={styles.card}
-              onPress={() => presenter.onViewAttendance()}
-            />
-            <SummaryCard
-              value={a.absentStudents ?? 0}
-              label="Absent students"
-              icon="person-remove-outline"
-              style={styles.card}
-              onPress={() => presenter.onViewAttendance()}
-            />
-            <SummaryCard
-              value={a.lateArrivals ?? 0}
-              label="Late arrivals"
-              icon="time-outline"
-              style={styles.card}
-              onPress={() => presenter.onViewAttendance()}
-            />
-          </View>
-          <Text style={styles.hint}>Attendance totals use submitted registers only.</Text>
+          {state.role === 'ACCOUNTS' ? (
+            <>
+              <Text style={styles.section}>Finance overview</Text>
+              <Text style={styles.hint}>Invoices: {state.financeSummary?.invoiceCount ?? 0}</Text>
+              <Text style={styles.hint}>Outstanding balance: ₦{((state.financeSummary?.outstandingMinor ?? 0) / 100).toLocaleString()}</Text>
+              <Text style={styles.hint}>Overdue invoices: {state.financeSummary?.overdueInvoices ?? 0}</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.section}>School overview</Text>
+              <View style={styles.grid}>
+                <SummaryCard value={state.schoolSummary?.activeStudents ?? 0} label="Active students" icon="people-outline" style={styles.card} onPress={() => navigation.navigate('StudentList')} />
+                <SummaryCard value={state.schoolSummary?.activeTeachers ?? 0} label="Active teachers" icon="person-outline" style={styles.card} onPress={() => navigation.navigate('TeacherList')} />
+              </View>
+              <Text style={styles.section}>Attendance</Text>
+              <View style={styles.grid}>
+                <SummaryCard
+                  value={`${a.registersSubmitted ?? 0} / ${a.registersExpected ?? 0}`}
+                  label="Registers submitted"
+                  icon="checkmark-circle-outline"
+                  style={styles.card}
+                  onPress={() => presenter.onViewAttendance()}
+                />
+                <SummaryCard
+                  value={a.missingRegisters ?? 0}
+                  label="Missing register"
+                  icon="alert-circle-outline"
+                  style={styles.card}
+                  onPress={() => presenter.onViewAttendance()}
+                />
+                <SummaryCard
+                  value={a.absentStudents ?? 0}
+                  label="Absent students"
+                  icon="person-remove-outline"
+                  style={styles.card}
+                  onPress={() => presenter.onViewAttendance()}
+                />
+                <SummaryCard
+                  value={a.lateArrivals ?? 0}
+                  label="Late arrivals"
+                  icon="time-outline"
+                  style={styles.card}
+                  onPress={() => presenter.onViewAttendance()}
+                />
+              </View>
+              <Text style={styles.hint}>Attendance totals use submitted registers only.</Text>
+            </>
+          )}
 
           <Text style={styles.section}>Needs your attention</Text>
           <RecordList
