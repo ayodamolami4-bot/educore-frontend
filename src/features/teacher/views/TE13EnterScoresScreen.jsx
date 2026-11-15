@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import { Screen } from '../../../components/Screen';
 import { Button, Card, Field, Notice, Select, ui } from '../../../components/Controls';
@@ -143,24 +143,19 @@ export function TE13EnterScoresScreen() {
       </Card>
 
       <Card title="Class scores">
-        {data?.students?.map((student) => (
-          <Select
-            key={student.id}
-            label={student.name}
-            value={selectedStudent === student.id ? 'selected' : 'not-selected'}
-            onChange={() => selectStudent(student.id)}
-            options={[
-              { value: 'selected', label: 'Selected for editing' },
-              { value: 'not-selected', label: 'Tap to edit this pupil' },
-            ]}
-            disabled={readOnly}
-          />
-        ))}
         {(data?.students ?? []).map((student) => (
-          <View key={student.id} style={ui.row}>
-            <Text style={[ui.text, { flex: 2 }]}>{student.name}</Text>
-            <Text style={ui.muted}>CA1 {student.ca1 ?? '—'} · CA2 {student.ca2 ?? '—'} · Exam {student.exam ?? '—'}</Text>
-          </View>
+          <Pressable
+            key={student.id}
+            onPress={() => selectStudent(student.id)}
+            disabled={readOnly}
+            style={[ui.row, { paddingVertical: 8, opacity: selectedStudent === student.id ? 1 : 0.85 }]}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={ui.text}>{student.name}</Text>
+              <Text style={ui.muted}>CA1 {student.ca1 ?? '—'} · CA2 {student.ca2 ?? '—'} · Exam {student.exam ?? '—'}</Text>
+            </View>
+            <Text style={ui.muted}>{selectedStudent === student.id ? 'Selected' : 'Edit'}</Text>
+          </Pressable>
         ))}
       </Card>
 
