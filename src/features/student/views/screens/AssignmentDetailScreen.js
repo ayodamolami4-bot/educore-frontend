@@ -56,6 +56,21 @@ export default function AssignmentDetailScreen({ route }) {
                 Submitted {sub.submittedAt} · {sub.status}
               </Text>
               <Text style={styles.body}>{sub.content}</Text>
+              {sub.history?.revisions?.length > 0 ? (
+                <View style={{ marginTop: spacing.sm }}>
+                  <Text style={styles.subMeta}>Accepted submission history</Text>
+                  {sub.history.revisions.map((revision) => (
+                    <View key={revision.revision} style={{ marginTop: spacing.xs }}>
+                      <Text style={styles.subMeta}>
+                        Revision {revision.revision} · {revision.submittedAt ?? ''}
+                      </Text>
+                      <Text style={styles.body}>
+                        {revision.snapshot?.responseText ?? 'No written response in this revision.'}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
               {sub.feedback ? (
                 <View style={styles.feedbackBox}>
                   <Text style={styles.feedbackLabel}>Teacher feedback</Text>
