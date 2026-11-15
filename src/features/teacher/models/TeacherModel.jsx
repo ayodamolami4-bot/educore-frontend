@@ -649,7 +649,9 @@ export class TeacherModel {
 
     return {
       cycleId: review.id,
+      classId,
       version: review.version,
+      state: review.state,
       completeness: {
         mine: itemsOf(review.sheets).filter((sheet) => sheet.state === 'SUBMITTED').length,
         others: itemsOf(review.sheets).length,
@@ -661,6 +663,12 @@ export class TeacherModel {
         name: student.fullName,
         average: student.average ?? student.totalAverage ?? '—',
         state: student.remark ? 'Remark saved' : 'Remark required',
+        remark: student.remark ?? '',
+        conduct: student.conduct ?? null,
+        punctuality: student.punctuality ?? null,
+        cooperation: student.cooperation ?? null,
+        handwriting: student.handwriting ?? null,
+        practicalSkills: student.practicalSkills ?? null,
         remarkVersion: student.remarkVersion ?? 1,
       })),
     };
