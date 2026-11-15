@@ -122,7 +122,7 @@ export function TE09AssignmentEditorScreen() {
       instructions: instructions.trim(),
       dueAt,
       maximumScore: score,
-      fileIds: [],
+      fileIds: (data?.files ?? []).map((file) => file.id).filter(Boolean),
       submissionMode: method === 'physical' ? 'PHYSICAL' : 'APP',
     };
 
