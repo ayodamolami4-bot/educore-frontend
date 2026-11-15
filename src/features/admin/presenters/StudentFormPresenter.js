@@ -30,6 +30,7 @@ const EMPTY_VALUES = {
   guardianRelationship: 'PARENT/GUARDIAN',
   guardianVerificationReference: '',
   reason: '',
+  subjectIds: {},
   fields: {},
 };
 
@@ -169,6 +170,11 @@ export class StudentFormPresenter {
     }
     if (key === 'department') {
       values.subjectIds = {};
+    }
+    if (key.startsWith('subjectChoice:')) {
+      const groupKey = key.slice('subjectChoice:'.length);
+      values.subjectIds = { ...values.subjectIds, [groupKey]: value };
+      delete errors[key];
     }
     if (key.startsWith('field:')) {
       const fieldKey = key.slice('field:'.length);
