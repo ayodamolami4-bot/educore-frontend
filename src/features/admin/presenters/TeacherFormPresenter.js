@@ -1,7 +1,7 @@
 /**
- * AD08 — Register or edit a teacher (Presenter). Create queues the account
- * provisioning workflow; edits patch the profile and route subject changes
- * through the assignment-changes endpoint so subject records stay in sync.
+ * AD08 — Register a teacher or edit the existing staff record.
+ * Creation uses SchoolService.TeacherInput: level eligibility, subject IDs
+ * and dated class assignments are explicit. Editing uses StaffEdit only.
  */
 import { ApiError } from '../api/ApiError';
 import { emailError, phoneError } from '../api/validation.js';
@@ -15,16 +15,16 @@ export class TeacherFormPresenter {
     this._navigation = null;
     this._alive = false;
     this.initialState = {
-      status: 'loading', // loading | editing | error
-      mode: 'create', // create | edit
+      status: 'loading',
+      mode: 'create',
       teacherId: null,
       teacher: null,
-      subjects: [], // every subject name, for the picker
+      subjects: [],
       classOptions: [],
-      staffNumberPreview: null, // the number the next new teacher gets
+      assignmentOptions: [],
+      provisioning: null,
       notice: null,
       errorText: null,
-      provisioning: null,
       saving: false,
     };
     this.state = this.initialState;
@@ -49,23 +49,40 @@ export class TeacherFormPresenter {
   async start(teacherId) {
     this._setState({ status: 'loading', errorText: null });
     try {
-      const [subjectsPage, classesPage, teacherResult, nextStaffNumber] = await Promise.all([
+      const [subjectsPage, classesPage, teacher, provisioning] = await Promise.all([
         this.structureModel.subjects(),
         this.structureModel.classes(),
         teacherId ? this.model.byId(teacherId) : Promise.resolve(null),
-        teacherId ? Promise.resolve(null) : this.model.nextStaffNumber().catch(() => null),
+        teacherId ? this.model.provisioning(teacherId).catch(() => null) : Promise.resolve(null),
       ]);
-      const teacher = teacherResult ? teacherResult.teacher || teacherResult : null;
+      const subjects = (subjectsPage.items ?? []).map((item) => ({
+        id: item.id,
+        name: item.name,
+      }));
+      const classOptions = (classesPage.items ?? []).map((item) => ({
+        id: item.id,
+        level: item.level,
+        sessionId: item.sessionId,
+        label: [item.level, item.arm].filter(Boolean).join(' '),
+      }));
+      const assignmentOptions = classOptions.flatMap((classItem) =>
+        subjects.map((subject) => ({
+          id: `${classItem.id}:${subject.id}`,
+          classId: classItem.id,
+          subjectId: subject.id,
+          level: classItem.level,
+          label: `${classItem.label} · ${subject.name}`,
+        })),
+      );
       this._setState({
         status: 'editing',
         mode: teacherId ? 'edit' : 'create',
         teacherId: teacherId || null,
         teacher,
-        subjects: subjectsPage.items.map((s) => s.name),
-        classOptions: classesPage.items,
-        // Create mode shows the number the server will assign, read-only.
-        staffNumberPreview: teacherId ? null : (nextStaffNumber && nextStaffNumber.next) || null,
-        provisioning: teacher ? teacher.provisioning || null : null,
+        subjects,
+        classOptions,
+        assignmentOptions,
+        provisioning,
         errorText: null,
       });
     } catch (error) {
@@ -80,10 +97,9 @@ export class TeacherFormPresenter {
     return this.start(this.state.teacherId);
   }
 
-  /** Save the form: create (with provisioning) or edit (profile + subjects). */
-  async saveTeacher(fields, initialSubjects) {
+  async saveTeacher(fields) {
     if (this.state.saving) return false;
-    if (!fields.fullName || !fields.fullName.trim()) {
+    if (!fields.fullName?.trim()) {
       this._setState({ notice: null, errorText: "Enter the teacher's full name." });
       return false;
     }
@@ -92,86 +108,117 @@ export class TeacherFormPresenter {
       this._setState({ notice: null, errorText: emailProblem });
       return false;
     }
-    // ONE phone format everywhere: the raw typing is validated first (so
-    // junk like "call me" is still refused), then stored as +234 + 10 digits.
     const phoneProblem = phoneError(fields.phone);
     if (phoneProblem) {
       this._setState({ notice: null, errorText: phoneProblem });
       return false;
     }
-    const phone = canonicalPhone(fields.phone);
     this._setState({ saving: true, notice: null, errorText: null });
+    const phone = canonicalPhone(fields.phone);
     try {
       if (this.state.mode === 'create') {
-        const result = await this.model.create({
-          fullName: fields.fullName,
-          staffNumber: fields.staffNumber,
+        const selectedAssignments = this.state.assignmentOptions.filter((item) =>
+          (fields.assignmentIds ?? []).includes(item.id),
+        );
+        const subjectIds = [...new Set(selectedAssignments.map((item) => item.subjectId))];
+        const eligibleLevels = [...new Set(selectedAssignments.map((item) => item.level))];
+        const periods = Number(fields.weeklyPeriods);
+        if (!selectedAssignments.length || !subjectIds.length || !eligibleLevels.length) {
+          throw new Error('Choose at least one real class-and-subject assignment.');
+        }
+        if (!Number.isInteger(periods) || periods < 1 || periods > 10) {
+          throw new Error('Weekly periods must be a whole number from 1 to 10.');
+        }
+        const body = {
+          fullName: fields.fullName.trim(),
           phone,
-          email: fields.email,
-          subjects: fields.subjects,
-          formClass: fields.formClass,
-        });
+          email: fields.email?.trim() || null,
+          existingLoginId: null,
+          relationshipVerified: false,
+          eligibleLevels,
+          subjectIds,
+          assignments: selectedAssignments.map((item) => ({
+            classId: item.classId,
+            subjectId: item.subjectId,
+            department: null,
+            weeklyPeriods: periods,
+          })),
+        };
+        const created = await this.model.create(body);
+        const [teacher, provisioning] = await Promise.all([
+          this.model.byId(created.id),
+          this.model.provisioning(created.id).catch(() => null),
+        ]);
         this._setState({
           saving: false,
-          teacherId: result.teacher.id,
-          teacher: result.teacher,
-          provisioning: result.provisioning || { status: 'Queued' },
-          notice:
-            `${result.teacher.fullName} registered — subjects and form class saved.` +
-            (result.provisioning && result.provisioning.status === 'Queued'
-              ? ' Their staff account provisioning has started — tap Retry if it stays queued.'
-              : ''),
+          teacherId: created.id,
+          teacher,
+          provisioning,
+          notice: `${teacher.fullName} registered. ${created.onboardingEventId ? 'Staff account provisioning has been queued.' : 'The staff record was saved.'}`,
         });
         return true;
       }
-      const saved = await this.model.update(this.state.teacherId, {
-        fullName: fields.fullName,
-        staffNumber: fields.staffNumber,
-        phone,
-        email: fields.email,
-        formClass: fields.formClass,
-      });
-      const subjectsChanged =
-        JSON.stringify([...(fields.subjects || [])].sort()) !==
-        JSON.stringify([...(initialSubjects || [])].sort());
-      if (subjectsChanged) {
-        await this.model.changeAssignments({
-          teacherId: this.state.teacherId,
-          subjects: fields.subjects,
-        });
-      }
+
+      const teacher = this.state.teacher;
+      const saved = await this.model.update(
+        this.state.teacherId,
+        {
+          fullName: fields.fullName.trim(),
+          phone,
+          email: fields.email?.trim() || null,
+          staffNumber: teacher.staffNumber,
+          joinedOn: teacher.joinedOn ?? null,
+          reason: fields.reason?.trim() ?? '',
+        },
+        teacher.version,
+      );
       this._setState({
         saving: false,
-        teacher: saved.teacher,
-        notice:
-          'Teacher updated.' +
-          (subjectsChanged ? ' Their subjects now follow them into the timetable.' : ''),
+        teacher: saved,
+        notice: 'Teacher staff record updated. Teaching assignments remain unchanged.',
       });
       return true;
     } catch (error) {
       this._setState({
         saving: false,
         notice: null,
-        errorText: error instanceof ApiError ? error.message : 'The teacher was not saved.',
+        errorText: error instanceof ApiError ? error.message : error.message || 'The teacher was not saved.',
       });
       return false;
     }
   }
 
-  async retryProvisioning() {
+  async retryProvisioning(reason) {
     if (!this.state.teacherId || this.state.saving) return;
-    this._setState({ saving: true, errorText: null });
+    if (!reason || reason.trim().length < 5) {
+      this._setState({ errorText: 'Enter a retry reason of at least five characters.' });
+      return;
+    }
+    const event = this.state.provisioning?.items?.find((item) =>
+      ['FAILED', 'RETRYING'].includes(item.state),
+    );
+    if (!event) {
+      this._setState({ errorText: 'There is no failed provisioning event to retry.' });
+      return;
+    }
+    this._setState({ saving: true, errorText: null, notice: null });
     try {
-      const result = await this.model.retryProvisioning(this.state.teacherId);
+      await this.model.retryProvisioning(
+        this.state.teacherId,
+        event.eventId,
+        event.version,
+        reason.trim(),
+      );
+      const provisioning = await this.model.provisioning(this.state.teacherId);
       this._setState({
         saving: false,
-        provisioning: result.provisioning,
-        notice: result.provisioning.detail || 'Provisioning completed.',
+        provisioning,
+        notice: 'Provisioning retry accepted. The background delivery worker will process it.',
       });
     } catch (error) {
       this._setState({
         saving: false,
-        errorText: error instanceof ApiError ? error.message : 'Provisioning did not complete.',
+        errorText: error instanceof ApiError ? error.message : 'Provisioning retry was not accepted.',
       });
     }
   }
