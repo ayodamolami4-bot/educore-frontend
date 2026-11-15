@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Text, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Screen } from '../../../components/Screen';
 import { Button, Card, Field, Notice, Select, ui } from '../../../components/Controls';
