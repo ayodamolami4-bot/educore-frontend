@@ -296,10 +296,16 @@ export class TeacherModel {
     const classItems = itemsOf(classes);
     const classById = new Map(classItems.map((item) => [item.id, item]));
 
+    const classDuties = classItems.filter((item) => item.classTeacher);
+
     return {
       date,
-      classDuty: classItems.find((item) => item.classTeacher)?.id ?? '',
-      registerState: 'All states',
+      classDuty: classDuties[0]?.id ?? '',
+      classes: classDuties.map((item) => ({
+        id: item.id,
+        label: classLabel(item),
+      })),
+      registerState: 'all',
       registers: itemsOf(registers).map((item) => ({
         id: item.id,
         classId: item.classId,
@@ -323,12 +329,30 @@ export class TeacherModel {
       throw localError('Select an assigned class and school date.');
     }
 
-    const result = await this.command(
-      schoolId,
-      '/attendance/registers',
-      'POST',
-      { classId, onDate: date }
+    // Opening a register is a read-first workflow. Reuse an existing draft or
+    // submitted register instead of issuing POST every time the screen opens.
+    const existingPage = await this.get(schoolId, '/attendance/registers', {
+      classId,
+      from: date,
+      to: date,
+    });
+    const existing = itemsOf(existingPage).find(
+      (item) =>
+        String(item.classId) === String(classId) &&
+        String(item.onDate ?? item.date).slice(0, 10) === date,
     );
+
+    const result = existing?.id
+      ? await this.get(
+          schoolId,
+          `/attendance/registers/${encodeURIComponent(existing.id)}`,
+        )
+      : await this.command(
+          schoolId,
+          '/attendance/registers',
+          'POST',
+          { classId, onDate: date },
+        );
 
     return this.mapRegister(result);
   }
@@ -359,24 +383,26 @@ export class TeacherModel {
     };
   }
 
-  saveRegisterMarks(schoolId, register, rows) {
-    return this.command(
+  async saveRegisterMarks(schoolId, register, rows) {
+    const result = await this.command(
       schoolId,
       `/attendance/registers/${encodeURIComponent(register.id)}/marks`,
       'PUT',
       { rows },
       register.version
     );
+    return this.mapRegister(result);
   }
 
-  submitRegister(schoolId, register) {
-    return this.command(
+  async submitRegister(schoolId, register) {
+    const result = await this.command(
       schoolId,
       `/attendance/registers/${encodeURIComponent(register.id)}/submit`,
       'POST',
       undefined,
       register.version
     );
+    return this.mapRegister(result);
   }
 
   async assignments(schoolId) {
