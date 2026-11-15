@@ -4,10 +4,9 @@
  * ST pages (My class, Learning, Timetable, Attendance, Assignment detail,
  * Report card, Notice detail) are pushed onto the stack from the tabs.
  *
- * The signed-in student's id comes from the session context (the demo
- * transport adds `studentId` to the STUDENT context). If no studentId is on
- * the context we fall back to 1 (the demo's Amara Okafor) so the student app
- * is explorable in demo mode without a real session.
+ * The signed-in student's id comes from the selected school context in demo
+ * mode, or from the authenticated STUDENT dashboard in live mode. Never
+ * substitute a demo or sequential ID for a real learner identity.
  */
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
