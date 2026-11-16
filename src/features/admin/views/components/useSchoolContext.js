@@ -9,9 +9,11 @@ import { getActiveContext } from '../../api/client';
 
 function contextBottomOf(settings) {
   if (!settings) return '';
-  const session = String(settings.sessionLabel || '').replace('-', '/');
-  const term = settings.termLabel || '';
-  return [session, term].filter(Boolean).join(' · ');
+  const session = settings.activeSession;
+  const sessionLabel = session
+    ? [session.name, [session.startsOn, session.endsOn].filter(Boolean).join('–')].filter(Boolean).join(' ')
+    : '';
+  return [sessionLabel, settings.timezone].filter(Boolean).join(' · ');
 }
 
 export default function useSchoolContext() {
@@ -28,7 +30,7 @@ export default function useSchoolContext() {
       SchoolSettingsModel.get()
         .then((result) => {
           if (!alive) return;
-          const settings = result && result.settings;
+          const settings = result;
           if (!settings) return;
           setContext({
             schoolName: settings.schoolName || activeContext.schoolName || 'School workspace',
