@@ -1,7 +1,7 @@
 /**
  * AD21 — Fee-plan setup and immutable invoice issue preview.
  */
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Alert } from 'react-native';
 import AdminScaffold from '../components/AdminScaffold';
 import RecordList from '../components/RecordList';
@@ -33,8 +33,7 @@ export default function FeePlansView({ navigation }) {
   const [formDueOn, setFormDueOn] = useState('');
   const [partialAllowed, setPartialAllowed] = useState(false);
 
-  const loadTerms = async () => {
-    await Promise.resolve();
+  const loadTerms = useCallback(async () => {
     try {
       const [metadata, sessionsPayload] = await Promise.all([
         api.get('metadata'),
@@ -56,31 +55,12 @@ export default function FeePlansView({ navigation }) {
       });
       setTerms(available);
       setTermsError('');
-      if (!pickedTermId) {
-        const active = available.find((term) => term.sessionId === metadata.activeSessionId) ?? available[0];
-        setPickedTermId(active?.id ?? '');
-      }
+      const active = available.find((term) => term.sessionId === metadata.activeSessionId) ?? available[0];
+      setPickedTermId((current) => current || active?.id || '');
     } catch (reason) {
       setTermsError(reason?.message ?? 'Could not load academic terms.');
     }
-  };
-
-  useEffect(() => {
-    presenter.attach(setState, navigation);
-    presenter.load();
-    void Promise.resolve().then(() => loadTerms());
-    const unsubscribe = navigation.addListener('focus', () => {
-      if (loadedOnce.current) {
-        presenter.load({ showLoading: false });
-        void loadTerms();
-      }
-      loadedOnce.current = true;
-    });
-    return () => {
-      unsubscribe?.remove?.();
-      presenter.detach();
-    };
-  }, [presenter, navigation]);
+  }, []);
 
   const toggleClass = (value) => {
     setPickedClasses((prev) =>
