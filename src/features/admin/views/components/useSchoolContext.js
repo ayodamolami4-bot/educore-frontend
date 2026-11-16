@@ -1,35 +1,26 @@
 /**
- * useSchoolContext — the LIVE school name + session/term label every admin
- * screen shows in its banner. Falls back to the seeded "Greenfield Secondary"
- * defaults while the first load is in flight (or if it fails), so every screen
- * renders before the network answers and never goes blank.
- *
- * Why a hook: AdminScaffold hard-coded "Greenfield Secondary" as a default, so
- * changing the school name in AD10 never reached the banner on any other
- * screen. The screens do not pass the name down; a single hook that reads the
- * settings once and refreshes on focus is the fix that touches every screen.
+ * Shared school banner context. Starts with the authenticated school name
+ * and refreshes its official session/term details from the settings endpoint.
  */
 import { useEffect, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { SchoolSettingsModel } from '../../models';
-
-const FALLBACK = {
-  schoolName: 'Greenfield Secondary',
-  contextBottom: '2026/2027 · First Term',
-};
+import { getActiveContext } from '../../api/client';
 
 function contextBottomOf(settings) {
-  if (!settings) return FALLBACK.contextBottom;
-  // The settings store "2026-2027" + "First Term"; the banner shows the
-  // "2026/2027 · First Term" shape the seed used everywhere.
+  if (!settings) return '';
   const session = String(settings.sessionLabel || '').replace('-', '/');
   const term = settings.termLabel || '';
-  return [session, term].filter(Boolean).join(' · ') || FALLBACK.contextBottom;
+  return [session, term].filter(Boolean).join(' · ');
 }
 
 export default function useSchoolContext() {
   const navigation = useNavigation();
-  const [context, setContext] = useState(FALLBACK);
+  const activeContext = getActiveContext();
+  const [context, setContext] = useState({
+    schoolName: activeContext.schoolName || 'School workspace',
+    contextBottom: '',
+  });
 
   useEffect(() => {
     let alive = true;
@@ -40,7 +31,7 @@ export default function useSchoolContext() {
           const settings = result && result.settings;
           if (!settings) return;
           setContext({
-            schoolName: settings.schoolName || FALLBACK.schoolName,
+            schoolName: settings.schoolName || activeContext.schoolName || 'School workspace',
             contextBottom: contextBottomOf(settings),
           });
         })
