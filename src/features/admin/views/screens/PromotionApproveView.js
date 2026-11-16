@@ -11,12 +11,12 @@ import StatusBadge from '../components/StatusBadge';
 import { LoadingView, ErrorState, useActionErrorAlert } from '../components/FeedbackViews';
 import { PrimaryButton, SecondaryButton } from './AdminHomeView';
 import { PromotionApprovePresenter } from '../../presenters/PromotionApprovePresenter';
-import { PromotionModel } from '../../models';
-import { destinationLabel } from '../../utils/validators';
+import { PromotionModel, AcademicStructureModel, CalendarModel } from '../../models';
+import { getActiveContext } from '../../api/client';
 import { colors, typography, spacing } from '../theme';
 
 export default function PromotionApproveView({ navigation }) {
-  const [presenter] = useState(() => new PromotionApprovePresenter(PromotionModel));
+  const [presenter] = useState(() => new PromotionApprovePresenter(PromotionModel, AcademicStructureModel, CalendarModel));
   const [state, setState] = useState(presenter.initialState);
 
   useEffect(() => {
@@ -28,6 +28,7 @@ export default function PromotionApproveView({ navigation }) {
   useActionErrorAlert(state.errorText);
 
   const preview = state.preview;
+  const isPrincipal = String(getActiveContext().role ?? '').toUpperCase() === 'PRINCIPAL';
 
   const onConfirm = () => {
     Alert.alert(
@@ -64,7 +65,7 @@ export default function PromotionApproveView({ navigation }) {
             items={state.previews.map((p) => ({
               id: p.id,
               title: `${p.classLabel} · ${p.sessionLabel}`,
-              meta: `Promote ${p.summary.promote} · repeat ${p.summary.repeat} · graduate ${p.summary.graduate}`,
+              meta: `Promote ${p.summary.promote} · repeat ${p.summary.repeat} · graduate ${p.summary.graduate} · review ${p.summary.review}`,
               status: p.status,
               raw: p,
             }))}
@@ -92,9 +93,11 @@ export default function PromotionApproveView({ navigation }) {
             items={preview.rows.map((r) => ({
               id: String(r.studentId),
               title: r.fullName,
-              // Every row names WHERE the student goes — same wording as the
-              // preview screen.
-              meta: `Average ${r.average}% — ${destinationLabel(preview.classLabel, r.decision)}`,
+              meta: [
+                r.average != null ? `Annual mean ${r.average}%` : 'Annual mean unavailable',
+                r.targetClassLabel,
+                r.decision,
+              ].filter(Boolean).join(' · '),
               status: r.decision,
               raw: r,
             }))}
@@ -107,11 +110,15 @@ export default function PromotionApproveView({ navigation }) {
             </Text>
           ) : (
             <View style={styles.actionsWrap}>
-              <PrimaryButton
-                label={state.busy ? 'Working…' : 'Confirm promotion'}
-                disabled={state.busy}
-                onPress={onConfirm}
-              />
+              {isPrincipal ? (
+                <PrimaryButton
+                  label={state.busy ? 'Working…' : 'Confirm promotion'}
+                  disabled={state.busy}
+                  onPress={onConfirm}
+                />
+              ) : (
+                <Text style={styles.hint}>Only the Principal can apply the final promotion outcomes. The School Office can prepare and review the batch.</Text>
+              )}
               <View style={styles.secondaryWrap}>
                 <SecondaryButton
                   label={state.busy ? 'Checking…' : 'Validate first'}
