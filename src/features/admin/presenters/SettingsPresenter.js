@@ -1,12 +1,11 @@
 /**
- * AD10 — School settings and admin access (Presenter). The school profile
- * and the admin memberships load in one pass; saving patches the settings,
- * membership edits go through their own endpoints.
+ * AD10 — School metadata and administrator access.
+ * The presenter only exposes operations supported by the school API.
  */
 import { ApiError } from '../api/ApiError';
 import { emailError, phoneError } from '../api/validation.js';
-// The settings model is injected by the view (constructor) — no static model
-// import here, so this presenter stays importable in node tests.
+
+const ADMIN_ROLES = ['PRINCIPAL', 'SCHOOL_OFFICE', 'ACCOUNTS'];
 
 export class SettingsPresenter {
   constructor(settingsModel) {
@@ -15,7 +14,7 @@ export class SettingsPresenter {
     this._navigation = null;
     this._alive = false;
     this.initialState = {
-      status: 'loading', // loading | content | error
+      status: 'loading',
       settings: null,
       memberships: [],
       notice: null,
@@ -44,21 +43,20 @@ export class SettingsPresenter {
   async load() {
     this._setState({ status: 'loading', errorText: null });
     try {
-      const [settingsResult, membershipsPage] = await Promise.all([
+      const [settings, membershipsPage] = await Promise.all([
         this.model.get(),
         this.model.adminMemberships(),
       ]);
       this._setState({
         status: 'content',
-        settings: settingsResult.settings,
+        settings,
         memberships: membershipsPage.items,
         errorText: null,
       });
     } catch (error) {
       this._setState({
         status: 'error',
-        errorText:
-          error instanceof ApiError ? error.message : 'Could not load the school settings.',
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'Could not load school metadata and staff access.',
       });
     }
   }
@@ -67,26 +65,19 @@ export class SettingsPresenter {
     return this.load();
   }
 
-  async saveSettings(fields) {
+  async addMembership(fields) {
     if (this.state.saving) return false;
-    if (!fields.schoolName || !fields.schoolName.trim()) {
-      this._setState({ notice: null, errorText: 'The school needs a name.' });
+    if (!String(fields.fullName ?? '').trim()) {
+      this._setState({ notice: null, errorText: "Enter the administrator's full name." });
       return false;
     }
-    // Session: the CURRENT year pair only — it follows the device date and
-    // nobody types it ("2029-2030" is refused, not just any two years).
-    const session = String(fields.sessionLabel || '').replace(/\s+/g, '');
-    const now = new Date();
-    const currentSession = `${now.getFullYear()}-${now.getFullYear() + 1}`;
-    if (session !== currentSession) {
-      this._setState({
-        notice: null,
-        errorText: `The session follows the device date and cannot be changed — it is ${currentSession}.`,
-      });
+    if (!String(fields.phone ?? '').trim()) {
+      this._setState({ notice: null, errorText: 'Enter a phone number for the staff account.' });
       return false;
     }
-    if (!['First Term', 'Second Term', 'Third Term'].includes(fields.termLabel)) {
-      this._setState({ notice: null, errorText: 'Pick First, Second or Third Term.' });
+    const phoneProblem = phoneError(fields.phone);
+    if (phoneProblem) {
+      this._setState({ notice: null, errorText: phoneProblem });
       return false;
     }
     if (fields.email) {
@@ -96,94 +87,86 @@ export class SettingsPresenter {
         return false;
       }
     }
-    if (fields.phone) {
-      const phoneProblem = phoneError(fields.phone);
-      if (phoneProblem) {
-        this._setState({ notice: null, errorText: phoneProblem });
-        return false;
-      }
-    }
-    if (fields.nextTermBegins && !/^\d{4}-\d{2}-\d{2}$/.test(fields.nextTermBegins.trim())) {
-      this._setState({
-        notice: null,
-        errorText: 'Next term begins must be a date like 2027-01-11.',
-      });
+    if (!ADMIN_ROLES.includes(String(fields.role ?? '').toUpperCase())) {
+      this._setState({ notice: null, errorText: 'Choose Principal, School Office or Accounts.' });
       return false;
     }
-    this._setState({ saving: true, notice: null, errorText: null });
-    try {
-      const result = await this.model.update({ ...fields, sessionLabel: session });
-      this._setState({
-        saving: false,
-        settings: result.settings,
-        notice: 'School settings saved — the header on every screen follows the name.',
-      });
-      return true;
-    } catch (error) {
-      this._setState({
-        saving: false,
-        notice: null,
-        errorText: error instanceof ApiError ? error.message : 'The settings were not saved.',
-      });
-      return false;
-    }
-  }
 
-  async addMembership(fields) {
-    if (this.state.saving) return false;
-    if (!fields.fullName || !fields.fullName.trim()) {
-      this._setState({ notice: null, errorText: "Enter the admin's full name." });
-      return false;
-    }
-    const inviteEmail =
-      emailError(fields.email) ||
-      (!fields.email ? 'Enter the email the invitation goes to.' : null);
-    if (inviteEmail) {
-      this._setState({ notice: null, errorText: inviteEmail });
-      return false;
-    }
-    const adminPhone = phoneError(fields.phone);
-    if (adminPhone) {
-      this._setState({ notice: null, errorText: adminPhone });
-      return false;
-    }
     this._setState({ saving: true, notice: null, errorText: null });
     try {
-      const result = await this.model.addAdminMembership(fields);
+      const created = await this.model.addAdminMembership(fields);
+      const directory = await this.model.adminMemberships();
+      const record = directory.items.find((item) => item.id === created.id);
       this._setState({
         saving: false,
-        memberships: [...this.state.memberships, result.membership],
-        notice: `${result.membership.fullName} can now sign in as ${result.membership.role}. An invitation goes to their email.`,
+        memberships: directory.items,
+        notice: record
+          ? `${record.fullName} was registered. Account provisioning is ${record.accessStatus.toLowerCase()}; issue the activation slip after provisioning completes.`
+          : 'The staff record was created. Refresh the directory to check account provisioning.',
+        errorText: null,
       });
       return true;
     } catch (error) {
       this._setState({
         saving: false,
         notice: null,
-        errorText: error instanceof ApiError ? error.message : 'The admin account was not created.',
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'The staff record could not be created.',
       });
       return false;
     }
   }
 
   async changeMembership(membershipId, patch, label) {
-    if (this.state.saving) return;
+    if (this.state.saving) return false;
+    const membership = this.state.memberships.find((item) => item.id === membershipId);
+    if (!membership) {
+      this._setState({ errorText: 'Refresh the staff directory before changing access.' });
+      return false;
+    }
+    const reason = String(label ?? patch.reason ?? '').trim();
+    if (reason.length < 5) {
+      this._setState({ errorText: 'Enter a reason of at least five characters for the access history.' });
+      return false;
+    }
     this._setState({ saving: true, notice: null, errorText: null });
     try {
-      const result = await this.model.updateAdminMembership(membershipId, patch);
+      await this.model.updateAdminMembership(membership, { ...patch, reason });
+      const directory = await this.model.adminMemberships();
       this._setState({
         saving: false,
-        memberships: this.state.memberships.map((m) =>
-          m.id === membershipId ? result.membership : m,
-        ),
-        notice: label || 'Admin access updated.',
+        memberships: directory.items,
+        notice: label || 'Staff access updated.',
+        errorText: null,
       });
+      return true;
     } catch (error) {
       this._setState({
         saving: false,
         notice: null,
-        errorText: error instanceof ApiError ? error.message : 'The change was not saved.',
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'The staff access change was not saved.',
       });
+      return false;
+    }
+  }
+
+  async issueActivationSlip(membershipId) {
+    if (this.state.saving) return null;
+    this._setState({ saving: true, notice: null, errorText: null });
+    try {
+      const slip = await this.model.issueAdminActivationSlip(membershipId);
+      this._setState({
+        saving: false,
+        notice: 'A private, one-time activation slip was generated. Hand it directly to the staff member.',
+        errorText: null,
+      });
+      return slip;
+    } catch (error) {
+      this._setState({
+        saving: false,
+        notice: null,
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'The activation slip could not be issued.',
+      });
+      return null;
     }
   }
 }
