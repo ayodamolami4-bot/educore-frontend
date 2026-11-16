@@ -65,7 +65,7 @@ export default function ConversationView({ route, navigation: _navigation }) {
 
           {state.messages.length === 0 ? (
             <Text style={styles.empty}>
-              No messages yet — {isClosed ? 'reopen the thread and ' : ''}write the first one below.
+              No messages are recorded in this conversation.
             </Text>
           ) : (
             state.messages.map((m) => (
