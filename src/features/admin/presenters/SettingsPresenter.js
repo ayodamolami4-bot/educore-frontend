@@ -65,6 +65,62 @@ export class SettingsPresenter {
     return this.load();
   }
 
+  async saveSettings(fields) {
+    if (this.state.saving) return false;
+    const settings = this.state.settings;
+    if (!settings || !Number.isSafeInteger(settings.version) || settings.version < 1) {
+      this._setState({ notice: null, errorText: 'Refresh the school settings before saving changes.' });
+      return false;
+    }
+    const phoneProblem = fields.phone ? phoneError(fields.phone) : null;
+    if (phoneProblem) {
+      this._setState({ notice: null, errorText: phoneProblem });
+      return false;
+    }
+    const emailProblem = fields.email ? emailError(fields.email) : null;
+    if (emailProblem) {
+      this._setState({ notice: null, errorText: emailProblem });
+      return false;
+    }
+    const address = String(fields.address ?? '').trim();
+    if (address && address.length < 5) {
+      this._setState({ notice: null, errorText: 'Enter an address of at least five characters, or leave it blank.' });
+      return false;
+    }
+    const reason = String(fields.reason ?? '').trim();
+    if (reason.length < 5) {
+      this._setState({ notice: null, errorText: 'Enter a reason of at least five characters for the settings change.' });
+      return false;
+    }
+
+    this._setState({ saving: true, notice: null, errorText: null });
+    try {
+      const result = await this.model.update({
+        phone: fields.phone,
+        email: fields.email,
+        address,
+        wednesdayPtEnabled: Boolean(fields.wednesdayPtEnabled),
+        reason,
+      }, settings.version);
+      this._setState({
+        saving: false,
+        settings: result.settings ?? result,
+        notice: result.timetableReviewRequired
+          ? 'School settings saved. The Wednesday PE change requires a timetable review.'
+          : 'School contact and timetable settings saved.',
+        errorText: null,
+      });
+      return true;
+    } catch (error) {
+      this._setState({
+        saving: false,
+        notice: null,
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'The school settings were not saved.',
+      });
+      return false;
+    }
+  }
+
   async addMembership(fields) {
     if (this.state.saving) return false;
     if (!String(fields.fullName ?? '').trim()) {
