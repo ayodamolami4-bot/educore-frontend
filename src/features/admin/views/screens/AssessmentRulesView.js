@@ -1,24 +1,28 @@
 /**
- * AD18 — Set exams and grading rules (View). CA/exam weights, pass mark and
- * the grade bands; the arithmetic is checked on save and refusals pop up.
+ * AD18 — Read-only adopted grading policy and assessment-cycle approval.
+ * The backend owns the grading rules; only a Principal can approve a cycle
+ * and open its versioned mark-entry window.
  */
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { Text, TextInput, View, StyleSheet } from 'react-native';
 import AdminScaffold from '../components/AdminScaffold';
-import { LoadingView, ErrorState, useActionErrorAlert } from '../components/FeedbackViews';
-import { digitsOnly } from '../../utils/validators';
+import RecordList from '../components/RecordList';
+import { LoadingView, ErrorState, Notice, useActionErrorAlert } from '../components/FeedbackViews';
 import { PrimaryButton, SecondaryButton } from './AdminHomeView';
 import { AssessmentRulesPresenter } from '../../presenters/AssessmentRulesPresenter';
 import { AssessmentModel } from '../../models';
+import { getActiveContext } from '../../api/client';
 import { colors, typography, spacing } from '../theme';
 
 export default function AssessmentRulesView({ navigation }) {
-  const [presenter] = useState(() => new AssessmentRulesPresenter(AssessmentModel));
+  const role = getActiveContext().role;
+  const [presenter] = useState(() => new AssessmentRulesPresenter(AssessmentModel, role));
   const [state, setState] = useState(presenter.initialState);
-  const [caText, setCaText] = useState('');
-  const [examText, setExamText] = useState('');
-  const [passText, setPassText] = useState('');
-  const [bandTexts, setBandTexts] = useState({});
+  const [opensOn, setOpensOn] = useState('');
+  const [opensTime, setOpensTime] = useState('08:00');
+  const [closesOn, setClosesOn] = useState('');
+  const [closesTime, setClosesTime] = useState('17:00');
+  const [reason, setReason] = useState('');
 
   useEffect(() => {
     presenter.attach(setState, navigation);
@@ -26,217 +30,234 @@ export default function AssessmentRulesView({ navigation }) {
     return () => presenter.detach();
   }, [presenter, navigation]);
 
-  // Arithmetic refusals (weights must sum to 100, bands must descend) pop up.
-  useActionErrorAlert(state.errorText, 'Grading rules');
+  useActionErrorAlert(state.errorText, 'Assessment cycle');
 
   const policy = state.policy;
+  const selected = state.selectedCycle;
+  const bands = policy?.gradeBands ?? {};
 
-  // Adjust the typed fields when a different policy arrives (load / save /
-  // lock) — done during render, not in an effect, so there is no cascading
-  // render pass. Failed saves and locks keep the same policy object, so the
-  // values the admin typed stay on screen to be fixed.
-  const [syncedPolicy, setSyncedPolicy] = useState(null);
-  if (policy && policy !== syncedPolicy) {
-    setSyncedPolicy(policy);
-    setCaText(String(policy.caWeight));
-    setExamText(String(policy.examWeight));
-    setPassText(String(policy.passMark));
-    setBandTexts(Object.fromEntries(policy.grades.map((g) => [g.grade, String(g.minScore)])));
-  }
-
-  // Live range hints: the weights are percentages of the WHOLE term, so a
-  // single weight above 100 can never be right — say so as it is typed,
-  // not only when Save refuses it.
-  const over100 = (t) => t.trim() && Number(t) > 100;
-  const passOutOfRange = (t) => t.trim() && (Number(t) < 34 || Number(t) > 100);
-  const bandOutOfRange = (t) => t.trim() && (Number(t) < 0 || Number(t) > 100);
-
-  const currentFields = () => {
-    const digits = (t) => Number(String(t).replace(/[^0-9.]/g, '')) || 0;
-    return {
-      caWeight: digits(caText),
-      examWeight: digits(examText),
-      passMark: digits(passText),
-      grades: policy
-        ? policy.grades.map((g) => ({ ...g, minScore: digits(bandTexts[g.grade]) }))
-        : undefined,
-    };
-  };
-
-  const onSave = () => {
-    presenter.save(currentFields());
-  };
-
-  if (state.status === 'loading') {
-    return (
-      <AdminScaffold eyebrow="Academics" title="Set exams and grading rules">
-        <LoadingView label="Loading the grading rules…" />
-      </AdminScaffold>
-    );
-  }
-  if (state.status === 'error') {
-    return (
-      <AdminScaffold eyebrow="Academics" title="Set exams and grading rules">
-        <ErrorState message={state.errorText} onRetry={() => presenter.onRetry()} />
-      </AdminScaffold>
-    );
-  }
-  if (!policy) {
-    return (
-      <AdminScaffold eyebrow="Academics" title="Set exams and grading rules">
-        <ErrorState message="No grading policy yet — create one by saving below." />
-      </AdminScaffold>
-    );
-  }
-
-  const locked = policy.locked;
+  const cycles = state.cycles.map((cycle) => ({
+    id: cycle.id,
+    title: 'Cycle ' + String(cycle.id).slice(0, 8),
+    meta: [
+      'Term ' + cycle.termId,
+      'Class ' + cycle.classId,
+      cycle.opensAt ? 'Opens ' + cycle.opensAt : '',
+      cycle.closesAt ? 'Closes ' + cycle.closesAt : '',
+    ].filter(Boolean).join(' · '),
+    status: cycle.state,
+    raw: cycle,
+  }));
 
   return (
     <AdminScaffold
       eyebrow="Academics"
-      title="Set exams and grading rules"
-      subtitle={`${policy.term} · CA ${policy.caWeight}% / exam ${policy.examWeight}% · pass at ${policy.passMark}%`}
+      title="Grading policy and assessment windows"
+      subtitle="The adopted school grading policy is fixed. Approvals and mark-entry windows are recorded on each assessment cycle."
     >
-      {state.notice ? <Text style={styles.notice}>{state.notice}</Text> : null}
-      {locked ? (
-        <Text style={styles.lockedNote}>
-          This policy is locked for the term — marks entry uses it as it is.
-        </Text>
-      ) : null}
+      {state.status === 'loading' ? <LoadingView label="Loading grading policy and assessment cycles…" /> : null}
+      {state.status === 'error' ? <ErrorState message={state.errorText} onRetry={() => presenter.onRetry()} /> : null}
+      {state.notice ? <Notice text={state.notice} /> : null}
 
-      <Text style={styles.section}>Continuous assessment vs exam</Text>
-      <View style={styles.row}>
-        <View style={styles.half}>
-          <Text style={styles.fieldLabel}>CA weight (%)</Text>
-          <TextInput
-            style={styles.input}
-            keyboardType="number-pad"
-            value={caText}
-            onChangeText={(t) => setCaText(digitsOnly(t))}
-            editable={!locked}
-            placeholder="30"
-            placeholderTextColor={colors.muted}
-          />
-        </View>
-        <View style={styles.half}>
-          <Text style={styles.fieldLabel}>Exam weight (%)</Text>
-          <TextInput
-            style={styles.input}
-            keyboardType="number-pad"
-            value={examText}
-            onChangeText={(t) => setExamText(digitsOnly(t))}
-            editable={!locked}
-            placeholder="70"
-            placeholderTextColor={colors.muted}
-          />
-        </View>
-      </View>
-      <Text style={styles.hint}>The two weights must add up to exactly 100.</Text>
-      {over100(caText) || over100(examText) ? (
-        <Text style={styles.fieldError}>
-          A weight above 100 cannot be right — the CA and exam together are always 100%.
-        </Text>
-      ) : null}
+      {state.status === 'content' && policy ? (
+        <>
+          <View style={styles.policyCard}>
+            <Text style={styles.section}>Adopted scoring policy</Text>
+            <View style={styles.weightRow}>
+              <View style={styles.weight}>
+                <Text style={styles.number}>{policy.ca1Maximum}/20</Text>
+                <Text style={styles.label}>CA 1</Text>
+              </View>
+              <View style={styles.weight}>
+                <Text style={styles.number}>{policy.ca2Maximum}/20</Text>
+                <Text style={styles.label}>CA 2</Text>
+              </View>
+              <View style={styles.weight}>
+                <Text style={styles.number}>{policy.examMaximum}/60</Text>
+                <Text style={styles.label}>Exam</Text>
+              </View>
+            </View>
+            <Text style={styles.body}>One-decimal score precision · maximum 100 marks</Text>
+            <Text style={styles.body}>Class ranking: {policy.rankingEnabled ? 'enabled' : 'not produced'}</Text>
+            <Text style={styles.hint}>
+              Configuration: {state.configuration || 'Adopted school policy'}
+            </Text>
+            <Text style={styles.hint}>{state.approvalGuidance}</Text>
 
-      <Text style={styles.section}>Pass mark</Text>
-      <TextInput
-        style={styles.input}
-        keyboardType="number-pad"
-        value={passText}
-        onChangeText={(t) => setPassText(digitsOnly(t))}
-        editable={!locked}
-        placeholder="40"
-        placeholderTextColor={colors.muted}
-      />
-      {passOutOfRange(passText) ? (
-        <Text style={styles.fieldError}>The pass mark must be between 34 and 100.</Text>
-      ) : null}
-      <Text style={styles.hint}>
-        Must be above 33 — the school&apos;s floor is 34%, and 100 at most.
-      </Text>
+            <Text style={styles.section}>Grade bands</Text>
+            {Object.entries(bands).sort((a, b) => b[1] - a[1]).map(([grade, threshold]) => (
+              <View key={grade} style={styles.bandRow}>
+                <Text style={styles.bandGrade}>{grade}</Text>
+                <Text style={styles.bandThreshold}>From {threshold}%</Text>
+              </View>
+            ))}
+            <Text style={styles.hint}>
+              This policy is not editable in the current backend. Its version is frozen and approved on each assessment cycle.
+            </Text>
+          </View>
 
-      <Text style={styles.section}>Grade bands — the score each grade starts at</Text>
-      {policy.grades.map((g) => (
-        <View key={g.grade} style={styles.bandRow}>
-          <Text style={styles.bandLabel}>
-            {g.grade} · {g.remark} — from
+          <Text style={styles.section}>Assessment cycles</Text>
+          <Text style={styles.body}>
+            Select a cycle to review its policy approval and mark-entry window. A Principal is required for approval or opening.
           </Text>
-          <TextInput
-            style={styles.bandInput}
-            keyboardType="number-pad"
-            value={bandTexts[g.grade] ?? ''}
-            onChangeText={(t) => setBandTexts((prev) => ({ ...prev, [g.grade]: digitsOnly(t) }))}
-            editable={!locked}
-            placeholderTextColor={colors.muted}
+          <RecordList
+            items={cycles}
+            onPressItem={(row) => {
+              presenter.selectCycle(row.raw);
+              setOpensOn(row.raw.opensAt?.slice(0, 10) ?? '');
+              setOpensTime(row.raw.opensAt?.slice(11, 16) ?? '08:00');
+              setClosesOn(row.raw.closesAt?.slice(0, 10) ?? '');
+              setClosesTime(row.raw.closesAt?.slice(11, 16) ?? '17:00');
+              setReason('');
+            }}
+            emptyText="No assessment cycles have been created yet."
           />
-        </View>
-      ))}
-      {policy.grades.some((g) => bandOutOfRange(bandTexts[g.grade] ?? '')) ? (
-        <Text style={styles.fieldError}>
-          Band scores are percentages — 0 to 100, each grade starting above the one below it.
-        </Text>
-      ) : null}
-      <Text style={styles.hint}>
-        A starts at 70, B below it, and so on — each band must start lower than the one above.
-      </Text>
 
-      <View style={styles.actions}>
-        <PrimaryButton
-          label={state.saving ? 'Saving…' : 'Save grading rules'}
-          disabled={state.saving || locked}
-          onPress={onSave}
-        />
-        {!locked ? (
-          <SecondaryButton
-            label={state.saving ? 'Working…' : 'Lock for the term'}
-            disabled={state.saving}
-            onPress={() => presenter.lock(currentFields())}
-          />
-        ) : (
-          <SecondaryButton
-            label={state.saving ? 'Working…' : 'Unlock to edit again'}
-            disabled={state.saving}
-            onPress={() => presenter.unlock()}
-          />
-        )}
-      </View>
+          {selected ? (
+            <View style={styles.cycleCard}>
+              <Text style={styles.section}>Selected cycle</Text>
+              <Text style={styles.body}>Cycle ID: {selected.id}</Text>
+              <Text style={styles.body}>State: {selected.state}</Text>
+              <Text style={styles.body}>
+                Policy approval: {selected.policyApprovedAt ? 'Approved' : 'Not approved'}
+              </Text>
+              {selected.opensAt ? <Text style={styles.body}>Opens: {selected.opensAt}</Text> : null}
+              {selected.closesAt ? <Text style={styles.body}>Closes: {selected.closesAt}</Text> : null}
+
+              {role === 'PRINCIPAL' && selected.state === 'DRAFT' && !selected.policyApprovedAt ? (
+                <>
+                  <Text style={styles.fieldLabel}>Approval / opening reason</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={reason}
+                    onChangeText={setReason}
+                    placeholder="Why is this policy approved for this cycle?"
+                    placeholderTextColor={colors.muted}
+                    maxLength={500}
+                  />
+                  <SecondaryButton
+                    label={state.saving ? 'Approving…' : 'Approve adopted policy'}
+                    disabled={state.saving || reason.trim().length < 5}
+                    onPress={async () => {
+                      const approved = await presenter.approvePolicy(reason);
+                      if (approved) setReason('');
+                    }}
+                  />
+                </>
+              ) : null}
+
+              {role === 'PRINCIPAL' && ['DRAFT', 'OPEN'].includes(selected.state) ? (
+                <>
+                  <Text style={styles.section}>Mark-entry window</Text>
+                  <Text style={styles.fieldLabel}>Opens on (YYYY-MM-DD)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={opensOn}
+                    onChangeText={setOpensOn}
+                    placeholder="2026-11-20"
+                    placeholderTextColor={colors.muted}
+                  />
+                  <Text style={styles.fieldLabel}>Opens at (HH:MM, Lagos time)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={opensTime}
+                    onChangeText={setOpensTime}
+                    placeholder="08:00"
+                    placeholderTextColor={colors.muted}
+                  />
+                  <Text style={styles.fieldLabel}>Closes on (YYYY-MM-DD)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={closesOn}
+                    onChangeText={setClosesOn}
+                    placeholder="2026-11-27"
+                    placeholderTextColor={colors.muted}
+                  />
+                  <Text style={styles.fieldLabel}>Closes at (HH:MM, Lagos time)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={closesTime}
+                    onChangeText={setClosesTime}
+                    placeholder="17:00"
+                    placeholderTextColor={colors.muted}
+                  />
+                  <Text style={styles.fieldLabel}>Audit reason</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={reason}
+                    onChangeText={setReason}
+                    placeholder="Why is this mark-entry window being opened or changed?"
+                    placeholderTextColor={colors.muted}
+                    maxLength={500}
+                  />
+                  <PrimaryButton
+                    label={state.saving ? 'Saving window…' : selected.state === 'OPEN' ? 'Update mark-entry window' : 'Open mark entry'}
+                    disabled={
+                      state.saving ||
+                      !opensOn ||
+                      !closesOn ||
+                      reason.trim().length < 5
+                    }
+                    onPress={async () => {
+                      const opened = await presenter.openCycle({
+                        opensOn,
+                        opensTime,
+                        closesOn,
+                        closesTime,
+                        reason,
+                      });
+                      if (opened) setReason('');
+                    }}
+                  />
+                </>
+              ) : null}
+              {role !== 'PRINCIPAL' ? (
+                <Notice text="School Office can review cycle policy and state. Only the Principal can approve the policy or open the mark-entry window." />
+              ) : null}
+            </View>
+          ) : null}
+        </>
+      ) : null}
     </AdminScaffold>
   );
 }
 
 const styles = StyleSheet.create({
-  notice: { ...typography.body, color: colors.primary, marginBottom: spacing.sm },
-  fieldError: { ...typography.label, color: '#a33a2a', marginBottom: spacing.xs },
-  lockedNote: { ...typography.label, color: colors.muted, marginBottom: spacing.sm },
+  policyCard: {
+    backgroundColor: colors.white,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: spacing.md,
+  },
   section: { ...typography.sectionTitle, marginTop: spacing.md, marginBottom: spacing.sm },
-  row: { flexDirection: 'row', gap: spacing.sm },
-  half: { flex: 1 },
-  fieldLabel: { ...typography.label, marginBottom: spacing.xs },
+  weightRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
+  weight: { flex: 1, padding: spacing.sm, borderRadius: 10, backgroundColor: colors.surfaceAlt ?? '#f3f6f7' },
+  number: { ...typography.title, fontSize: 22 },
+  label: { ...typography.label, color: colors.muted },
+  body: { ...typography.body, color: colors.text, marginTop: spacing.xs },
+  hint: { ...typography.label, color: colors.muted, marginTop: spacing.sm },
+  bandRow: { flexDirection: 'row', paddingVertical: spacing.xs, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+  bandGrade: { ...typography.body, width: 50, fontWeight: '700' },
+  bandThreshold: { ...typography.body },
+  cycleCard: {
+    marginTop: spacing.md,
+    backgroundColor: colors.white,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: spacing.md,
+  },
+  fieldLabel: { ...typography.label, marginTop: spacing.sm, marginBottom: spacing.xs },
   input: {
-    borderWidth: 1,
+    ...typography.input,
+    color: colors.text,
+    backgroundColor: colors.white,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     borderRadius: 10,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    ...typography.body,
+    minHeight: 44,
   },
-  hint: { ...typography.label, color: colors.muted, marginTop: spacing.xs },
-  bandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  bandLabel: { ...typography.body, flex: 1 },
-  bandInput: {
-    width: 72,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 10,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    textAlign: 'center',
-    ...typography.body,
-  },
-  actions: { marginTop: spacing.md, gap: spacing.sm },
 });
