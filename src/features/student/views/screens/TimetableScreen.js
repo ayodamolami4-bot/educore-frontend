@@ -6,7 +6,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import StudentScaffold from '../components/StudentScaffold';
-import { LoadingView, ErrorState, useActionErrorAlert } from '../components/FeedbackViews';
+import { LoadingView, ErrorState, EmptyState, useActionErrorAlert } from '../components/FeedbackViews';
 import { StudentTimetablePresenter } from '../../presenters/StudentReadPresenters';
 import { StudentModel } from '../../models';
 import { colors, typography, spacing } from '../theme';
@@ -35,10 +35,10 @@ export default function TimetableScreen({ route }) {
   return (
     <StudentScaffold
       bannerTop={tt ? tt.classLabel : 'Timetable'}
-      bannerBottom={tt ? `${tt.termLabel} · weekly` : ''}
+      bannerBottom={tt ? (tt.termLabel ? `${tt.termLabel} · weekly` : 'Weekly timetable') : ''}
       eyebrow="Timetable"
       title="My week"
-      subtitle={tt ? `${tt.classLabel} · ${tt.termLabel}` : ''}
+      subtitle={tt ? [tt.classLabel, tt.termLabel].filter(Boolean).join(' · ') : ''}
     >
       {state.status === 'loading' ? <LoadingView label="Loading your timetable…" /> : null}
       {state.status === 'error' ? (
@@ -46,17 +46,28 @@ export default function TimetableScreen({ route }) {
       ) : null}
       {state.status === 'content' && tt ? (
         <View>
-          {tt.days.map((day) => (
-            <View key={day.day} style={styles.dayBlock}>
-              <Text style={styles.dayTitle}>{day.day}</Text>
-              {day.periods.map((p) => (
-                <View key={p.period} style={styles.periodRow}>
-                  <Text style={styles.periodTime}>{p.time}</Text>
-                  <Text style={styles.periodSubject}>{p.subject}</Text>
-                </View>
-              ))}
-            </View>
-          ))}
+          {tt.days?.length ? (
+            tt.days.map((day) => (
+              <View key={day.day} style={styles.dayBlock}>
+                <Text style={styles.dayTitle}>{day.day}</Text>
+                {day.periods.map((p) => (
+                  <View key={p.period} style={styles.periodRow}>
+                    <Text style={styles.periodTime}>{p.time}</Text>
+                    <Text style={styles.periodSubject}>{p.subject}</Text>
+                  </View>
+                ))}
+              </View>
+            ))
+          ) : (
+            <EmptyState
+              title={tt.published ? 'No lessons scheduled' : 'No timetable published'}
+              hint={
+                tt.published
+                  ? 'There are no lessons in your current timetable.'
+                  : 'Your weekly lessons will appear here after the school publishes its timetable.'
+              }
+            />
+          )}
 
           {tt.todayEvents?.length ? (
             <View style={styles.calendarBlock}>
