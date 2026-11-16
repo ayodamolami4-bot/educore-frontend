@@ -42,36 +42,38 @@ export function TE11ReviewSubmissionScreen() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
-  const load = async () => {
-    await Promise.resolve();
-    if (!assignmentId || !studentId) {
-      setError('Open a real student submission from TE10.');
-      return;
-    }
-    setError('');
-    try {
-      const [submission, draft, assignment] = await Promise.all([
-        model.submission(context.schoolId, assignmentId, studentId),
-        model.reviewDraft(context.schoolId, assignmentId, studentId),
-        model.get(context.schoolId, `/assignments/${encodeURIComponent(assignmentId)}`),
-      ]);
-      setData({ ...submission, reviewDraft: draft, maximumScore: assignment.maximumScore, assignment });
-      const saved = draft.review ?? {};
-      const existingFeedback = saved.feedback ?? submission.feedback ?? '';
-      setAction(saved.action ?? 'GRADE');
-      setScore(saved.score == null ? (submission.score == null ? '' : String(submission.score)) : String(saved.score));
-      setFeedback(existingFeedback);
-      setReason(saved.reason ?? '');
-      const deadline = dateTimeInLagos(saved.extraDeadline);
-      setResubmitDate(deadline.date);
-      setResubmitTime(deadline.time);
-    } catch (reasonValue) {
-      setError(reasonValue?.message ?? 'Could not load the accepted submission and review draft.');
-    }
-  };
-
-  useEffect(() => { void load(); }, [model, context.schoolId, assignmentId, studentId]);
-
+  useEffect(() => {
+    let active = true;
+    void Promise.resolve().then(async () => {
+      if (!active) return;
+      if (!assignmentId || !studentId) {
+        setError('Open a real student submission from TE10.');
+        return;
+      }
+      setError('');
+      try {
+        const [submission, draft, assignment] = await Promise.all([
+          model.submission(context.schoolId, assignmentId, studentId),
+          model.reviewDraft(context.schoolId, assignmentId, studentId),
+          model.get(context.schoolId, `/assignments/${encodeURIComponent(assignmentId)}`),
+        ]);
+        if (!active) return;
+        setData({ ...submission, reviewDraft: draft, maximumScore: assignment.maximumScore, assignment });
+        const saved = draft.review ?? {};
+        const existingFeedback = saved.feedback ?? submission.feedback ?? '';
+        setAction(saved.action ?? 'GRADE');
+        setScore(saved.score == null ? (submission.score == null ? '' : String(submission.score)) : String(saved.score));
+        setFeedback(existingFeedback);
+        setReason(saved.reason ?? '');
+        const deadline = dateTimeInLagos(saved.extraDeadline);
+        setResubmitDate(deadline.date);
+        setResubmitTime(deadline.time);
+      } catch (reasonValue) {
+        if (active) setError(reasonValue?.message ?? 'Could not load the accepted submission and review draft.');
+      }
+    });
+    return () => { active = false; };
+  }, [model, context.schoolId, assignmentId, studentId]);
   const bodyForSave = () => {
     const value = feedback.trim();
     if (value.length < 2 || value.length > 3000) throw new Error('Feedback must contain 2–3,000 characters.');
