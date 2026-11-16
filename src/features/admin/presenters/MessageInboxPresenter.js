@@ -174,12 +174,23 @@ export class MessageInboxPresenter {
           ? 'No linked guardian with learning access is recorded for this student.'
           : null,
       });
+      return true;
     } catch (error) {
       this._setState({
         contacts: null,
         errorText: error instanceof ApiError ? error.message : error?.message ?? 'Could not load this student’s authorised contacts.',
       });
+      return false;
     }
+  }
+
+  selectGuardian(guardianId) {
+    this._setState({ selectedGuardianId: guardianId });
+  }
+
+  selectTarget(target) {
+    if (!this.state.targets.some((item) => item.value === target)) return;
+    this._setState({ selectedTarget: target });
   }
 
   async onStartConversation({ subject, body }) {
