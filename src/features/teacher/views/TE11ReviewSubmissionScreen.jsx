@@ -43,6 +43,7 @@ export function TE11ReviewSubmissionScreen() {
   const [error, setError] = useState('');
 
   const load = async () => {
+    await Promise.resolve();
     if (!assignmentId || !studentId) {
       setError('Open a real student submission from TE10.');
       return;
