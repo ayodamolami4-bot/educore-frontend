@@ -105,15 +105,38 @@ export function TE05TimetableScreen() {
       ) : null}
 
       {display === 'calendar' ? (
-        <Card title={`School activities · ${data?.date ?? ''}`}>
-          {(data?.duties ?? []).map((item) => (
-            <View key={item.id} style={{ paddingVertical: 7 }}>
-              <Text style={ui.text}>{item.time || 'Time not set'} · {item.title}</Text>
-              <Text style={ui.muted}>{item.detail}</Text>
-            </View>
-          ))}
-          {!data?.duties?.length ? <Text style={ui.muted}>No published teaching, examination or supervision activities are listed for today.</Text> : null}
-        </Card>
+        <>
+          <Card title={`School activities · ${data?.date ?? ''}`}>
+            {(data?.duties ?? []).map((item) => (
+              <View key={item.id} style={{ paddingVertical: 7 }}>
+                <Text style={ui.text}>{item.time || 'Time not set'} · {item.title}</Text>
+                <Text style={ui.muted}>{item.detail}</Text>
+              </View>
+            ))}
+            {!data?.duties?.length ? <Text style={ui.muted}>No published teaching, examination or supervision activities are listed for today.</Text> : null}
+          </Card>
+
+          <Card title="Published examinations">
+            {(data?.examinations ?? []).map((item) => (
+              <View key={item.id} style={{ paddingVertical: 7 }}>
+                <Text style={ui.text}>{item.date} · {item.time || 'Time not set'} · {item.title}</Text>
+                <Text style={ui.muted}>{item.classLabel}{item.department ? ' · ' + item.department : ''}{item.room ? ' · ' + item.room : ''}</Text>
+                <Text style={ui.muted}>{item.invigilatorName ? 'Invigilator: ' + item.invigilatorName : ''}</Text>
+              </View>
+            ))}
+            {!data?.examinations?.length ? <Text style={ui.muted}>No upcoming published examinations were returned for your assignments.</Text> : null}
+          </Card>
+
+          <Card title="School calendar exceptions">
+            {(data?.calendarExceptions ?? []).map((item) => (
+              <View key={item.id} style={{ paddingVertical: 6 }}>
+                <Text style={ui.text}>{item.onDate} · {item.title}</Text>
+                <Text style={ui.muted}>{item.teachingDay ? 'Teaching day' : 'School closed'}</Text>
+              </View>
+            ))}
+            {!data?.calendarExceptions?.length ? <Text style={ui.muted}>No dated school calendar exceptions are recorded for your assigned sessions.</Text> : null}
+          </Card>
+        </>
       ) : null}
 
       <Card title="Assigned classes">
