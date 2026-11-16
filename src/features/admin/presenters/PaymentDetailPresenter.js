@@ -1,8 +1,8 @@
 /**
- * AD25 — One payment and its refund review. Shows the payment's facts and
- * the refund requests raised against it, and runs the refund state machine
- * (request → decide → execute or manual confirmation). Every action posts
- * through the Model and reloads.
+ * AD25 — Payment and its fee-adjustment refund workflow.
+ * Requests and decisions use the backend's amount, payment, reason and
+ * version fields. Provider confirmation requires its reference and evidence;
+ * there is no standalone refund-execution route.
  */
 import { ApiError } from '../api/ApiError';
 
@@ -14,10 +14,10 @@ export class PaymentDetailPresenter {
     this._alive = false;
     this._paymentId = null;
     this.initialState = {
-      status: 'loading', // loading | content | error
+      status: 'loading',
       payment: null,
       refunds: [],
-      saving: null, // which action is mid-flight
+      saving: null,
       notice: null,
       errorText: null,
     };
@@ -44,20 +44,21 @@ export class PaymentDetailPresenter {
     this._paymentId = paymentId;
     this._setState({ status: 'loading', errorText: null });
     try {
-      const [payment, refunds] = await Promise.all([
-        this.model.paymentById(paymentId),
-        this.model.refundRequests({ paymentId }),
-      ]);
+      const payment = await this.model.paymentById(paymentId);
+      const refunds = await this.model.refundRequests({ paymentId });
       this._setState({
         status: 'content',
         payment,
-        refunds: (refunds && refunds.items) || [],
+        refunds: refunds.items ?? [],
+        errorText: null,
       });
+      return payment;
     } catch (error) {
       this._setState({
         status: 'error',
-        errorText: error instanceof ApiError ? error.message : 'Could not load this payment.',
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'Could not load this payment.',
       });
+      return null;
     }
   }
 
@@ -65,85 +66,108 @@ export class PaymentDetailPresenter {
     return this.load(this._paymentId);
   }
 
-  /** Office raises a refund request against this payment. */
   async onRequestRefund(reason) {
-    if (this.state.saving) return;
-    const trimmed = String(reason || '').trim();
-    if (!trimmed) {
-      this._setState({ errorText: 'Give a short reason for the refund request.' });
-      return;
+    if (this.state.saving) return false;
+    const payment = this.state.payment;
+    const trimmed = String(reason ?? '').trim();
+    if (!payment?.invoiceId || !payment?.id) {
+      this._setState({ errorText: 'The payment is not linked to an invoice, so a refund cannot be requested.' });
+      return false;
     }
+    if (trimmed.length < 5) {
+      this._setState({ errorText: 'Enter a refund reason of at least five characters.' });
+      return false;
+    }
+    const amountMinor = Number(payment.allocatedMinor ?? payment.amountMinor ?? 0);
+    if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) {
+      this._setState({ errorText: 'The confirmed payment has no refundable allocated amount.' });
+      return false;
+    }
+
     this._setState({ saving: 'request', errorText: null, notice: null });
     try {
-      const result = await this.model.requestRefund({
-        paymentId: this._paymentId,
+      await this.model.requestRefund({
+        invoiceId: payment.invoiceId,
+        paymentId: payment.id,
+        amountMinor,
         reason: trimmed,
       });
-      if (result && result.ok === false) {
-        this._setState({ errorText: result.error || 'The refund request could not be raised.' });
-        return;
-      }
       await this.load(this._paymentId);
-      this._setState({ notice: 'Refund request raised — it is now Pending.' });
+      this._setState({ notice: 'Refund adjustment request submitted for Principal review.' });
+      return true;
     } catch (error) {
       this._setState({
-        errorText:
-          error instanceof ApiError ? error.message : 'The refund request could not be raised.',
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'The refund request could not be raised.',
       });
+      return false;
     } finally {
       if (this._alive) this._setState({ saving: null });
     }
   }
 
-  /** Approve or reject a Pending request (the office decides). */
-  async onDecision(refund, action) {
-    if (this.state.saving) return;
-    this._setState({ saving: `decide:${refund.id}`, errorText: null, notice: null });
+  async onDecision(refund, action, reason) {
+    if (this.state.saving) return false;
+    const trimmed = String(reason ?? '').trim();
+    if (trimmed.length < 5) {
+      this._setState({ errorText: 'Enter a decision reason of at least five characters.' });
+      return false;
+    }
+    if (!Number.isSafeInteger(refund?.version) || refund.version < 1) {
+      this._setState({ errorText: 'The refund request version is missing. Refresh the payment.' });
+      return false;
+    }
+    if (!['approve', 'reject'].includes(action)) return false;
+
+    this._setState({ saving: 'decide:' + refund.id, errorText: null, notice: null });
     try {
-      await this.model.decideRefund(refund.id, { action });
+      await this.model.decideRefund(refund.id, {
+        action,
+        reason: trimmed,
+      }, refund.version);
       await this.load(this._paymentId);
       this._setState({
-        notice: action === 'approve' ? 'Refund approved.' : 'Refund request rejected.',
+        notice: action === 'approve'
+          ? 'Refund approved. Provider processing must be completed and independently verified before confirmation.'
+          : 'Refund request rejected.',
       });
+      return true;
     } catch (error) {
       this._setState({
-        errorText: error instanceof ApiError ? error.message : 'The decision could not be saved.',
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'The refund decision could not be saved.',
       });
+      return false;
     } finally {
       if (this._alive) this._setState({ saving: null });
     }
   }
 
-  /** Paystack executes the approved refund. */
-  async onExecute(refund) {
-    if (this.state.saving) return;
-    this._setState({ saving: `execute:${refund.id}`, errorText: null, notice: null });
-    try {
-      await this.model.executeRefund(refund.id);
-      await this.load(this._paymentId);
-      this._setState({ notice: 'Refund executed through Paystack.' });
-    } catch (error) {
-      this._setState({
-        errorText: error instanceof ApiError ? error.message : 'The refund could not be executed.',
-      });
-    } finally {
-      if (this._alive) this._setState({ saving: null });
+  async onConfirmRefund(refund, reference, verificationReference) {
+    if (this.state.saving) return false;
+    const providerReference = String(reference ?? '').trim();
+    const evidence = String(verificationReference ?? '').trim();
+    if (providerReference.length < 3 || evidence.length < 5) {
+      this._setState({ errorText: 'Enter the provider refund reference and independent verification evidence.' });
+      return false;
     }
-  }
+    if (!Number.isSafeInteger(refund?.version) || refund.version < 1) {
+      this._setState({ errorText: 'The approved refund version is missing. Refresh the payment.' });
+      return false;
+    }
 
-  /** Cash/transfer refund done by hand at the office, then confirmed here. */
-  async onConfirmManual(refund) {
-    if (this.state.saving) return;
-    this._setState({ saving: `confirm:${refund.id}`, errorText: null, notice: null });
+    this._setState({ saving: 'confirm:' + refund.id, errorText: null, notice: null });
     try {
-      await this.model.confirmRefundManually(refund.id, {});
+      await this.model.confirmRefundManually(refund.id, {
+        reference: providerReference,
+        verificationReference: evidence,
+      }, refund.version);
       await this.load(this._paymentId);
-      this._setState({ notice: 'Marked as refunded (manual confirmation).' });
+      this._setState({ notice: 'The backend verified and confirmed the refund.' });
+      return true;
     } catch (error) {
       this._setState({
-        errorText:
-          error instanceof ApiError ? error.message : 'The confirmation could not be saved.',
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'The refund was not confirmed.',
       });
+      return false;
     } finally {
       if (this._alive) this._setState({ saving: null });
     }
