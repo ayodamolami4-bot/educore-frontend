@@ -227,10 +227,9 @@ export class TeacherModel {
 
     const today = todayInLagos();
     const from = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
-    const [student, attendance, reports, classes, assignments] = await Promise.all([
+    const [student, attendance, classes, assignments] = await Promise.all([
       this.get(schoolId, '/students/' + encodeURIComponent(studentId)),
       this.get(schoolId, '/students/' + encodeURIComponent(studentId) + '/attendance', { from, to: today }),
-      this.get(schoolId, '/students/' + encodeURIComponent(studentId) + '/reports'),
       this.get(schoolId, '/my-classes'),
       this.get(schoolId, '/teaching-assignments', { classId }),
     ]);
@@ -247,6 +246,19 @@ export class TeacherModel {
     const assignedClass = itemsOf(classes).find((entry) =>
       String(entry.id) === String(resolvedClassId)
     );
+    const isClassTeacher = Boolean(assignedClass?.classTeacher);
+
+    // Published reports are restricted to the current class lead by the API.
+    // A subject teacher can still view authorised attendance and enrolment.
+    let reports = { items: [] };
+    if (isClassTeacher) {
+      try {
+        reports = await this.get(schoolId, '/students/' + encodeURIComponent(studentId) + '/reports');
+      } catch (error) {
+        if (!(error instanceof ApiError) || error.problem?.status !== 404) throw error;
+      }
+    }
+
     const assignedSubjects = [...new Set(
       itemsOf(assignments)
         .filter((entry) => String(entry.classId) === String(resolvedClassId))
@@ -279,7 +291,8 @@ export class TeacherModel {
       classArm: classLabel(placement),
       state: student.status ?? '',
       yourSubject: assignedSubjects.join(', '),
-      classTeacherDuty: Boolean(assignedClass?.classTeacher),
+      classTeacherDuty: isClassTeacher,
+      reportsAvailable: isClassTeacher,
       enrolment: placement.startsOn
         ? placement.startsOn + (placement.endsOn ? ' – ' + placement.endsOn : ' – current')
         : '',
