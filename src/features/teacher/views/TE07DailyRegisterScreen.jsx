@@ -20,6 +20,7 @@ export function TE07DailyRegisterScreen() {
   const route = useRoute();
   const classId = route.params?.classId;
   const date = route.params?.date;
+  const classLabel = route.params?.classLabel;
   const { context, model } = useTeacher();
   const [data, setData] = useState(null);
   const [status, setStatus] = useState('PRESENT');
@@ -138,7 +139,7 @@ export function TE07DailyRegisterScreen() {
   return (
     <Screen
       title="Daily class register"
-      subtitle={data ? `${data.classId} · ${date}` : 'Dated attendance register'}
+      subtitle={data ? `${classLabel || 'Assigned class'} · ${date}` : 'Dated attendance register'}
       code="TE07"
     >
       {error ? <Notice text={error} tone="error" /> : null}
