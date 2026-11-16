@@ -563,12 +563,36 @@ export const StudentModel = {
       range
     );
 
-    const records = itemsOf(response);
+    // The backend returns only accepted register rows. Missing registers are
+    // intentionally absent from this response and must never be counted as absences.
+    const statusLabels = {
+      PRESENT: 'Present',
+      ABSENT: 'Absent',
+      LATE: 'Late',
+      EXCUSED: 'Excused',
+    };
+    const records = itemsOf(response).map((record) => ({
+      ...record,
+      date: record.onDate ?? record.date ?? '',
+      status: statusLabels[String(record.status ?? '').toUpperCase()] ??
+        record.status ?? 'Not recorded',
+    }));
+    const summary = records.reduce((counts, record) => {
+      if (record.status === 'Present') counts.present += 1;
+      else if (record.status === 'Absent') counts.absent += 1;
+      else if (record.status === 'Late') counts.late += 1;
+      else if (record.status === 'Excused') counts.excused += 1;
+      counts.total += 1;
+      return counts;
+    }, { present: 0, absent: 0, late: 0, excused: 0, total: 0 });
+
     return {
       ...response,
+      summary,
       items: records,
       records,
       attendance: records,
+      days: records,
     };
   },
 
