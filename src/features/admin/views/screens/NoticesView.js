@@ -63,6 +63,7 @@ export default function NoticesView({ navigation }) {
   const needsClass = ['CLASS', 'DEPARTMENT'].includes(composer.audience);
 
   useActionErrorAlert(composer.errorText, 'Notice not sent');
+  useActionErrorAlert(state.errorText, 'Notice action failed');
 
   return (
     <AdminScaffold
@@ -164,7 +165,9 @@ export default function NoticesView({ navigation }) {
       <SelectSheet
         visible={classSheetVisible}
         label="Choose class"
-        options={state.classes.map((item) => ({ label: item.classLabel, value: item.id }))}
+        options={state.classes
+          .filter((item) => !isDepartmentAudience || ['SSS1', 'SSS2', 'SSS3'].includes(item.level))
+          .map((item) => ({ label: item.classLabel, value: item.id }))}
         value={composer.classId}
         onSelect={(value) => presenter.onComposerChange('classId', value)}
         onClose={() => setClassSheetVisible(false)}
