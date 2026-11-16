@@ -1,10 +1,8 @@
 /**
- * AD34 — School change history (Presenter). One list, filterable by
- * category; every entry says who did it, when, and exactly what changed.
+ * AD34 — School change history. Available service streams are determined by
+ * the signed-in role; filters only request streams the backend authorises.
  */
 import { ApiError } from '../api/ApiError';
-
-export const AUDIT_CATEGORIES = ['All', 'Staff', 'Records', 'Academics', 'Finance'];
 
 export class AuditTrailPresenter {
   constructor(auditModel) {
@@ -12,10 +10,15 @@ export class AuditTrailPresenter {
     this._render = null;
     this._navigation = null;
     this._alive = false;
+    const domains = this.model.permittedDomains();
+    this.categories = ['All', ...domains.map((domain) =>
+      domain.charAt(0).toUpperCase() + domain.slice(1)
+    )];
     this.initialState = {
-      status: 'loading', // loading | content | error
+      status: 'loading',
       rows: [],
       category: 'All',
+      categories: this.categories,
       notice: null,
       errorText: null,
     };
@@ -41,14 +44,15 @@ export class AuditTrailPresenter {
   async load({ showLoading } = {}) {
     if (showLoading !== false) this._setState({ status: 'loading', errorText: null });
     try {
-      const page = await this.model.list(
-        this.state.category === 'All' ? {} : { category: this.state.category },
-      );
+      const domain = this.state.category === 'All'
+        ? undefined
+        : this.state.category.toLowerCase();
+      const page = await this.model.list({ domain });
       this._setState({ status: 'content', rows: page.items, errorText: null });
     } catch (error) {
       this._setState({
         status: 'error',
-        errorText: error instanceof ApiError ? error.message : 'Could not load the change history.',
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'Could not load the change history.',
       });
     }
   }
@@ -58,6 +62,7 @@ export class AuditTrailPresenter {
   }
 
   onFilterCategory(category) {
+    if (!this.categories.includes(category)) return;
     this._setState({ category });
     return this.load({ showLoading: false });
   }
