@@ -35,6 +35,7 @@ export function TE13EnterScoresScreen() {
   const readOnly = data?.state === 'SUBMITTED';
 
   const load = async () => {
+    await Promise.resolve();
     if (!cycleId || !assignmentId) {
       setError('Open a subject mark package from TE12 before entering scores.');
       return;
