@@ -1,142 +1,263 @@
 /**
- * AD33 — Bring in or download school data (View). Three record kinds share
- * one screen: students, teachers and parents. Each kind exports its records
- * as a CSV (share sheet on phones, clipboard on web) and accepts pasted CSV
- * rows for import. The import shows how many rows are ready and how many have
- * problems, and writes the valid ones through the same endpoint the matching
- * screen uses.
+ * AD33 — Import and export school academic records.
+ * Imports use a server preview and explicit review before any rows are applied.
  */
 import React, { useEffect, useMemo, useState } from 'react';
-import { Text, StyleSheet } from 'react-native';
+import { Text, TextInput, View, StyleSheet } from 'react-native';
 import AdminScaffold from '../components/AdminScaffold';
 import LabelledField from '../components/LabelledField';
 import SelectSheet from '../components/SelectSheet';
 import { PrimaryButton, SecondaryButton } from './AdminHomeView';
-import { useActionErrorAlert } from '../components/FeedbackViews';
+import { ErrorState, LoadingView, Notice, useActionErrorAlert } from '../components/FeedbackViews';
+import { ImportsExportsPresenter } from '../../presenters/ImportsExportsPresenter';
 import {
-  ImportsExportsPresenter,
-  importCsvHeaderFor,
-} from '../../presenters/ImportsExportsPresenter';
-import { StudentModel, TeacherModel, GuardianModel } from '../../models';
+  StudentModel,
+  TeacherModel,
+  CalendarModel,
+  DataTransferModel,
+} from '../../models';
 import { colors, typography, spacing } from '../theme';
 
 const KIND_OPTIONS = [
-  { label: 'Students', value: 'students' },
-  { label: 'Teachers', value: 'teachers' },
-  { label: 'Parents / guardians', value: 'parents' },
+  { label: 'Students', value: 'STUDENTS' },
+  { label: 'Teachers', value: 'TEACHERS' },
 ];
 
-const KIND_COPY = {
-  students: {
-    exportHelp: 'Send the current student records as a CSV file to email, Drive or WhatsApp.',
-    exportBtn: 'Export students (CSV)',
-    importHelp:
-      'Paste CSV rows below — with or without the header line. Required columns: firstName, lastName, class.',
-    importBtn: (n) => (n > 0 ? `Import ${n} students` : 'Import students'),
-    noun: 'students',
-  },
-  teachers: {
-    exportHelp: 'Send the current teacher records as a CSV file to email, Drive or WhatsApp.',
-    exportBtn: 'Export teachers (CSV)',
-    importHelp:
-      'Paste CSV rows below — with or without the header line. Required columns: fullName, phone. Optional: email, subjects (pipe-separated), formClass.',
-    importBtn: (n) => (n > 0 ? `Import ${n} teachers` : 'Import teachers'),
-    noun: 'teachers',
-  },
-  parents: {
-    exportHelp:
-      'Send the current parent/guardian records as a CSV file to email, Drive or WhatsApp.',
-    exportBtn: 'Export parents (CSV)',
-    importHelp:
-      'Paste CSV rows below — with or without the header line. Required: fullName and at least a phone or an email. Optional: relationship, children (pipe-separated "Name,Class" pairs).',
-    importBtn: (n) => (n > 0 ? `Import ${n} parents` : 'Import parents'),
-    noun: 'parents',
-  },
-};
+function sessionLabel(session) {
+  const dates = [session.startsOn, session.endsOn].filter(Boolean).join(' – ');
+  return [session.name ?? session.label ?? 'Academic session', dates].filter(Boolean).join(' · ');
+}
 
-export default function ImportsExportsView() {
-  const [kind, setKind] = useState('students');
-  // A fresh presenter per kind — each kind has its own model, its own snapshot,
-  // and its own validation rules. Switching kind wipes the paste box too.
-  const presenter = useMemo(() => {
-    if (kind === 'teachers') {
-      return new ImportsExportsPresenter(StudentModel, 'teachers', TeacherModel);
-    }
-    if (kind === 'parents') {
-      return new ImportsExportsPresenter(StudentModel, 'parents', GuardianModel);
-    }
-    return new ImportsExportsPresenter(StudentModel, 'students');
-  }, [kind]);
+export default function ImportsExportsView({ navigation }) {
+  const [presenter] = useState(() =>
+    new ImportsExportsPresenter(DataTransferModel, StudentModel, TeacherModel, CalendarModel)
+  );
   const [state, setState] = useState(presenter.initialState);
   const [kindSheet, setKindSheet] = useState(false);
+  const [sessionSheet, setSessionSheet] = useState(false);
+  const [relationshipsVerified, setRelationshipsVerified] = useState(false);
+  const [duplicatesReviewed, setDuplicatesReviewed] = useState(false);
+  const [approvalReason, setApprovalReason] = useState('');
 
   useEffect(() => {
     presenter.attach(setState);
+    presenter.load();
     return () => presenter.detach();
   }, [presenter]);
 
-  // Import/export failures pop up; per-row problems stay listed inline.
-  useActionErrorAlert(state.errorText, 'Import failed');
+  useActionErrorAlert(state.errorText, 'School import');
 
-  const copy = KIND_COPY[kind];
+  const selectedSession = useMemo(
+    () => state.sessions.find((session) => session.id === state.sessionId),
+    [state.sessions, state.sessionId],
+  );
+  const rows = Array.isArray(state.preview?.rows) ? state.preview.rows : [];
+  const readyCount = rows.filter((row) => row.state === 'READY').length;
+  const invalidCount = rows.filter((row) => row.state !== 'READY').length;
+  const importKindLabel = state.kind === 'STUDENTS' ? 'students' : 'teachers';
+  const canConfirm = Boolean(
+    state.preview &&
+    rows.length > 0 &&
+    invalidCount === 0 &&
+    ['PREVIEW', 'PARTIAL', 'PAUSED'].includes(state.preview.state),
+  );
+
+  const chooseKind = (value) => {
+    setKindSheet(false);
+    setRelationshipsVerified(false);
+    setDuplicatesReviewed(false);
+    setApprovalReason('');
+    presenter.setKind(value);
+  };
+
+  const chooseSession = (value) => {
+    setSessionSheet(false);
+    presenter.setSession(value);
+  };
+
+  const createPreview = async () => {
+    setRelationshipsVerified(false);
+    setDuplicatesReviewed(false);
+    setApprovalReason('');
+    await presenter.preview();
+  };
+
+  const confirmImport = async () => {
+    const confirmed = await presenter.confirm({
+      relationshipsVerified,
+      duplicatesReviewed,
+      reason: approvalReason,
+    });
+    if (confirmed) setApprovalReason('');
+  };
 
   return (
     <AdminScaffold
       eyebrow="More"
       title="Bring in or download school data"
-      subtitle="Export or import students, teachers and parents — one record kind at a time."
+      subtitle="Export current lists or run a reviewed, auditable Student / Teacher CSV import."
     >
-      <Text style={styles.section}>Record kind</Text>
-      <Text style={styles.bodyText}>
-        Pick which records to export or import. The CSV columns and the import rules change with the
-        kind.
-      </Text>
-      <SecondaryButton
-        label={KIND_OPTIONS.find((o) => o.value === kind).label}
-        onPress={() => setKindSheet(true)}
-      />
+      {state.status === 'loading' ? <LoadingView label="Loading import templates and sessions…" /> : null}
+      {state.status === 'error' ? (
+        <ErrorState message={state.errorText} onRetry={() => presenter.onRetry()} />
+      ) : null}
+      {state.status === 'content' ? (
+        <>
+          {state.notice ? <Notice text={state.notice} /> : null}
 
-      <Text style={styles.section}>Export</Text>
-      <Text style={styles.bodyText}>{copy.exportHelp}</Text>
-      <SecondaryButton
-        label={state.exporting ? 'Preparing export…' : copy.exportBtn}
-        onPress={() => presenter.onExport()}
-        disabled={state.exporting}
-      />
-      {state.exportNotice ? <Text style={styles.notice}>{state.exportNotice}</Text> : null}
+          <Text style={styles.section}>Record type</Text>
+          <SecondaryButton
+            label={KIND_OPTIONS.find((item) => item.value === state.kind)?.label ?? state.kind}
+            onPress={() => setKindSheet(true)}
+          />
 
-      <Text style={styles.section}>Import {copy.noun}</Text>
-      <Text style={styles.bodyText}>{copy.importHelp}</Text>
-      <LabelledField
-        label="Pasted CSV"
-        multiline
-        numberOfLines={6}
-        value={state.pasted}
-        onChangeText={(text) => presenter.onPasteChange(text)}
-        placeholder={importCsvHeaderFor(kind)}
-      />
-      <Text style={styles.preview}>
-        {state.rows.length} ready · {state.problems.length} with problems
-      </Text>
-      {state.problems.slice(0, 4).map((p) => (
-        <Text key={`${p.rowNumber}-${p.problem.slice(0, 8)}`} style={styles.problem}>
-          Row {p.rowNumber}: {p.problem}
-        </Text>
-      ))}
-      <PrimaryButton
-        label={state.importing ? 'Importing…' : copy.importBtn(state.rows.length)}
-        disabled={state.rows.length === 0 || state.importing}
-        onPress={() => presenter.onImport()}
-      />
-      {state.notice ? <Text style={styles.notice}>{state.notice}</Text> : null}
+          <Text style={styles.section}>Export</Text>
+          <Text style={styles.body}>
+            Export the current authorised Student or Teacher directory as CSV. The export contains directory fields only; it is not an import template.
+          </Text>
+          <SecondaryButton
+            label={state.exporting ? 'Preparing CSV…' : 'Export ' + importKindLabel + ' CSV'}
+            disabled={state.exporting}
+            onPress={() => presenter.onExport()}
+          />
+          {state.exportNotice ? <Notice text={state.exportNotice} /> : null}
+
+          <Text style={styles.section}>Import template</Text>
+          <Text style={styles.body}>
+            This backend import is available for Students and Teachers. Parent / guardian relationships are verified as part of a Student import; there is no separate guardian CSV import endpoint.
+          </Text>
+          <Text style={styles.fieldLabel}>Required CSV headers for {importKindLabel}</Text>
+          <Text selectable style={styles.columns}>
+            {(state.template?.columns ?? []).join(',')}
+          </Text>
+          {state.template?.classKeyExample ? (
+            <Text style={styles.body}>
+              Class key format: {state.template.classKeyExample}. Teacher assignments use {state.template.classAssignmentsExample}. List values are separated with semicolons.
+            </Text>
+          ) : null}
+          <Text style={styles.body}>
+            Maximum {state.template?.maximumRows ?? 1000} rows. Stable row_reference is required for every row. Student rows also require full_name, date_of_birth, sex, class_key, starts_on and verified guardian relationship details or an existing verified guardian ID.
+          </Text>
+
+          <Text style={styles.section}>Prepare import preview</Text>
+          <LabelledField
+            label="Academic session"
+            placeholder="Choose the session for this import"
+            displayValue={selectedSession ? sessionLabel(selectedSession) : ''}
+            onPress={() => setSessionSheet(true)}
+          />
+
+          <TextInput
+            style={[styles.input, styles.csvInput]}
+            multiline
+            autoCapitalize="none"
+            autoCorrect={false}
+            value={state.pasted}
+            onChangeText={(value) => presenter.setPasted(value)}
+            placeholder={(state.template?.columns ?? []).join(',') + '\nPaste CSV header and rows here'}
+            placeholderTextColor={colors.muted}
+            editable={!state.previewing && !state.confirming}
+          />
+          <PrimaryButton
+            label={state.previewing ? 'Validating CSV on the server…' : 'Create validation preview'}
+            onPress={createPreview}
+            loading={state.previewing}
+            disabled={state.previewing || state.confirming || !state.pasted.trim() || !state.sessionId}
+          />
+
+          {state.preview ? (
+            <View style={styles.preview}>
+              <Text style={styles.section}>Server validation result</Text>
+              <Text style={styles.body}>
+                Import {state.preview.id} · {state.preview.state} · version {state.preview.version}
+              </Text>
+              <Text style={styles.counts}>
+                {readyCount} ready · {invalidCount} need correction · {rows.length} total rows
+              </Text>
+              {rows.map((row) => (
+                <View key={row.id} style={styles.row}>
+                  <Text style={styles.rowTitle}>
+                    Row {row.rowNumber} · {row.state}
+                  </Text>
+                  {row.errorCode ? <Text style={styles.problem}>{row.errorCode}</Text> : null}
+                  {row.errorMessage ? <Text style={styles.problem}>{row.errorMessage}</Text> : null}
+                  {(row.warnings ?? []).map((warning, index) => (
+                    <Text key={row.id + '-warning-' + index} style={styles.warning}>{warning}</Text>
+                  ))}
+                  <Text style={styles.rowReference}>Reference: {row.rowReference}</Text>
+                </View>
+              ))}
+              {invalidCount > 0 ? (
+                <Notice text="No data has been applied. Correct the CSV rows, then create a new preview. The backend will reject confirmation while any row is invalid." tone="warning" />
+              ) : null}
+
+              {['QUEUED', 'PROCESSING', 'PARTIAL'].includes(state.preview.state) ? (
+                <Notice text="This import has been accepted for processing. Refresh the preview to view row outcomes." />
+              ) : null}
+              <SecondaryButton
+                label="Refresh import status"
+                onPress={() => presenter.refreshPreview()}
+                disabled={state.confirming || state.previewing}
+              />
+
+              {canConfirm ? (
+                <>
+                  <Text style={styles.section}>Review before applying rows</Text>
+                  <SecondaryButton
+                    label={relationshipsVerified ? 'Guardian / account relationships verified ✓' : 'Confirm guardian / account relationships'}
+                    onPress={() => setRelationshipsVerified((value) => !value)}
+                    disabled={state.confirming}
+                  />
+                  <SecondaryButton
+                    label={duplicatesReviewed ? 'Duplicate review completed ✓' : 'Confirm duplicate review'}
+                    onPress={() => setDuplicatesReviewed((value) => !value)}
+                    disabled={state.confirming}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    value={approvalReason}
+                    onChangeText={setApprovalReason}
+                    placeholder="Import review reason (at least 10 characters)"
+                    placeholderTextColor={colors.muted}
+                    maxLength={500}
+                    editable={!state.confirming}
+                  />
+                  <PrimaryButton
+                    label={state.confirming ? 'Confirming import…' : 'Confirm and queue import'}
+                    onPress={confirmImport}
+                    loading={state.confirming}
+                    disabled={
+                      state.confirming ||
+                      !relationshipsVerified ||
+                      !duplicatesReviewed ||
+                      approvalReason.trim().length < 10
+                    }
+                  />
+                </>
+              ) : null}
+            </View>
+          ) : null}
+        </>
+      ) : null}
 
       <SelectSheet
         visible={kindSheet}
-        label="Which records?"
+        label="Choose record type"
         options={KIND_OPTIONS}
-        value={kind}
-        onSelect={(value) => setKind(value)}
+        value={state.kind}
+        onSelect={chooseKind}
         onClose={() => setKindSheet(false)}
+      />
+      <SelectSheet
+        visible={sessionSheet}
+        label="Choose academic session"
+        options={state.sessions.map((session) => ({
+          value: session.id,
+          label: sessionLabel(session),
+        }))}
+        value={state.sessionId}
+        onSelect={chooseSession}
+        onClose={() => setSessionSheet(false)}
       />
     </AdminScaffold>
   );
@@ -144,8 +265,45 @@ export default function ImportsExportsView() {
 
 const styles = StyleSheet.create({
   section: { ...typography.sectionTitle, marginTop: spacing.lg, marginBottom: spacing.sm },
-  bodyText: { ...typography.body, color: colors.muted, marginBottom: spacing.sm },
-  preview: { ...typography.label, marginTop: spacing.xs, marginBottom: spacing.sm },
-  problem: { ...typography.label, color: '#a33a2a', marginBottom: spacing.xs },
-  notice: { ...typography.label, color: colors.muted, marginTop: spacing.sm, textAlign: 'center' },
+  body: { ...typography.body, color: colors.muted, marginBottom: spacing.sm },
+  fieldLabel: { ...typography.label, marginTop: spacing.sm, marginBottom: spacing.xs },
+  columns: {
+    ...typography.label,
+    color: colors.text,
+    backgroundColor: colors.white,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    borderRadius: 10,
+    padding: spacing.sm,
+  },
+  input: {
+    ...typography.input,
+    color: colors.text,
+    backgroundColor: colors.white,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    minHeight: 48,
+  },
+  csvInput: { minHeight: 150, textAlignVertical: 'top', marginTop: spacing.md },
+  preview: {
+    backgroundColor: colors.white,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: spacing.md,
+    marginTop: spacing.lg,
+  },
+  counts: { ...typography.label, color: colors.primary, marginTop: spacing.sm },
+  row: {
+    paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  rowTitle: { ...typography.body, fontWeight: '700' },
+  problem: { ...typography.label, color: '#a33a2a', marginTop: spacing.xs },
+  warning: { ...typography.label, color: '#8a6519', marginTop: spacing.xs },
+  rowReference: { ...typography.label, color: colors.muted, marginTop: spacing.xs },
 });
