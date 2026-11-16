@@ -1,7 +1,6 @@
 /** AD10 — School workspace settings, administrator records and activation. */
-import { api, normalizePage } from '../api/client';
+import { api, getActiveContext, normalizePage } from '../api/client';
 import { endpoints } from '../api/endpoints';
-import { getActiveContext } from '../api/client';
 
 const itemsOf = (value) => normalizePage(value).items;
 
