@@ -7,7 +7,6 @@ import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import AdminScaffold from '../components/AdminScaffold';
 import RecordList from '../components/RecordList';
 import { LoadingView, ErrorState, useActionErrorAlert } from '../components/FeedbackViews';
-import { PrimaryButton } from './AdminHomeView';
 import { TeacherListPresenter } from '../../presenters/TeacherListPresenter';
 import { TeacherModel } from '../../models';
 import { colors, typography, spacing } from '../theme';
@@ -17,7 +16,6 @@ const STATUSES = ['all', 'Active', 'Inactive'];
 export default function TeacherListView({ navigation }) {
   const [presenter] = useState(() => new TeacherListPresenter(TeacherModel));
   const [state, setState] = useState(presenter.initialState);
-  const [csvText, setCsvText] = useState('');
   const loadedOnce = useRef(false);
 
   // Import problems pop up AND stay listed under the box — nothing wrong
