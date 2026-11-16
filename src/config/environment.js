@@ -22,9 +22,18 @@ export function readEnvironment(values) {
       throw new Error('Use the API origin ending /api/v1, with no credentials, query or fragment.');
     }
   }
+  const apiTimeoutMs =
+    values.apiTimeoutMs === undefined || values.apiTimeoutMs === ''
+      ? 20000
+      : Number(values.apiTimeoutMs);
+  if (!Number.isInteger(apiTimeoutMs) || apiTimeoutMs < 20000 || apiTimeoutMs > 300000) {
+    throw new Error('EXPO_PUBLIC_API_TIMEOUT_MS must be an integer from 20000 to 300000.');
+  }
+
   return {
     demo,
     apiBaseUrl,
+    apiTimeoutMs,
     appLinkHost: values.appLinkHost ?? '',
     easProjectId: values.easProjectId ?? '',
   };
@@ -33,6 +42,7 @@ export function readEnvironment(values) {
 export const environment = readEnvironment({
   demo: process.env.EXPO_PUBLIC_DEMO_MODE,
   apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL,
+  apiTimeoutMs: process.env.EXPO_PUBLIC_API_TIMEOUT_MS,
   appLinkHost: process.env.EXPO_PUBLIC_APP_LINK_HOST,
   easProjectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID,
 });
