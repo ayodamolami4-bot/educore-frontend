@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { Screen } from '../../../components/Screen';
