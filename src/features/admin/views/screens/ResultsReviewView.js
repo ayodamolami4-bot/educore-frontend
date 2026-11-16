@@ -2,7 +2,7 @@
  * AD19 — Review assessment cycles, submitted subject sheets and official
  * report publication. Each action uses the cycle/sheet version from the API.
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Text, TextInput, View, StyleSheet } from 'react-native';
 import AdminScaffold from '../components/AdminScaffold';
 import RecordList from '../components/RecordList';
@@ -17,6 +17,8 @@ export default function ResultsReviewView({ navigation }) {
   const role = getActiveContext().role;
   const [presenter] = useState(() => new ResultsReviewPresenter(ResultsModel, role));
   const [state, setState] = useState(presenter.initialState);
+  const selectedCycleRef = useRef(state.selectedCycle);
+  selectedCycleRef.current = state.selectedCycle;
   const [sheetReason, setSheetReason] = useState('');
   const [cycleReason, setCycleReason] = useState('');
   const [principalRemark, setPrincipalRemark] = useState('');
@@ -29,7 +31,7 @@ export default function ResultsReviewView({ navigation }) {
     presenter.attach(setState, navigation);
     presenter.load();
     const unsubscribe = navigation.addListener('focus', () => {
-      if (!state.selectedCycle) presenter.load();
+      if (!selectedCycleRef.current) presenter.load();
       else presenter.refresh();
     });
     return () => {
