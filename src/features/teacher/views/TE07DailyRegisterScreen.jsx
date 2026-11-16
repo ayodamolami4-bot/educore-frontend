@@ -32,22 +32,26 @@ export function TE07DailyRegisterScreen() {
 
   useEffect(() => {
     let active = true;
-    if (!classId || !date) {
-      setError('Open this register from an assigned class duty.');
-      return () => { active = false; };
-    }
-    model.register(context.schoolId, classId, date)
-      .then((value) => {
+    const load = async () => {
+      await Promise.resolve();
+      if (!active) return;
+      if (!classId || !date) {
+        setError('Open this register from an assigned class duty.');
+        return;
+      }
+      try {
+        const value = await model.register(context.schoolId, classId, date);
         if (!active) return;
         setData(value);
         setStudent(value.students?.[0]?.id ?? '');
         if (value.state !== 'DRAFT') {
           setMessage('This register has already been submitted and is read-only.');
         }
-      })
-      .catch((reason) => {
+      } catch (reason) {
         if (active) setError(reason?.message ?? 'Could not open the daily register.');
-      });
+      }
+    };
+    void load();
     return () => { active = false; };
   }, [model, context.schoolId, classId, date]);
 
