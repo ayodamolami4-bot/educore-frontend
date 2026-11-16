@@ -20,13 +20,18 @@ import { InvoiceDetailPresenter } from '../../presenters/InvoiceDetailPresenter'
 import { FinanceModel } from '../../models';
 import { colors, typography, spacing, statusTone } from '../theme';
 
-const METHODS = ['Cash', 'Transfer', 'POS'];
+const METHODS = [
+  { label: 'Cash', value: 'CASH' },
+  { label: 'Verified bank transfer', value: 'BANK' },
+];
 
 export default function InvoiceDetailView({ route, navigation }) {
   const [presenter] = useState(() => new InvoiceDetailPresenter(FinanceModel));
   const [state, setState] = useState(presenter.initialState);
   const [amountText, setAmountText] = useState('');
   const [referenceText, setReferenceText] = useState('');
+  const [verificationText, setVerificationText] = useState('');
+  const [reasonText, setReasonText] = useState('');
   const [methodSheet, setMethodSheet] = useState(false);
   const invoiceId = route.params?.invoiceId;
   const loadedOnce = useRef(false);
@@ -51,18 +56,27 @@ export default function InvoiceDetailView({ route, navigation }) {
   const confirmRecord = () => {
     const method = state.method;
     Alert.alert(
-      'Record this payment?',
-      `${method} · ₦${Number(String(amountText).replace(/[^0-9.]/g, '') || 0).toLocaleString(
-        'en-NG',
-      )}. The balance and status update immediately.`,
+      'Record this office payment?',
+      method + ' · ₦' + Number(String(amountText).replace(/[^0-9.]/g, '') || 0).toLocaleString('en-NG') +
+        '. The payment is saved as confirmed only after the backend validates the evidence and invoice version.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Record',
-          onPress: () => {
-            presenter.recordPayment({ amount: amountText, method, reference: referenceText });
-            setAmountText('');
-            setReferenceText('');
+          text: 'Record payment',
+          onPress: async () => {
+            const saved = await presenter.recordPayment({
+              amount: amountText,
+              method,
+              reference: referenceText,
+              verificationReference: verificationText,
+              reason: reasonText,
+            });
+            if (saved) {
+              setAmountText('');
+              setReferenceText('');
+              setVerificationText('');
+              setReasonText('');
+            }
           },
         },
       ],
@@ -115,7 +129,7 @@ export default function InvoiceDetailView({ route, navigation }) {
           />
 
           <Text style={styles.section}>Record an office payment</Text>
-          <Text style={styles.hint}>Cash, transfer or POS paid at the school office.</Text>
+          <Text style={styles.hint}>Only cash or independently verified bank transfers can be recorded through this office workflow. Online card payments must be verified through Paystack.</Text>
           {state.notice ? <Text style={styles.notice}>{state.notice}</Text> : null}
 
           <Text style={styles.fieldLabel}>Amount (₦)</Text>
@@ -135,19 +149,43 @@ export default function InvoiceDetailView({ route, navigation }) {
             <Text style={styles.methodCaret}>Change</Text>
           </Pressable>
 
-          <Text style={styles.fieldLabel}>Receipt reference (optional)</Text>
+          <Text style={styles.fieldLabel}>Receipt or bank reference (required)</Text>
           <TextInput
             style={styles.input}
-            placeholder="e.g. RCP-0142"
+            placeholder="e.g. RCP-0142 or bank transaction reference"
             placeholderTextColor={colors.muted}
             value={referenceText}
             onChangeText={setReferenceText}
           />
 
+          <Text style={styles.fieldLabel}>Independent verification evidence reference</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Reference to the checked receipt, bank entry or evidence"
+            placeholderTextColor={colors.muted}
+            value={verificationText}
+            onChangeText={setVerificationText}
+          />
+
+          <Text style={styles.fieldLabel}>Reason for recording</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Why is this payment being recorded?"
+            placeholderTextColor={colors.muted}
+            value={reasonText}
+            onChangeText={setReasonText}
+          />
+
           <View style={styles.sendBtn}>
             <PrimaryButton
               label={state.saving ? 'Saving…' : 'Record payment'}
-              disabled={!amountText.trim() || state.saving}
+              disabled={
+                !amountText.trim() ||
+                referenceText.trim().length < 3 ||
+                verificationText.trim().length < 5 ||
+                reasonText.trim().length < 5 ||
+                state.saving
+              }
               onPress={confirmRecord}
             />
           </View>
@@ -157,7 +195,7 @@ export default function InvoiceDetailView({ route, navigation }) {
       <SelectSheet
         visible={methodSheet}
         label="How was it paid?"
-        options={METHODS.map((m) => ({ label: m, value: m }))}
+        options={METHODS}
         value={state.method}
         onSelect={(v) => presenter.onPickMethod(v)}
         onClose={() => setMethodSheet(false)}
