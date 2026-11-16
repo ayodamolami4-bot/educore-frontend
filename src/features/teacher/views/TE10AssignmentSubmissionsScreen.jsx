@@ -41,26 +41,28 @@ export function TE10AssignmentSubmissionsScreen() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
-  const load = async () => {
-    await Promise.resolve();
-    if (!assignmentId) {
-      setError('Open an actual assignment from the TE08 list.');
-      return;
-    }
-    setError('');
-    try {
-      const value = await model.assignment(context.schoolId, assignmentId);
-      setData(value);
-      const due = dateTimeInLagos(value.dueAt);
-      setNewDueDate(due.date);
-      setNewDueTime(due.time);
-    } catch (reasonValue) {
-      setError(reasonValue?.message ?? 'Could not load this assignment and its submissions.');
-    }
-  };
-
-  useEffect(() => { void load(); }, [model, context.schoolId, assignmentId]);
-
+  useEffect(() => {
+    let active = true;
+    void Promise.resolve().then(async () => {
+      if (!active) return;
+      if (!assignmentId) {
+        setError('Open an actual assignment from the TE08 list.');
+        return;
+      }
+      setError('');
+      try {
+        const value = await model.assignment(context.schoolId, assignmentId);
+        if (!active) return;
+        setData(value);
+        const due = dateTimeInLagos(value.dueAt);
+        setNewDueDate(due.date);
+        setNewDueTime(due.time);
+      } catch (reasonValue) {
+        if (active) setError(reasonValue?.message ?? 'Could not load this assignment and its submissions.');
+      }
+    });
+    return () => { active = false; };
+  }, [model, context.schoolId, assignmentId]);
   const submissions = useMemo(() => (data?.submissions ?? []).filter((item) => {
     const state = String(item.state ?? '').toUpperCase();
     return filter === 'all'
