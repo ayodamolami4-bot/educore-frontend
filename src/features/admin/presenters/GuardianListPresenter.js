@@ -13,7 +13,7 @@ export class GuardianListPresenter {
     this.initialState = {
       status: 'loading', // loading | content | error
       rows: [],
-      query: { q: '', status: 'all' },
+      query: { q: '' },
       notice: null,
       errorText: null,
     };
@@ -55,11 +55,6 @@ export class GuardianListPresenter {
 
   onSearch(text) {
     this._setState({ query: { ...this.state.query, q: text } });
-    return this.load({ showLoading: false });
-  }
-
-  onFilterStatus(status) {
-    this._setState({ query: { ...this.state.query, status } });
     return this.load({ showLoading: false });
   }
 
