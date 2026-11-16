@@ -17,11 +17,13 @@ export const TeacherModel = {
       : filters.status === 'Inactive'
         ? false
         : undefined;
-    const page = normalizePage(await api.get(endpoints.teachers.list, null, {
+    const raw = await api.get(endpoints.teachers.list, null, {
       search: filters.q || undefined,
       active,
-      limit: 30,
-    }));
+      cursor: filters.cursor,
+      limit: filters.limit ?? 30,
+    });
+    const page = normalizePage(raw);
     const [assignmentsPage, classesPage] = await Promise.all([
       api.get('teaching-assignments', null, { limit: 100 }),
       api.get('classes'),
@@ -30,6 +32,8 @@ export const TeacherModel = {
     const classes = itemsOf(classesPage);
     return {
       ...page,
+      hasMore: Boolean(raw?.hasMore),
+      nextCursor: raw?.nextCursor ?? null,
       items: page.items.map((teacher) => {
         const duties = assignments.filter((item) => item.teacherId === teacher.id);
         const classDuty = classes.find((item) => item.attendanceTeacherId === teacher.id);
@@ -46,6 +50,21 @@ export const TeacherModel = {
         };
       }),
     };
+  },
+
+  async listAll(filters = {}) {
+    const items = [];
+    let cursor;
+    let hasMore = true;
+    do {
+      const page = await this.list({ ...filters, cursor, limit: 100 });
+      items.push(...page.items);
+      hasMore = page.hasMore;
+      const next = page.nextCursor ?? (hasMore ? page.items.at(-1)?.id : null);
+      if (!hasMore || !next || next === cursor || page.items.length === 0) break;
+      cursor = next;
+    } while (hasMore);
+    return items;
   },
 
   create(body) {
