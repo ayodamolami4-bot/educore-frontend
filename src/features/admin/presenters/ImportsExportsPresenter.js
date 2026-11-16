@@ -86,14 +86,14 @@ export class ImportsExportsPresenter {
   async load() {
     this._setState({ status: 'loading', errorText: null });
     try {
-      const [template, sessionPayload, batchPage] = await Promise.all([
+      const [template, sessionOptions, batchPage] = await Promise.all([
         this.model.template(this.state.kind),
-        this.calendar.sessions(),
+        this.calendar.sessionOptions(),
         this.model.batches(),
       ]);
-      const sessions = itemsOf(sessionPayload);
-      const sessionId = sessions.find((session) => session.active)?.id ??
-        sessions.find((session) => session.isActive)?.id ??
+      const sessions = itemsOf(sessionOptions.sessions);
+      const sessionId = sessionOptions.activeSessionId ??
+        sessions.find((session) => session.active)?.id ??
         sessions[0]?.id ??
         '';
       this._setState({
