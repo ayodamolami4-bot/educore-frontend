@@ -18,7 +18,6 @@ export default function ResultsReviewView({ navigation }) {
   const [presenter] = useState(() => new ResultsReviewPresenter(ResultsModel, role));
   const [state, setState] = useState(presenter.initialState);
   const selectedCycleRef = useRef(state.selectedCycle);
-  selectedCycleRef.current = state.selectedCycle;
   const [sheetReason, setSheetReason] = useState('');
   const [cycleReason, setCycleReason] = useState('');
   const [principalRemark, setPrincipalRemark] = useState('');
@@ -26,6 +25,10 @@ export default function ResultsReviewView({ navigation }) {
   const [reopenReason, setReopenReason] = useState('');
   const [closesOn, setClosesOn] = useState('');
   const [closesTime, setClosesTime] = useState('17:00');
+
+  useEffect(() => {
+    selectedCycleRef.current = state.selectedCycle;
+  }, [state.selectedCycle]);
 
   useEffect(() => {
     presenter.attach(setState, navigation);
