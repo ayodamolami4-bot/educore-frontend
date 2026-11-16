@@ -1,15 +1,10 @@
 /**
- * AD29 — School messages (View): the notifications inbox. One row per
- * conversation with its unread badge; opening a thread goes to AD30.
- *
- * "New message" opens in three steps:
- *   1. WHO — All guardians / All teachers / the individual picker / any
- *      class from the live class list.
- *   2a. A class → Teachers, Guardians, or BOTH (the whole group in one tap).
- *   2b. Individuals → tick 1+ teachers and guardians, or "Send to all".
+ * AD29 — School messages for Principal and School Office.
+ * A conversation is tied to one student, a linked guardian and an
+ * authorised destination selected by the backend.
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { View } from 'react-native';
+import { View, Text, TextInput, StyleSheet } from 'react-native';
 import AdminScaffold from '../components/AdminScaffold';
 import RecordList from '../components/RecordList';
 import SelectSheet from '../components/SelectSheet';
@@ -17,32 +12,30 @@ import {
   LoadingView,
   EmptyState,
   ErrorState,
-  useActionErrorAlert,
+  Notice,
 } from '../components/FeedbackViews';
-import { PrimaryButton } from './AdminHomeView';
+import { PrimaryButton, SecondaryButton } from './AdminHomeView';
 import { MessageInboxPresenter } from '../../presenters/MessageInboxPresenter';
-import { MessagesModel } from '../../models';
-import { spacing } from '../theme';
+import { MessagesModel, StudentModel } from '../../models';
+import { getActiveContext } from '../../api/client';
+import { colors, typography, spacing } from '../theme';
 
 export default function MessageInboxView({ navigation }) {
-  const [presenter] = useState(() => new MessageInboxPresenter(MessagesModel));
+  const [presenter] = useState(() =>
+    new MessageInboxPresenter(MessagesModel, StudentModel, getActiveContext())
+  );
   const [state, setState] = useState(presenter.initialState);
-  const [groupSheet, setGroupSheet] = useState(false);
-  const [classSheet, setClassSheet] = useState(false);
-  const [individualsSheet, setIndividualsSheet] = useState(false);
-  const [pickedRecipients, setPickedRecipients] = useState([]);
-  const [currentGroup, setCurrentGroup] = useState(null); // step-1 value driving the open sheet
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [studentSheet, setStudentSheet] = useState(false);
+  const [guardianSheet, setGuardianSheet] = useState(false);
+  const [targetSheet, setTargetSheet] = useState(false);
+  const [subject, setSubject] = useState('');
+  const [firstMessage, setFirstMessage] = useState('');
   const loadedOnce = useRef(false);
-
-  // Conversation-start refusals (empty selection, server guard) pop up —
-  // they used to fail invisibly.
-  useActionErrorAlert(state.errorText, 'New message');
 
   useEffect(() => {
     presenter.attach(setState, navigation);
     presenter.load();
-    // Unread badges change when threads are opened elsewhere, so re-fetch on
-    // every focus after the first.
     const unsubscribe = navigation.addListener('focus', () => {
       if (loadedOnce.current) presenter.load();
       loadedOnce.current = true;
@@ -53,58 +46,66 @@ export default function MessageInboxView({ navigation }) {
     };
   }, [presenter, navigation]);
 
-  const labelOf = (value) => {
-    const hit = state.recipients.find((r) => r.value === value);
-    return hit ? hit.label : value;
+  const openComposer = async () => {
+    await presenter.loadRecipients(() => setComposerOpen(true));
   };
 
-  // Step 1 → route each audience to its own second step.
-  const onPickGroup = (value) => {
-    setGroupSheet(false);
-    setCurrentGroup(value);
-    if (value.startsWith('class:')) {
-      presenter.loadPeople(value, () => setClassSheet(true));
-    } else {
-      setPickedRecipients([]);
-      presenter.loadPeople(value, () => setIndividualsSheet(true));
+  const chooseStudent = async (studentId) => {
+    setStudentSheet(false);
+    const ready = await presenter.loadPeople(studentId);
+    if (ready) setGuardianSheet(true);
+  };
+
+  const chooseGuardian = (guardianId) => {
+    presenter.selectGuardian(guardianId);
+    setGuardianSheet(false);
+    if (state.targets.length > 1) setTargetSheet(true);
+  };
+
+  const startConversation = async () => {
+    const started = await presenter.onStartConversation({
+      subject,
+      body: firstMessage,
+    });
+    if (started) {
+      setSubject('');
+      setFirstMessage('');
+      setComposerOpen(false);
     }
   };
 
-  // Individuals sheet: "Done" sends to the ticked people, "Send to all" to
-  // everyone the sheet shows.
-  const sendIndividuals = (_sendAll) => {
-    const values = state.people.map((p) => p.value);
-    const allTitle =
-      currentGroup === 'group:all-teachers'
-        ? 'All teachers'
-        : currentGroup === 'group:all-guardians'
-          ? 'All guardians'
-          : 'All teachers & guardians';
-    setIndividualsSheet(false);
-    presenter.startForSelection(pickedRecipients, values, allTitle);
-  };
+  const selectedStudent = state.students.find((item) => item.id === state.selectedStudentId);
+  const selectedGuardian = state.guardians.find((item) => item.id === state.selectedGuardianId);
+  const selectedTarget = state.targets.find((item) => item.value === state.selectedTarget);
 
   return (
     <AdminScaffold
       eyebrow="Messages"
       title="School messages"
-      subtitle="Guardian and staff conversations, newest first."
+      subtitle="Private conversations linked to an enrolled student and an authorised guardian."
     >
-      {state.status === 'loading' ? <LoadingView label="Loading messages…" /> : null}
+      {state.status === 'loading' ? <LoadingView label="Loading school conversations…" /> : null}
       {state.status === 'empty' ? (
-        <EmptyState title="No conversations yet" hint="Messages you send or receive land here." />
+        <EmptyState title="No conversations yet" hint="New conversations opened by the school will appear here." />
       ) : null}
       {state.status === 'error' ? (
         <ErrorState message={state.errorText} onRetry={() => presenter.onRetry()} />
       ) : null}
+      {state.errorText && state.status !== 'error' ? <Notice text={state.errorText} tone="error" /> : null}
+      {state.notice ? <Notice text={state.notice} /> : null}
+
       {state.status === 'content' ? (
         <RecordList
-          items={state.conversations.map((c) => ({
-            id: c.id,
-            title: c.title,
-            meta: `${c.participantLabel} · ${c.lastMessage} · ${c.lastAt}`,
-            status: c.unread > 0 ? 'New' : null,
-            raw: c,
+          items={state.conversations.map((conversation) => ({
+            id: conversation.id,
+            title: conversation.title,
+            meta: [
+              conversation.participantLabel,
+              conversation.studentLabel,
+              conversation.stateLabel,
+            ].filter(Boolean).join(' · '),
+            status: conversation.state === 'OPEN' ? 'Open' : conversation.stateLabel,
+            raw: conversation,
           }))}
           onPressItem={(row) => presenter.onOpenConversation(row.raw)}
           emptyText="No conversations yet."
@@ -113,61 +114,140 @@ export default function MessageInboxView({ navigation }) {
 
       <View style={{ marginTop: spacing.md }}>
         <PrimaryButton
-          label={state.starting ? 'Creating…' : 'New message'}
-          onPress={() => presenter.loadRecipients(() => setGroupSheet(true))}
-          disabled={state.starting}
+          label={composerOpen ? 'Conversation composer open' : 'New conversation'}
+          onPress={openComposer}
+          disabled={state.starting || !['PRINCIPAL', 'SCHOOL_OFFICE'].includes(getActiveContext().role)}
         />
       </View>
 
-      {/* Step 1 — the audience. */}
-      <SelectSheet
-        visible={groupSheet}
-        label="Message who?"
-        options={state.recipients.map((r) => ({ label: r.label, value: r.value }))}
-        value={null}
-        onSelect={onPickGroup}
-        onClose={() => setGroupSheet(false)}
-      />
+      {composerOpen ? (
+        <View style={styles.composer}>
+          <Text style={styles.composerTitle}>Start a school conversation</Text>
 
-      {/* Step 2a — one class: its teachers, its guardians, or both. */}
-      <SelectSheet
-        visible={classSheet}
-        label={
-          currentGroup ? `Message which group in ${labelOf(currentGroup)}` : 'Message which group?'
-        }
-        options={state.people.map((p) => ({ label: p.label, value: p.value }))}
-        value={null}
-        onSelect={(v) => {
-          const hit = state.people.find((p) => p.value === v);
-          setClassSheet(false);
-          presenter.onStartConversation(v, hit ? hit.label : v);
-        }}
-        onClose={() => setClassSheet(false)}
-      />
+          <SecondaryButton
+            label={selectedStudent
+              ? selectedStudent.name + (selectedStudent.classLabel ? ' · ' + selectedStudent.classLabel : '')
+              : 'Choose student'}
+            onPress={() => setStudentSheet(true)}
+            disabled={state.starting}
+          />
 
-      {/* Step 2b — individuals: tick 1+ people, or Send to all. */}
+          {state.contacts ? (
+            <>
+              <SecondaryButton
+                label={selectedGuardian?.label ?? 'Choose linked guardian'}
+                onPress={() => setGuardianSheet(true)}
+                disabled={!state.guardians.length || state.starting}
+              />
+              <SecondaryButton
+                label={selectedTarget?.label ?? 'Choose destination'}
+                onPress={() => setTargetSheet(true)}
+                disabled={state.targets.length < 2 || state.starting}
+              />
+              {!state.guardians.length ? (
+                <Notice text="A conversation cannot start until the student has a linked guardian with learning access." tone="warning" />
+              ) : null}
+            </>
+          ) : selectedStudent ? (
+            <Notice text="Checking the student's linked guardian permissions…" />
+          ) : (
+            <Notice text="Choose a student to load only the guardians with active learning access." />
+          )}
+
+          <TextInput
+            style={styles.input}
+            value={subject}
+            onChangeText={setSubject}
+            placeholder="Conversation subject"
+            placeholderTextColor={colors.muted}
+            maxLength={160}
+            editable={!state.starting}
+          />
+          <TextInput
+            style={[styles.input, styles.messageInput]}
+            multiline
+            value={firstMessage}
+            onChangeText={setFirstMessage}
+            placeholder="Write the first message"
+            placeholderTextColor={colors.muted}
+            maxLength={8000}
+            editable={!state.starting}
+          />
+          <PrimaryButton
+            label={state.starting ? 'Starting conversation…' : 'Start conversation'}
+            onPress={startConversation}
+            disabled={
+              state.starting ||
+              !selectedStudent ||
+              !selectedGuardian ||
+              !selectedTarget ||
+              subject.trim().length < 3 ||
+              firstMessage.trim().length < 2
+            }
+          />
+          <SecondaryButton
+            label="Cancel"
+            onPress={() => setComposerOpen(false)}
+            disabled={state.starting}
+          />
+        </View>
+      ) : null}
+
       <SelectSheet
-        visible={individualsSheet}
-        label="Tick the people to message — or send to all"
-        options={state.people.map((p) => ({ label: p.label, value: p.value }))}
-        multiple
-        selectedValues={pickedRecipients}
-        onToggle={(value) =>
-          setPickedRecipients((prev) =>
-            prev.includes(value) ? prev.filter((r) => r !== value) : [...prev, value],
-          )
-        }
-        extraAction={
-          state.people.length
-            ? {
-                label: `Send to all (${state.people.length})`,
-                onPress: () => sendIndividuals(true),
-              }
-            : null
-        }
-        onDone={() => sendIndividuals(false)}
-        onClose={() => setIndividualsSheet(false)}
+        visible={studentSheet}
+        label="Choose a student"
+        options={state.students.map((student) => ({
+          value: student.id,
+          label: student.name + (student.classLabel ? ' · ' + student.classLabel : ''),
+        }))}
+        value={state.selectedStudentId}
+        onSelect={chooseStudent}
+        onClose={() => setStudentSheet(false)}
+      />
+      <SelectSheet
+        visible={guardianSheet}
+        label="Choose a linked guardian with learning access"
+        options={state.guardians.map((guardian) => ({
+          value: guardian.id,
+          label: guardian.label,
+        }))}
+        value={state.selectedGuardianId}
+        onSelect={chooseGuardian}
+        onClose={() => setGuardianSheet(false)}
+      />
+      <SelectSheet
+        visible={targetSheet}
+        label="Choose conversation destination"
+        options={state.targets}
+        value={state.selectedTarget}
+        onSelect={(value) => presenter.selectTarget(value)}
+        onClose={() => setTargetSheet(false)}
       />
     </AdminScaffold>
   );
 }
+
+const styles = StyleSheet.create({
+  composer: {
+    marginTop: spacing.lg,
+    padding: spacing.md,
+    borderRadius: 12,
+    backgroundColor: colors.surfaceAlt ?? colors.white,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    gap: spacing.sm,
+  },
+  composerTitle: { ...typography.sectionTitle },
+  input: {
+    ...typography.input,
+    backgroundColor: colors.white,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    minHeight: 46,
+    marginTop: spacing.xs,
+  },
+  messageInput: { minHeight: 100, textAlignVertical: 'top' },
+});
