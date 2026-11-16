@@ -58,18 +58,25 @@ export const StudentModel = {
       cursor: filters.cursor,
       limit: filters.limit ?? 30,
     });
-    return normalizePage(payload);
+    return {
+      ...normalizePage(payload),
+      hasMore: Boolean(payload?.hasMore),
+      nextCursor: payload?.nextCursor ?? null,
+    };
   },
 
   async listAll(filters = {}) {
     const items = [];
     let cursor;
-    let page;
+    let hasMore = true;
     do {
-      page = await this.listFull({ ...filters, cursor });
+      const page = await this.listFull({ ...filters, cursor });
       items.push(...page.items);
-      cursor = page.hasMore ? page.items.at(-1)?.id : null;
-    } while (cursor);
+      hasMore = page.hasMore;
+      const next = page.nextCursor ?? (hasMore ? page.items.at(-1)?.id : null);
+      if (!hasMore || !next || next === cursor || page.items.length === 0) break;
+      cursor = next;
+    } while (hasMore);
     return items;
   },
 
