@@ -1,6 +1,28 @@
-/** AD31/AD32 — Complaints: intake, replies, internal notes, ownership, state, history. */
+/** AD31/AD32 — Complaint detail, public replies, office-only notes and state changes. */
 import { api, normalizePage } from '../api/client';
 import { endpoints } from '../api/endpoints';
+
+const itemsOf = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.items)) return payload.items;
+  return [];
+};
+
+const statusLabel = (value) => ({
+  NEW: 'New',
+  IN_REVIEW: 'In review',
+  WAITING_FOR_PARENT: 'Waiting for parent',
+  RESOLVED: 'Resolved',
+  CLOSED: 'Closed',
+}[String(value ?? '').toUpperCase()] ?? String(value ?? ''));
+
+const entryView = (entry) => ({
+  id: entry.id,
+  at: entry.createdAt ?? '',
+  author: entry.authorId ?? 'School participant',
+  text: entry.body ?? '',
+  files: itemsOf(entry.files),
+});
 
 export const ComplaintsModel = {
   async list(query) {
@@ -12,36 +34,91 @@ export const ComplaintsModel = {
   },
 
   async byId(caseId) {
-    return api.get(endpoints.complaints.byId, { caseId });
+    const [raw, historyPage] = await Promise.all([
+      api.get(endpoints.complaints.byId, { caseId }),
+      api.get(endpoints.complaints.history, { caseId }),
+    ]);
+    const entries = itemsOf(raw.entries);
+    const publicEntries = entries.filter((entry) => entry.visibility === 'PUBLIC').map(entryView);
+    const privateEntries = entries.filter((entry) => entry.visibility === 'INTERNAL').map(entryView);
+    const history = itemsOf(historyPage).map((item, index) => ({
+      id: item.id ?? String(item.createdAt ?? 'event') + '-' + index,
+      at: item.createdAt ?? '',
+      text: [
+        item.action,
+        item.beforeState && item.afterState ? item.beforeState + ' → ' + item.afterState : '',
+        item.reason ?? '',
+      ].filter(Boolean).join(' · '),
+    }));
+
+    return {
+      ...raw,
+      status: statusLabel(raw.state),
+      owner: raw.ownerId ?? 'Unassigned',
+      guardianName: 'Linked guardian',
+      openedAt: publicEntries[0]?.at ?? '',
+      channel: raw.intakeChannel ?? '',
+      detail: publicEntries[0]?.text ?? '',
+      history,
+      replies: publicEntries,
+      notes: privateEntries,
+    };
   },
 
   async replies(caseId) {
-    return api.get(endpoints.complaints.replies, { caseId });
+    const complaint = await this.byId(caseId);
+    return { items: complaint.replies };
   },
 
-  async addReply(caseId, body) {
-    return api.post(endpoints.complaints.replies, { caseId }, body);
+  async addReply(caseId, body, version) {
+    return api.post(
+      endpoints.complaints.replies,
+      { caseId },
+      { body: String(body?.body ?? '').trim(), internal: false, fileIds: body?.fileIds ?? [] },
+      { version },
+    );
   },
 
   async internalNotes(caseId) {
-    return api.get(endpoints.complaints.internalNotes, { caseId });
+    const complaint = await this.byId(caseId);
+    return { items: complaint.notes };
   },
 
-  async addInternalNote(caseId, body) {
-    return api.post(endpoints.complaints.internalNotes, { caseId }, body);
+  async addInternalNote(caseId, body, version) {
+    return api.post(
+      endpoints.complaints.replies,
+      { caseId },
+      { body: String(body?.body ?? '').trim(), internal: true, fileIds: body?.fileIds ?? [] },
+      { version },
+    );
   },
 
-  async assignOwner(caseId, body) {
-    return api.post(endpoints.complaints.owner, { caseId }, body);
+  async assignOwner(caseId, body, version) {
+    return api.put(
+      endpoints.complaints.owner,
+      { caseId },
+      { ownerId: body?.ownerId ?? null, reason: String(body?.reason ?? '').trim() },
+      { version },
+    );
   },
 
-  /** State machine moves (open → in-review → resolved → closed) — backend validates. */
-  async stateAction(caseId, body) {
-    return api.post(endpoints.complaints.stateActions, { caseId }, body);
+  async stateAction(caseId, body, version) {
+    const action = ({
+      'start-review': 'START_REVIEW',
+      'wait-for-parent': 'WAIT_FOR_PARENT',
+      resolve: 'RESOLVE',
+      close: 'CLOSE',
+    })[body?.action] ?? body?.action;
+    return api.post(
+      endpoints.complaints.stateActions,
+      { caseId },
+      { action, reason: String(body?.reason ?? '').trim() },
+      { version },
+    );
   },
 
   async history(caseId) {
-    return api.get(endpoints.complaints.history, { caseId });
+    return normalizePage(await api.get(endpoints.complaints.history, { caseId }));
   },
 };
 
