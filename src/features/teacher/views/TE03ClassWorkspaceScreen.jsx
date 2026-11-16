@@ -17,15 +17,23 @@ export function TE03ClassWorkspaceScreen() {
 
   useEffect(() => {
     let active = true;
-    setData(null);
-    setError('');
-    if (!classId) {
-      setError('Choose a class from your assigned classes before opening its workspace.');
-      return () => { active = false; };
-    }
-    model.classWorkspace(context.schoolId, classId)
-      .then((value) => { if (active) setData(value); })
-      .catch((reason) => { if (active) setError(reason?.message ?? 'Could not load this assigned class.'); });
+    const load = async () => {
+      await Promise.resolve();
+      if (!active) return;
+      setData(null);
+      setError('');
+      if (!classId) {
+        setError('Choose a class from your assigned classes before opening its workspace.');
+        return;
+      }
+      try {
+        const value = await model.classWorkspace(context.schoolId, classId);
+        if (active) setData(value);
+      } catch (reason) {
+        if (active) setError(reason?.message ?? 'Could not load this assigned class.');
+      }
+    };
+    void load();
     return () => { active = false; };
   }, [model, context.schoolId, classId]);
 
