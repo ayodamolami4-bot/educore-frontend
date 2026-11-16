@@ -126,21 +126,13 @@ export const endpoints = {
   },
 
   results: {
-    markPackages: 'assessment-cycles',
-    markPackageById: 'assessment-cycles/{cycleId}/review',
-    returnPackage: 'assessment-cycles/{cycleId}/sheets/{assignmentId}/return',
-    approvePackage: 'assessment-cycles/{cycleId}/approve-policy',
-    absenceResolutions: null,
-    reportBatches: 'assessment-cycles',
-    reportBatchById: 'assessment-cycles/{cycleId}/review',
-    returnBatch: 'assessment-cycles/{cycleId}/return-review',
-    publishBatch: 'assessment-cycles/{cycleId}/publish',
-    reopenBatch: 'assessment-cycles/{cycleId}/reopen',
-    submitBatch: 'assessment-cycles/{cycleId}/submit-review',
-    reviewIssues: null,
-    resolveIssue: null,
+    cycles: 'assessment-cycles',
+    cycleReview: 'assessment-cycles/{cycleId}/review',
+    returnSheet: 'assessment-cycles/{cycleId}/sheets/{assignmentId}/return',
+    returnReview: 'assessment-cycles/{cycleId}/return-review',
+    publishCycle: 'assessment-cycles/{cycleId}/publish',
+    reopenCycle: 'assessment-cycles/{cycleId}/reopen',
   },
-
   reports: {
     catalogue: 'school-reports/catalogue',
   },
