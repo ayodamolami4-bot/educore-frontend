@@ -42,6 +42,7 @@ export function TE10AssignmentSubmissionsScreen() {
   const [error, setError] = useState('');
 
   const load = async () => {
+    await Promise.resolve();
     if (!assignmentId) {
       setError('Open an actual assignment from the TE08 list.');
       return;
