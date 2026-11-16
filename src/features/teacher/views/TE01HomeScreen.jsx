@@ -29,15 +29,17 @@ export function TE01HomeScreen() {
       <Card title={data?.greeting ?? 'Teacher'} subtitle={data?.today ?? context.schoolName}>
         {loading ? (
           <Notice text="Loading this school's records…" />
-        ) : (
+        ) : data ? (
           <View style={ui.row}>
-            {data.summary.map((s) => (
+            {(data.summary ?? []).map((s) => (
               <View key={s.label} style={{ flex: 1 }}>
                 <Text style={ui.muted}>{s.label}</Text>
                 <Text style={ui.text}>{s.value}</Text>
               </View>
             ))}
           </View>
+        ) : (
+          <Notice text="Teacher home data could not be loaded. Use the message above and retry the screen." tone="warning" />
         )}
       </Card>
 
