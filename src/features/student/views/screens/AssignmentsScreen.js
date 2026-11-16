@@ -52,7 +52,7 @@ export default function AssignmentsScreen({ route }) {
           items={state.items.map((a) => ({
             id: a.id,
             title: a.title,
-            meta: `${a.subject} · due ${a.dueAt}${a.submission && a.submission.score != null ? ` · ${a.submission.score}/${a.maxScore}` : ''}`,
+            meta: `${a.subject} · ${a.dueAt ? `due ${a.dueAt}` : 'No due date'}${a.submission && a.submission.score != null ? ` · ${a.submission.score}/${a.maxScore}` : ''}`,
             status: a.status,
           }))}
           onPressItem={(row) =>
