@@ -35,10 +35,10 @@ export default function MyClassScreen({ route }) {
   return (
     <StudentScaffold
       bannerTop={ov ? ov.studentName : 'Loading…'}
-      bannerBottom={ov ? `${ov.classLabel} · ${ov.termLabel}` : ''}
+      bannerBottom={ov ? [ov.classLabel, ov.termLabel].filter(Boolean).join(' · ') : ''}
       eyebrow="My class"
       title={ov ? ov.classLabel : 'My class'}
-      subtitle={ov ? `${ov.subjects.length} subjects · form teacher ${ov.formTeacherName}` : ''}
+      subtitle={ov ? `${ov.subjects.length} subjects${ov.formTeacherName ? ` · form teacher ${ov.formTeacherName}` : ''}` : ''}
     >
       {state.status === 'loading' ? <LoadingView label="Loading your class…" /> : null}
       {state.status === 'error' ? (
