@@ -91,7 +91,6 @@ export default function TeacherListView({ navigation }) {
           <Text style={styles.hint}>
             Bulk imports use the school Imports workflow. Register one teacher here when a new class-and-subject assignment is required.
           </Text>
-        </View>
           {state.notice ? <Text style={styles.notice}>{state.notice}</Text> : null}
           {state.errorText ? <Text style={styles.inlineError}>{state.errorText}</Text> : null}
           {state.importResult && state.importResult.failed.length ? (
