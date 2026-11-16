@@ -25,6 +25,7 @@ export function TE15ReportsScreen() {
   const [notice, setNotice] = useState('');
 
   const load = async () => {
+    await Promise.resolve();
     setError('');
     try {
       const value = await model.reports(context.schoolId);
