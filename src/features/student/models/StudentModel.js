@@ -102,17 +102,35 @@ function reportView(value) {
 
   return {
     ...raw,
-    termLabel: raw.termLabel ?? raw.termName ?? raw.term ?? '',
+    // Published report snapshots use termNumber/class and classTeacherRemark.
+    termLabel:
+      raw.termLabel ??
+      raw.termName ??
+      raw.term ??
+      (raw.termNumber != null ? `Term ${raw.termNumber}` : ''),
     classLabel:
       typeof classValue === 'string'
         ? classValue
         : classValue?.label ?? '',
     average:
       raw.average ?? raw.averagePercentage ?? raw.summary?.average ?? null,
+    // The published report contract does not include a class position.
     position: raw.position ?? raw.classPosition ?? null,
     formTeacherName: raw.formTeacherName ?? null,
-    overallRemark: raw.overallRemark ?? raw.remark ?? '',
-    subjects: Array.isArray(raw.subjects) ? raw.subjects : [],
+    overallRemark: raw.overallRemark ?? raw.classTeacherRemark ?? raw.remark ?? '',
+    principalRemark: raw.principalRemark ?? '',
+    // Preserve the official backend marks; only adapt their field names.
+    subjects: Array.isArray(raw.subjects)
+      ? raw.subjects.map((subject) => ({
+          ...subject,
+          subject: subject.subject ?? subject.name ?? subject.subjectName ?? '',
+          ca1: subject.ca1 ?? null,
+          ca2: subject.ca2 ?? null,
+          examScore: subject.examScore ?? subject.exam ?? null,
+          total: subject.total ?? null,
+          grade: subject.grade ?? '',
+        }))
+      : [],
   };
 }
 
