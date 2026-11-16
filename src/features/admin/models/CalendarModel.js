@@ -105,6 +105,17 @@ export const CalendarModel = {
     };
   },
 
+  async sessionOptions() {
+    const [metadata, payload] = await Promise.all([
+      api.get('metadata'),
+      api.get('academic-sessions'),
+    ]);
+    return {
+      activeSessionId: metadata.activeSessionId ?? null,
+      sessions: itemsOf(payload),
+    };
+  },
+
   sessions() {
     return api.get('academic-sessions');
   },
