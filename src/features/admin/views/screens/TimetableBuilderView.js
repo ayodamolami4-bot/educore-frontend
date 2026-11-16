@@ -1,292 +1,209 @@
 /**
- * AD14 — Build the weekly timetable (View). Day sections with one row per
- * period. Tapping a period opens a menu: fill it (subject or activity),
- * change its subject or its time, or remove it. "+ Add a period" appends a
- * fresh one to a day. A period's teacher must be the subject's assigned one.
+ * AD14 — Build a term timetable from the class's active teaching assignments.
+ * Each lesson is an individual server-backed record in the term-wide plan.
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Alert, Modal, TextInput, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Alert, StyleSheet } from 'react-native';
 import AdminScaffold from '../components/AdminScaffold';
 import RecordList from '../components/RecordList';
 import SelectSheet from '../components/SelectSheet';
-import { LoadingView, ErrorState, useActionErrorAlert } from '../components/FeedbackViews';
+import { LoadingView, ErrorState, Notice, EmptyState } from '../components/FeedbackViews';
 import { PrimaryButton, SecondaryButton } from './AdminHomeView';
-import {
-  TimetableBuilderPresenter,
-  MAX_PERIODS_PER_DAY,
-} from '../../presenters/TimetableBuilderPresenter';
-import { TimetableModel, AcademicStructureModel } from '../../models';
+import { TimetableBuilderPresenter } from '../../presenters/TimetableBuilderPresenter';
+import { TimetableModel, AcademicStructureModel, CalendarModel } from '../../models';
 import { colors, typography, spacing } from '../theme';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-const ACTIVITIES = ['Break', 'Sports / PE', 'Study Time', 'Assembly', 'Clubs & Societies'].map(
-  (a) => ({ label: a, value: a }),
-);
+const DURATIONS = [
+  { label: '30 minutes', value: 30 },
+  { label: '60 minutes', value: 60 },
+];
+
 export default function TimetableBuilderView({ navigation, route }) {
-  const [presenter] = useState(
-    () => new TimetableBuilderPresenter(TimetableModel, AcademicStructureModel),
+  const [presenter] = useState(() =>
+    new TimetableBuilderPresenter(TimetableModel, AcademicStructureModel, CalendarModel)
   );
   const [state, setState] = useState(presenter.initialState);
   const loadedOnce = useRef(false);
-  const [pickerOpen, setPickerOpen] = useState(!route.params?.classId); // no class in the route → open the picker straight away
-  const [pendingSlot, setPendingSlot] = useState(null); // { day, period } — an existing period
-  const [addDay, setAddDay] = useState(null); // a day to append a brand-new period to
-  const [pendingSubject, setPendingSubject] = useState(null);
-  const [subjectSheet, setSubjectSheet] = useState(false);
-  const [teacherSheet, setTeacherSheet] = useState(false);
-  const [activitySheet, setActivitySheet] = useState(false);
-  const [timeTarget, setTimeTarget] = useState(null); // { day, period, value }
-  // Action sheet for an EXISTING filled period. Android caps Alert.alert at
-  // THREE buttons; the old "More…" sub-alert packed four (remove, change
-  // subject, change activity, cancel) and the fourth button was silently
-  // dropped — so the office could change a subject period to a subject but
-  // never to an activity, and could not change an activity period at all.
-  // SelectSheet has no button-count cap, so every option is reachable.
-  const [slotActionSheet, setSlotActionSheet] = useState(null); // { slot } | null
-  const initialClassId = route.params && route.params.classId;
+  const [classSheet, setClassSheet] = useState(!route.params?.classId);
+  const [assignmentSheet, setAssignmentSheet] = useState(false);
+  const [daySheet, setDaySheet] = useState(false);
+  const [durationSheet, setDurationSheet] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingLessonId, setEditingLessonId] = useState('');
+  const [assignmentId, setAssignmentId] = useState('');
+  const [day, setDay] = useState('Monday');
+  const [start, setStart] = useState('08:00');
+  const [durationMinutes, setDurationMinutes] = useState(30);
+  const [room, setRoom] = useState('');
+
+  const draft = state.draft;
+  const isDraft = draft?.status === 'DRAFT';
+  const filledCount = draft?.slots?.length ?? 0;
 
   useEffect(() => {
     presenter.attach(setState, navigation);
-    if (initialClassId) presenter.openForClass(initialClassId);
-    else {
-      presenter.pickClass();
-    }
+    if (route.params?.classId) presenter.openForClass(route.params.classId);
+    else presenter.pickClass();
     const unsubscribe = navigation.addListener('focus', () => {
-      if (loadedOnce.current && state.draft) presenter.openForClass(state.draft.classLabel);
+      if (loadedOnce.current && state.selectedClass) {
+        presenter.openForClass(state.selectedClass.id);
+      }
       loadedOnce.current = true;
     });
     return () => {
       unsubscribe?.remove?.();
       presenter.detach();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [presenter, navigation, initialClassId]);
+  }, [presenter, navigation, route.params?.classId]);
 
-  // Guard refusals (already published, mismatched teacher…) pop up.
-  useActionErrorAlert(state.errorText);
-
-  const draft = state.draft;
-  const filledCount = draft ? draft.slots.filter((s) => s.subject || s.activity).length : 0;
-
-  const openTimeEditor = (slot) => {
-    // Prefill from the structured times, else split the label "08:00 – 08:40".
-    let start = slot.start || '';
-    let end = slot.end || '';
-    if ((!start || !end) && slot.time) {
-      const parts = String(slot.time)
-        .split(/[–-]/)
-        .map((x) => x.trim());
-      if (parts.length === 2) {
-        start = start || parts[0];
-        end = end || parts[1];
-      }
-    }
-    setTimeTarget({ day: slot.day, period: slot.period, start, end });
+  const openNewLesson = (selectedDay = 'Monday') => {
+    setEditingLessonId('');
+    setAssignmentId(state.assignments[0]?.id ?? '');
+    setDay(selectedDay);
+    setStart('08:00');
+    setDurationMinutes(30);
+    setRoom('');
+    setFormOpen(true);
   };
 
-  const onSlotPress = (slot) => {
-    if (!slot) return;
-    if (slot.subject || slot.activity) {
-      // Filled period — open the bottom-sheet menu (every option is reachable,
-      // unlike Alert.alert which caps at three buttons on Android).
-      setSlotActionSheet({ slot });
-      return;
-    }
+  const openEditLesson = (lesson) => {
+    setEditingLessonId(lesson.id);
+    setAssignmentId(lesson.assignmentId);
+    setDay(lesson.day);
+    setStart(lesson.start);
+    setDurationMinutes(lesson.durationMinutes);
+    setRoom(lesson.room ?? '');
+    setFormOpen(true);
+  };
+
+  const onLessonPress = (lesson) => {
+    if (!isDraft) return;
     Alert.alert(
-      `${slot.day}, period ${slot.period} · ${slot.time} is empty`,
-      'Fill it with what?',
+      lesson.subject + ' · ' + lesson.day,
+      lesson.time + ' · ' + (lesson.teacherName ?? '') + (lesson.room ? ' · ' + lesson.room : ''),
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Change time', onPress: () => openTimeEditor(slot) },
+        { text: 'Edit lesson', onPress: () => openEditLesson(lesson) },
         {
-          text: 'Fill period…',
-          onPress: () =>
-            Alert.alert(`Fill ${slot.day}, period ${slot.period}`, 'Fill it with what?', [
-              { text: 'Cancel', style: 'cancel' },
-              {
-                text: 'Activity',
-                onPress: () => {
-                  setPendingSlot({ day: slot.day, period: slot.period });
-                  setActivitySheet(true);
-                },
-              },
-              {
-                text: 'Subject',
-                onPress: () => {
-                  setPendingSlot({ day: slot.day, period: slot.period });
-                  setSubjectSheet(true);
-                },
-              },
-            ]),
+          text: 'Remove lesson',
+          style: 'destructive',
+          onPress: () => Alert.alert(
+            'Remove this lesson?',
+            'This removes the lesson from the draft term plan. The currently published timetable remains unchanged.',
+            [
+              { text: 'Keep lesson', style: 'cancel' },
+              { text: 'Remove', style: 'destructive', onPress: () => presenter.removeSlot(lesson.id) },
+            ],
+          ),
         },
       ],
     );
   };
 
-  // One of the bottom-sheet options for an existing period was tapped.
-  // `pendingSlot` is set first so the subject/activity sheet knows which
-  // period to write to when its own picker is closed.
-  const onSlotAction = (action) => {
-    const slot = slotActionSheet && slotActionSheet.slot;
-    setSlotActionSheet(null);
-    if (!slot || !action) return;
-    if (action === 'time') {
-      openTimeEditor(slot);
-      return;
+  const saveLesson = async () => {
+    const saved = await presenter.saveLesson({
+      lessonId: editingLessonId || undefined,
+      assignmentId,
+      day,
+      start: start.trim(),
+      durationMinutes,
+      room,
+    });
+    if (saved) {
+      setFormOpen(false);
+      setEditingLessonId('');
     }
-    if (action === 'remove') {
-      presenter.removeSlot(slot.day, slot.period);
-      return;
-    }
-    setPendingSlot({ day: slot.day, period: slot.period });
-    if (action === 'subject') setSubjectSheet(true);
-    else if (action === 'activity') setActivitySheet(true);
   };
 
-  const onSubjectPicked = (subject) => {
-    setPendingSubject(subject);
-    setSubjectSheet(false);
-    // Rule: a period's teacher must be the subject's assigned teacher.
-    const hasTeacher = state.teachers.some((t) => (t.subjects || []).includes(subject));
-    if (!hasTeacher) {
-      setPendingSlot(null);
-      setAddDay(null);
-      setPendingSubject(null);
-      Alert.alert(
-        'No teacher assigned',
-        `No active teacher is assigned to ${subject} yet — open "Classes, subjects and departments", tap the subject and assign a teacher, or pick another subject.`,
-      );
-      return;
-    }
-    setTeacherSheet(true);
-  };
-
-  const onTeacherPicked = (teacherName) => {
-    setTeacherSheet(false);
-    if (pendingSlot && pendingSubject) {
-      presenter.fillSlot(pendingSlot.day, pendingSlot.period, pendingSubject, teacherName);
-    } else if (addDay && pendingSubject) {
-      presenter.appendSlot(addDay, { subject: pendingSubject, teacherName });
-    }
-    setPendingSlot(null);
-    setAddDay(null);
-    setPendingSubject(null);
-  };
-
-  const onActivityPicked = (activity) => {
-    setActivitySheet(false);
-    if (pendingSlot) {
-      presenter.fillActivity(pendingSlot.day, pendingSlot.period, activity);
-    } else if (addDay) {
-      presenter.appendSlot(addDay, { activity });
-    }
-    setPendingSlot(null);
-    setAddDay(null);
-  };
-
-  const onSaveTime = async () => {
-    if (!timeTarget) return;
-    const ok = await presenter.setTime(
-      timeTarget.day,
-      timeTarget.period,
-      (timeTarget.start || '').trim(),
-      (timeTarget.end || '').trim(),
-    );
-    // Stay open on a validation error so the office can correct the times;
-    // the exact problem pops up (24-hour clock, end after start…).
-    if (ok) setTimeTarget(null);
-  };
+  const classOptions = state.classOptions.map((item) => ({
+    value: item.id,
+    label: item.classLabel,
+  }));
 
   return (
     <AdminScaffold
       eyebrow="Academics"
-      title={draft ? `Timetable — ${draft.classLabel}` : 'Build the weekly timetable'}
-      subtitle={
-        draft
-          ? `${filledCount}/${draft.slots.length} periods filled · ${draft.status}`
-          : 'Choose a class to build its week'
-      }
+      title={draft ? 'Timetable — ' + draft.classLabel : 'Build the weekly timetable'}
+      subtitle={draft
+        ? (draft.termLabel + ' · effective ' + draft.effectiveFrom + ' · ' + draft.status)
+        : 'Choose a class to edit its term timetable'}
     >
-      {state.status === 'loading' ? <LoadingView label="Opening the timetable…" /> : null}
+      {state.status === 'loading' ? <LoadingView label="Opening the term timetable…" /> : null}
       {state.status === 'error' ? (
         <ErrorState
           message={state.errorText}
           onRetry={() => {
-            if (state.draft) presenter.openForClass(state.draft.classLabel);
+            if (state.selectedClass) presenter.openForClass(state.selectedClass.id);
             else {
               presenter.pickClass();
-              setPickerOpen(true);
+              setClassSheet(true);
             }
           }}
         />
       ) : null}
+      {state.notice ? <Notice text={state.notice} /> : null}
 
-      {/* The class picker was dismissed without choosing — never dead-end:
-          offer the class list again. */}
-      {state.status === 'picking' && !pickerOpen ? (
-        <View>
-          <Text style={styles.pickHint}>
-            Pick a class to open its timetable. The class list is one tap away.
-          </Text>
-          <SecondaryButton label="Choose a class" onPress={() => setPickerOpen(true)} />
-        </View>
+      {state.status === 'picking' && !classSheet ? (
+        <SecondaryButton label="Choose a class" onPress={() => setClassSheet(true)} />
       ) : null}
 
       {state.status === 'content' && draft ? (
         <View>
-          {state.notice ? <Text style={styles.notice}>{state.notice}</Text> : null}
-          {draft.status === 'Published' ? (
-            <Text style={styles.publishedNote}>
-              This timetable is published — reopen it from the review page before editing.
+          <View style={styles.summary}>
+            <Text style={styles.summaryText}>
+              {filledCount} scheduled lessons in this class view · plan version {draft.version}
             </Text>
+            <Text style={styles.hint}>
+              This is one term-wide timetable plan. Lessons are stored using the active teacher-subject assignments; editing this class does not create a separate class plan.
+            </Text>
+          </View>
+
+          {draft.weeklyTargets?.length ? (
+            <View style={styles.targets}>
+              <Text style={styles.section}>Required weekly periods</Text>
+              {draft.weeklyTargets.map((target) => {
+                const assignment = state.assignments.find((item) => item.id === target.assignmentId);
+                return (
+                  <View key={target.assignmentId} style={styles.targetRow}>
+                    <Text style={styles.targetName}>{assignment?.label ?? 'Assigned subject'}</Text>
+                    <Text style={styles.targetValue}>
+                      {target.scheduledPeriods} / {target.requiredPeriods}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
           ) : null}
 
-          {DAYS.map((day) => {
-            const daySlots = draft.slots
-              .filter((s) => s.day === day)
-              .sort((a, b) => a.period - b.period);
+          {DAYS.map((weekday) => {
+            const lessons = draft.slots
+              .filter((lesson) => lesson.day === weekday)
+              .sort((a, b) => a.startMinute - b.startMinute);
             return (
-              <View key={day}>
-                <Text style={styles.section}>{day}</Text>
+              <View key={weekday}>
+                <Text style={styles.section}>{weekday}</Text>
                 <RecordList
-                  items={daySlots.map((slot) => ({
-                    id: `${day}-${slot.period}`,
-                    title: `Period ${slot.period} · ${slot.time}`,
-                    meta: slot.activity
-                      ? `${slot.activity} — no teacher needed`
-                      : slot.subject
-                        ? `${slot.subject} · ${slot.teacherName}`
-                        : 'Empty — tap for options',
-                    status: slot.activity ? 'Activity' : slot.subject ? 'Filled' : 'Empty',
-                    raw: slot,
+                  items={lessons.map((lesson) => ({
+                    id: lesson.id,
+                    title: lesson.time + ' · ' + lesson.subject,
+                    meta: [
+                      lesson.teacherName,
+                      lesson.room ? 'Room ' + lesson.room : '',
+                      lesson.department ?? '',
+                    ].filter(Boolean).join(' · '),
+                    status: 'Lesson',
+                    raw: lesson,
                   }))}
-                  onPressItem={(row) => onSlotPress(row.raw)}
-                  emptyText=""
+                  onPressItem={(row) => onLessonPress(row.raw)}
+                  emptyText="No lessons scheduled for this day."
                 />
-                {daySlots.length < MAX_PERIODS_PER_DAY && draft.status !== 'Published' ? (
+                {isDraft ? (
                   <View style={styles.addWrap}>
                     <SecondaryButton
-                      label={`+ Add a period on ${day}`}
+                      label={'Add lesson on ' + weekday}
                       disabled={state.saving}
-                      onPress={() => {
-                        Alert.alert(`Add a period on ${day}`, 'What kind of period?', [
-                          { text: 'Cancel', style: 'cancel' },
-                          {
-                            text: 'Activity',
-                            onPress: () => {
-                              setAddDay(day);
-                              setActivitySheet(true);
-                            },
-                          },
-                          {
-                            text: 'Teaching period',
-                            onPress: () => {
-                              setAddDay(day);
-                              setSubjectSheet(true);
-                            },
-                          },
-                        ]);
-                      }}
+                      onPress={() => openNewLesson(weekday)}
                     />
                   </View>
                 ) : null}
@@ -294,188 +211,185 @@ export default function TimetableBuilderView({ navigation, route }) {
             );
           })}
 
-          {/* Breathing room so "Send for review" never touches the last day's add button. */}
-          <View style={styles.actions}>
-            <SecondaryButton
-              label={state.sendingReview ? 'Sending…' : 'Send for review'}
-              disabled={state.sendingReview || draft.status === 'Published'}
-              onPress={() => presenter.sendForReview()}
-            />
-          </View>
+          {draft.conflicts?.length ? (
+            <View style={styles.conflictCard}>
+              <Text style={styles.section}>Review findings</Text>
+              {draft.conflicts.map((item, index) => (
+                <Text key={'conflict-' + index} style={styles.problem}>
+                  {item.issue ?? item.code ?? 'Conflict'} · {item.detail ?? item.lessonId ?? ''}
+                </Text>
+              ))}
+            </View>
+          ) : null}
+
+          {isDraft ? (
+            <View style={styles.actions}>
+              <SecondaryButton
+                label="Refresh this term plan"
+                disabled={state.saving}
+                onPress={() => presenter.refresh()}
+              />
+              <Text style={styles.hint}>
+                The draft is reviewed and published from Academics → Review and publish the timetable.
+              </Text>
+            </View>
+          ) : (
+            <Notice text="This is a published plan. Create a new revision from the current published plan to make changes." />
+          )}
         </View>
       ) : null}
 
       <SelectSheet
-        visible={pickerOpen && state.status === 'picking'}
+        visible={classSheet && state.status === 'picking'}
         label="Which class timetable?"
-        options={state.classOptions.map((c) => ({ label: c.classLabel, value: c.classLabel }))}
+        options={classOptions}
+        value={state.selectedClass?.id}
         onSelect={(value) => {
-          setPickerOpen(false);
+          setClassSheet(false);
           presenter.openForClass(value);
         }}
-        onClose={() => setPickerOpen(false)}
-      />
-      <SelectSheet
-        visible={subjectSheet}
-        label={
-          pendingSlot
-            ? `${pendingSlot.day}, period ${pendingSlot.period} — which subject?`
-            : addDay
-              ? `New period on ${addDay} — which subject?`
-              : 'Which subject?'
-        }
-        options={state.subjects.map((s) => ({
-          label:
-            draft && s.classes.includes(draft.classLabel)
-              ? s.name
-              : `${s.name} — not assigned to ${draft ? draft.classLabel : 'this class'}`,
-          value: s.name,
-        }))}
-        onSelect={onSubjectPicked}
-        onClose={() => setSubjectSheet(false)}
-      />
-      <SelectSheet
-        visible={teacherSheet}
-        label={`${pendingSubject || 'The subject'} — its assigned teacher`}
-        options={state.teachers
-          .filter((t) => (t.subjects || []).includes(pendingSubject))
-          .map((t) => ({ label: t.fullName, value: t.fullName }))}
-        onSelect={onTeacherPicked}
-        onClose={() => setTeacherSheet(false)}
-      />
-      <SelectSheet
-        visible={activitySheet}
-        label={
-          pendingSlot
-            ? `${pendingSlot.day}, period ${pendingSlot.period} — which activity?`
-            : addDay
-              ? `New period on ${addDay} — which activity?`
-              : 'Which activity?'
-        }
-        options={ACTIVITIES}
-        onSelect={onActivityPicked}
-        onClose={() => setActivitySheet(false)}
-      />
-      {/* Bottom-sheet menu for an EXISTING filled period — subject OR activity
-          periods both offer every option (change to the other type, change
-          within the same type, change the time, or remove the period). */}
-      <SelectSheet
-        visible={Boolean(slotActionSheet)}
-        label={
-          slotActionSheet
-            ? `${slotActionSheet.slot.day}, period ${slotActionSheet.slot.period} — change what?`
-            : 'Change what?'
-        }
-        options={[
-          { label: 'Change time', value: 'time' },
-          {
-            label:
-              slotActionSheet && slotActionSheet.slot.subject
-                ? 'Change to another subject'
-                : 'Change to a subject',
-            value: 'subject',
-          },
-          {
-            label:
-              slotActionSheet && slotActionSheet.slot.activity
-                ? 'Change to another activity'
-                : 'Change to an activity',
-            value: 'activity',
-          },
-          { label: 'Remove this period', value: 'remove' },
-        ]}
-        onSelect={(value) => onSlotAction(value)}
-        onClose={() => setSlotActionSheet(null)}
+        onClose={() => setClassSheet(false)}
       />
 
-      <Modal
-        visible={Boolean(timeTarget)}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setTimeTarget(null)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Period time</Text>
-            <Text style={styles.modalHint}>
-              24-hour clock — start and end, e.g. 08:00 and 08:40. A period may never start at or
-              before the previous one ends.
-            </Text>
-            <View style={styles.timeRow}>
-              <View style={styles.timeField}>
-                <Text style={styles.timeLabel}>Starts</Text>
-                <TextInput
-                  style={styles.modalInput}
-                  value={timeTarget ? timeTarget.start : ''}
-                  onChangeText={(t) => setTimeTarget((prev) => ({ ...prev, start: t }))}
-                  placeholder="08:00"
-                  placeholderTextColor={colors.muted}
-                  keyboardType="numbers-pad"
-                  maxLength={5}
-                />
-              </View>
-              <View style={styles.timeField}>
-                <Text style={styles.timeLabel}>Ends</Text>
-                <TextInput
-                  style={styles.modalInput}
-                  value={timeTarget ? timeTarget.end : ''}
-                  onChangeText={(t) => setTimeTarget((prev) => ({ ...prev, end: t }))}
-                  placeholder="08:40"
-                  placeholderTextColor={colors.muted}
-                  keyboardType="numbers-pad"
-                  maxLength={5}
-                />
-              </View>
-            </View>
-            <View style={styles.modalActions}>
-              <View style={styles.modalButton}>
-                <SecondaryButton label="Cancel" onPress={() => setTimeTarget(null)} />
-              </View>
-              <View style={styles.modalButton}>
-                <PrimaryButton label="Save time" disabled={state.saving} onPress={onSaveTime} />
-              </View>
-            </View>
-          </View>
+      <SelectSheet
+        visible={assignmentSheet}
+        label="Choose the active subject-teacher assignment"
+        options={state.assignments.map((item) => ({
+          value: item.id,
+          label: item.label,
+        }))}
+        value={assignmentId}
+        onSelect={(value) => {
+          setAssignmentId(value);
+          setAssignmentSheet(false);
+        }}
+        onClose={() => setAssignmentSheet(false)}
+      />
+      <SelectSheet
+        visible={daySheet}
+        label="Choose weekday"
+        options={DAYS.map((value) => ({ value, label: value }))}
+        value={day}
+        onSelect={(value) => {
+          setDay(value);
+          setDaySheet(false);
+        }}
+        onClose={() => setDaySheet(false)}
+      />
+      <SelectSheet
+        visible={durationSheet}
+        label="Lesson duration"
+        options={DURATIONS}
+        value={durationMinutes}
+        onSelect={(value) => {
+          setDurationMinutes(value);
+          setDurationSheet(false);
+        }}
+        onClose={() => setDurationSheet(false)}
+      />
+
+      {formOpen ? (
+        <View style={styles.form}>
+          <Text style={styles.section}>{editingLessonId ? 'Edit lesson' : 'Add lesson'}</Text>
+          <Text style={styles.fieldLabel}>Teaching assignment</Text>
+          <SecondaryButton
+            label={state.assignments.find((item) => item.id === assignmentId)?.label ?? 'Choose subject and teacher'}
+            onPress={() => setAssignmentSheet(true)}
+            disabled={state.saving || state.assignments.length === 0}
+          />
+          <Text style={styles.fieldLabel}>Weekday</Text>
+          <SecondaryButton label={day} onPress={() => setDaySheet(true)} disabled={state.saving} />
+          <Text style={styles.fieldLabel}>Start time (Lagos time, HH:MM)</Text>
+          <TextInput
+            style={styles.input}
+            value={start}
+            onChangeText={setStart}
+            placeholder="08:30"
+            placeholderTextColor={colors.muted}
+            maxLength={5}
+            keyboardType="numbers-and-punctuation"
+            editable={!state.saving}
+          />
+          <Text style={styles.fieldLabel}>Duration</Text>
+          <SecondaryButton
+            label={durationMinutes + ' minutes'}
+            onPress={() => setDurationSheet(true)}
+            disabled={state.saving}
+          />
+          <Text style={styles.fieldLabel}>Room (optional)</Text>
+          <TextInput
+            style={styles.input}
+            value={room}
+            onChangeText={setRoom}
+            placeholder="e.g. LAB-1"
+            placeholderTextColor={colors.muted}
+            editable={!state.saving}
+          />
+          <Text style={styles.hint}>
+            Lessons are 30 or 60 minutes, Monday–Friday, between 08:00 and 13:00. The 11:30 break and Friday sports hour are reserved. The backend validates teacher and room conflicts.
+          </Text>
+          <PrimaryButton
+            label={state.saving ? 'Saving lesson…' : editingLessonId ? 'Save lesson changes' : 'Add lesson'}
+            onPress={saveLesson}
+            loading={state.saving}
+            disabled={state.saving || !assignmentId || !start.trim()}
+          />
+          <SecondaryButton
+            label="Cancel"
+            onPress={() => setFormOpen(false)}
+            disabled={state.saving}
+          />
         </View>
-      </Modal>
+      ) : null}
     </AdminScaffold>
   );
 }
 
 const styles = StyleSheet.create({
-  notice: { ...typography.body, color: colors.primary, marginBottom: spacing.sm },
-  publishedNote: { ...typography.label, color: colors.muted, marginBottom: spacing.sm },
+  summary: {
+    backgroundColor: colors.white,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  summaryText: { ...typography.body, fontWeight: '700' },
   section: { ...typography.sectionTitle, marginTop: spacing.md, marginBottom: spacing.sm },
-  pickHint: { ...typography.label, color: colors.muted, marginBottom: spacing.sm },
-  actions: { marginTop: spacing.md },
-  addWrap: { marginTop: spacing.md },
-  timeRow: { flexDirection: 'row', gap: spacing.sm },
-  timeField: { flex: 1 },
-  timeLabel: { ...typography.label, color: colors.muted, marginBottom: spacing.xs },
-  modalActions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
-  modalButton: { flex: 1 },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    alignItems: 'center',
-    justifyContent: 'center',
+  hint: { ...typography.label, color: colors.muted, marginTop: spacing.xs, marginBottom: spacing.sm },
+  targets: {
+    backgroundColor: colors.white,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  targetRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.xs },
+  targetName: { ...typography.label, color: colors.text, flex: 1 },
+  targetValue: { ...typography.label, fontWeight: '700' },
+  addWrap: { marginTop: spacing.xs, marginBottom: spacing.md },
+  conflictCard: { backgroundColor: colors.white, borderRadius: 12, padding: spacing.md, marginTop: spacing.md },
+  problem: { ...typography.label, color: '#A33A2A', marginTop: spacing.xs },
+  actions: { marginTop: spacing.md, gap: spacing.sm },
+  form: {
+    marginTop: spacing.lg,
+    backgroundColor: colors.white,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    borderRadius: 12,
     padding: spacing.md,
   },
-  modalCard: {
-    backgroundColor: colors.surface || '#fff',
-    borderRadius: 14,
-    padding: spacing.md,
-    width: '100%',
-  },
-  modalTitle: { ...typography.sectionTitle, marginBottom: spacing.xs },
-  modalHint: { ...typography.label, color: colors.muted, marginBottom: spacing.sm },
-  modalInput: {
-    borderWidth: 1,
+  fieldLabel: { ...typography.label, marginTop: spacing.sm, marginBottom: spacing.xs },
+  input: {
+    ...typography.input,
+    color: colors.text,
+    backgroundColor: colors.white,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     borderRadius: 10,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    ...typography.body,
-    marginBottom: spacing.sm,
+    minHeight: 44,
   },
 });
