@@ -1,8 +1,14 @@
-/** AD10 — School metadata, administrator records and secure staff activation. */
+/** AD10 — School workspace settings, administrator records and activation. */
 import { api, normalizePage } from '../api/client';
 import { endpoints } from '../api/endpoints';
 
 const itemsOf = (value) => normalizePage(value).items;
+
+const schoolSettingsView = (raw, sessions = []) => ({
+  ...raw,
+  schoolName: raw.name ?? raw.schoolName ?? 'School workspace',
+  activeSession: sessions.find((item) => item.id === raw.activeSessionId) ?? null,
+});
 
 const staffView = (raw) => ({
   ...raw,
@@ -14,25 +20,34 @@ const staffView = (raw) => ({
 
 export const SchoolSettingsModel = {
   async get() {
-    const metadata = await api.get(endpoints.settings.get);
-    const sessionPage = await api.get('academic-sessions');
-    const sessions = itemsOf(sessionPage);
-    const activeSession = sessions.find((item) => item.id === metadata.activeSessionId) ?? null;
-    return { ...metadata, activeSession };
+    const [settings, sessionPage] = await Promise.all([
+      api.get(endpoints.settings.get),
+      api.get('academic-sessions'),
+    ]);
+    return schoolSettingsView(settings, itemsOf(sessionPage));
   },
 
-  // School metadata updates are limited to the published form definition and
-  // school-day policy; the API does not expose arbitrary profile edits.
   async update(body, version) {
-    return api.put(
+    const result = await api.put(
       endpoints.settings.update,
       null,
       {
-        studentFields: body.studentFields,
-        wednesdayPtEnabled: body.wednesdayPtEnabled,
+        phone: String(body.phone ?? '').trim() || null,
+        email: String(body.email ?? '').trim() || null,
+        address: String(body.address ?? '').trim() || null,
+        wednesdayPtEnabled: Boolean(body.wednesdayPtEnabled),
+        reason: String(body.reason ?? '').trim(),
+        logoFileId: null,
+        clearLogo: false,
       },
       { version },
     );
+    const current = result.settings ?? result;
+    const sessionPage = await api.get('academic-sessions');
+    return {
+      ...result,
+      settings: schoolSettingsView(current, itemsOf(sessionPage)),
+    };
   },
 
   async adminMemberships() {
@@ -92,16 +107,19 @@ export const SchoolSettingsModel = {
   },
 
   async saveEnrolmentFormDraft(body, version) {
-    return api.put(
-      'metadata',
+    return api.post(
+      'metadata-versions',
       null,
-      { studentFields: body.studentFields, wednesdayPtEnabled: body.wednesdayPtEnabled },
+      {
+        studentFields: body.studentFields ?? [],
+        reason: String(body.reason ?? '').trim(),
+      },
       { version },
     );
   },
 
   async publishEnrolmentForm() {
-    throw new Error('The backend publishes school metadata through the versioned metadata update; there is no separate enrolment-form publish endpoint.');
+    throw new Error('A metadata version is published when it is saved. There is no separate publish endpoint.');
   },
 
   async settlementConfiguration() {
