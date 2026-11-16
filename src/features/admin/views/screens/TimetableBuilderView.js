@@ -24,6 +24,8 @@ export default function TimetableBuilderView({ navigation, route }) {
     new TimetableBuilderPresenter(TimetableModel, AcademicStructureModel, CalendarModel)
   );
   const [state, setState] = useState(presenter.initialState);
+  const selectedClassRef = useRef(state.selectedClass);
+  selectedClassRef.current = state.selectedClass;
   const loadedOnce = useRef(false);
   const [classSheet, setClassSheet] = useState(!route.params?.classId);
   const [assignmentSheet, setAssignmentSheet] = useState(false);
@@ -46,8 +48,8 @@ export default function TimetableBuilderView({ navigation, route }) {
     if (route.params?.classId) presenter.openForClass(route.params.classId);
     else presenter.pickClass();
     const unsubscribe = navigation.addListener('focus', () => {
-      if (loadedOnce.current && state.selectedClass) {
-        presenter.openForClass(state.selectedClass.id);
+      if (loadedOnce.current && selectedClassRef.current) {
+        presenter.openForClass(selectedClassRef.current.id);
       }
       loadedOnce.current = true;
     });
