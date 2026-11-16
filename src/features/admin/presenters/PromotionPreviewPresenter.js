@@ -18,7 +18,7 @@ const decisionLabel = (value) => ({
 const classLabelOf = (item) =>
   [item?.level, item?.arm].filter(Boolean).join(' ') || 'School class';
 
-function previewView(raw, classes, sessions) {
+export function previewView(raw, classes, sessions) {
   const sourceClass = classes.find((item) => item.id === raw.sourceClassId) ?? {};
   const sourceSession = sessions.find((item) => item.id === raw.sourceSessionId) ?? {};
   const targetClasses = classes.filter((item) => item.sessionId === raw.targetSessionId);
