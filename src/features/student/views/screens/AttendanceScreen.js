@@ -36,7 +36,13 @@ export default function AttendanceScreen({ route }) {
     <StudentScaffold
       eyebrow="Attendance"
       title="My attendance"
-      subtitle={att ? `${att.termLabel} · ${att.summary.rate}% present` : ''}
+      subtitle={
+        att
+          ? Number.isFinite(att.summary?.rate)
+            ? `${att.termLabel ?? 'Attendance'} · ${att.summary.rate}% present`
+            : `${att.summary?.total ?? att.days?.length ?? 0} submitted register entries · missing registers are not counted as absences`
+          : ''
+      }
     >
       {state.status === 'loading' ? <LoadingView label="Loading your attendance…" /> : null}
       {state.status === 'error' ? (
@@ -60,14 +66,18 @@ export default function AttendanceScreen({ route }) {
               <Text style={styles.summaryLabel}>Late</Text>
             </View>
             <View style={[styles.summaryTile, styles.rateTile]}>
-              <Text style={styles.summaryValue}>{att.summary.rate}%</Text>
-              <Text style={styles.summaryLabel}>Rate</Text>
+              <Text style={styles.summaryValue}>
+                {Number.isFinite(att.summary.rate) ? `${att.summary.rate}%` : att.summary.excused ?? 0}
+              </Text>
+              <Text style={styles.summaryLabel}>
+                {Number.isFinite(att.summary.rate) ? 'Rate' : 'Excused'}
+              </Text>
             </View>
           </View>
 
           <Text style={styles.section}>Day-by-day</Text>
-          {att.days.map((d) => (
-            <View key={d.date} style={styles.dayRow}>
+          {(att.days || []).map((d, index) => (
+            <View key={d.registerId ?? d.date ?? index} style={styles.dayRow}>
               <Text style={styles.dayDate}>{d.date}</Text>
               <View style={[styles.dayBadge, { backgroundColor: toneFor(d.status) }]}>
                 <Text style={styles.dayBadgeText}>{d.status}</Text>
