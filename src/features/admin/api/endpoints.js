@@ -56,10 +56,11 @@ export const endpoints = {
   auditTrail: 'activity/{domain}',
 
   settings: {
-    get: 'settings',
-    update: 'settings',
+    get: 'metadata',
+    update: 'metadata',
     adminMemberships: 'staff',
-    adminMembershipById: 'staff/{staffId}',
+    adminMembershipById: 'staff/{staffId}/access',
+    adminInvitations: 'onboarding/{type}/{subjectId}/invitations',
     enrolmentFormDraft: null,
     enrolmentFormPublish: null,
     settlementConfiguration: 'invoices/payment-settings',
