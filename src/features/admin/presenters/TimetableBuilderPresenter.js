@@ -1,55 +1,68 @@
 /**
- * AD14 — Build the weekly timetable. One draft per class: 5 days × 6 periods,
- * tap an empty period to pick the subject and the teacher. The draft is saved
- * after every fill; "Send for review" checks it is complete first.
+ * AD14 — Build a term timetable from active teaching assignments.
+ * The backend stores one versioned plan per term and lessons by assignment ID.
+ * A class is simply the focused view of its lessons inside that term plan.
  */
 import { ApiError } from '../api/ApiError';
-import { timeError, minutesOf } from '../api/validation.js';
 
-const BASE_TIMES = [
-  '08:00 – 08:40',
-  '08:45 – 09:25',
-  '09:30 – 10:10',
-  '10:40 – 11:20',
-  '11:25 – 12:05',
-  '12:10 – 12:50',
-];
-// Extra periods 7–10: up to 10 periods per day (raised from 8). The first two
-// extras are activity-friendly lunch/afternoon slots; 9 and 10 cover a full
-// afternoon. periodTime falls back to 'TBD' past this list, so the office can
-// still type a custom time via the time editor for any period number.
-const EXTRA_TIMES = {
-  7: '12:55 – 13:35',
-  8: '13:40 – 14:20',
-  9: '14:25 – 15:05',
-  10: '15:10 – 15:50',
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+const minuteLabel = (value) => {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '';
+  return String(Math.floor(n / 60)).padStart(2, '0') + ':' + String(n % 60).padStart(2, '0');
 };
+const minuteOf = (value) => {
+  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(String(value ?? ''));
+  return match ? Number(match[1]) * 60 + Number(match[2]) : null;
+};
+const todayInLagos = () => {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Africa/Lagos',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date()).map((item) => [item.type, item.value]));
+  return parts.year + '-' + parts.month + '-' + parts.day;
+};
+const classLabel = (item) =>
+  [item?.level, item?.arm].filter(Boolean).join(' ') || item?.classLabel || 'Class';
 
-/** The maximum number of periods a day may hold. */
-export const MAX_PERIODS_PER_DAY = 10;
-
-/** Six fixed teaching periods, then up to four activity/teaching slots. */
-function periodTime(period) {
-  return BASE_TIMES[period - 1] || EXTRA_TIMES[period] || 'TBD';
+function lessonView(lesson, index) {
+  const day = DAYS[Number(lesson.weekday) - 1] ?? 'Monday';
+  const start = minuteLabel(lesson.startMinute);
+  const end = minuteLabel(lesson.endMinute);
+  return {
+    ...lesson,
+    day,
+    weekday: Number(lesson.weekday),
+    period: index + 1,
+    start,
+    end,
+    durationMinutes: Number(lesson.endMinute) - Number(lesson.startMinute),
+    time: start + ' – ' + end,
+    subject: lesson.subjectName ?? 'Assigned subject',
+    teacherName: lesson.teacherName ?? 'Assigned teacher',
+    activity: null,
+  };
 }
 
 export class TimetableBuilderPresenter {
-  constructor(timetableModel, structureModel) {
+  constructor(timetableModel, structureModel, calendarModel) {
     this.model = timetableModel;
     this.structureModel = structureModel;
+    this.calendar = calendarModel;
     this._render = null;
     this._navigation = null;
     this._alive = false;
     this.initialState = {
-      status: 'picking', // picking | loading | content | error
-      draft: null,
+      status: 'picking',
       classOptions: [],
-      subjects: [], // subjects taught in the draft's class
-      teachers: [], // active teachers for the slot picker
+      selectedClass: null,
+      draft: null,
+      assignments: [],
       notice: null,
       errorText: null,
       saving: false,
-      sendingReview: false,
     };
     this.state = this.initialState;
   }
@@ -70,233 +83,247 @@ export class TimetableBuilderPresenter {
     this._render(this.state);
   }
 
-  /** No class chosen yet — load the options for the picker sheet. */
   async pickClass() {
-    this._setState({ status: 'picking', errorText: null });
+    this._setState({ status: 'picking', errorText: null, notice: null });
     try {
       const page = await this.structureModel.classes();
-      this._setState({ classOptions: page.items, status: 'picking' });
+      const options = (page.items ?? []).map((item) => ({
+        ...item,
+        classLabel: classLabel(item),
+        label: classLabel(item),
+      }));
+      this._setState({ classOptions: options, status: 'picking' });
     } catch (error) {
       this._setState({
         status: 'error',
-        errorText: error instanceof ApiError ? error.message : 'Could not load the class list.',
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'Could not load the class list.',
       });
     }
   }
 
-  /** Open the class's in-progress draft, or start one. When the class only
-      has a PUBLISHED timetable, the new draft is seeded with the published
-      week's slots so re-opening looks like EDITING the published timetable
-      (the office expects to see the periods they just published, not a blank
-      week). The published record stays untouched until the new draft is
-      re-published. */
-  async openForClass(classLabel) {
-    this._setState({ status: 'loading', notice: null, errorText: null });
+  async openForClass(classId) {
+    this._setState({ status: 'loading', notice: null, errorText: null, draft: null });
     try {
-      const page = await this.model.drafts();
-      const existing = page.items.find(
-        (d) => d.classLabel === classLabel && d.status !== 'Published',
-      );
-      let draft;
-      if (existing) {
-        draft = (await this.model.draftById(existing.id)).draft;
-      } else {
-        // No in-progress draft. If a PUBLISHED one exists, seed the new draft
-        // with its slots so the fields are NOT empty on re-open.
-        const published = page.items.find(
-          (d) => d.classLabel === classLabel && d.status === 'Published',
-        );
-        const createBody = { classLabel };
-        if (published) {
-          createBody.seedSlots = published.slots;
-        }
-        draft = (await this.model.createDraft(createBody)).draft;
+      let classes = this.state.classOptions;
+      if (!classes.length) {
+        const page = await this.structureModel.classes();
+        classes = (page.items ?? []).map((item) => ({
+          ...item,
+          classLabel: classLabel(item),
+          label: classLabel(item),
+        }));
       }
-      const [subjectsPage, teachersPage] = await Promise.all([
-        this.structureModel.subjects(),
-        this.model.assignmentCandidates(),
+      const selectedClass = classes.find((item) => item.id === classId);
+      if (!selectedClass) throw new Error('The selected class is no longer available.');
+
+      const today = todayInLagos();
+      const termsPage = await this.calendar.terms(selectedClass.sessionId);
+      const terms = termsPage.items ?? [];
+      const term =
+        terms.find((item) => item.startsOn <= today && item.endsOn >= today) ??
+        terms.find((item) => item.startsOn > today) ??
+        terms.slice().sort((a, b) => String(b.endsOn).localeCompare(String(a.endsOn)))[0];
+      if (!term) {
+        throw new Error('There is no academic term for this class session. Create the term in School Calendar before building its timetable.');
+      }
+
+      const planPage = await this.model.drafts(term.id);
+      const termPlans = planPage.items ?? [];
+      const existing = termPlans.find((item) => item.status === 'DRAFT');
+      const published = termPlans.find((item) => item.status === 'PUBLISHED');
+      let plan;
+      if (existing) {
+        plan = existing;
+      } else {
+        const effectiveFrom = today >= term.startsOn && today <= term.endsOn
+          ? today
+          : term.startsOn;
+        plan = await this.model.createDraft({
+          termId: term.id,
+          effectiveFrom,
+          sourcePlanId: published?.id ?? null,
+        });
+      }
+
+      const [review, assignmentPage] = await Promise.all([
+        this.model.draftById(plan.id),
+        this.model.assignmentCandidates({ classId: selectedClass.id }),
       ]);
-      // NOTE: this must NOT be named `classLabel` — a same-named const in this
-      // block shadows the parameter and puts `createDraft({ classLabel })`
-      // above into the temporal dead zone (crashed every NEW class in v11–v14).
-      const label = draft.classLabel;
-      const inClass = (s) => s.classes.includes(label);
+      const assignments = (assignmentPage.items ?? []).map((assignment) => ({
+        ...assignment,
+        label: [
+          assignment.subjectName ?? 'Subject',
+          assignment.teacherName ?? 'Teacher',
+        ].join(' · '),
+      }));
+      const classLessons = (review.lessons ?? [])
+        .filter((lesson) => String(lesson.classId) === String(selectedClass.id))
+        .sort((a, b) => a.weekday - b.weekday || a.startMinute - b.startMinute)
+        .map((lesson, index, all) => {
+          const dayIndex = all.filter((item) => item.weekday === lesson.weekday && item.startMinute < lesson.startMinute).length;
+          return lessonView(lesson, dayIndex);
+        });
+      const weeklyTargets = (review.weeklyTargets ?? []).filter(
+        (target) => String(target.classId) === String(selectedClass.id),
+      );
+      const draft = {
+        id: review.id,
+        termId: term.id,
+        termLabel: 'Term ' + term.number,
+        sessionLabel: selectedClass.sessionName ?? '',
+        classId: selectedClass.id,
+        classLabel: selectedClass.classLabel,
+        effectiveFrom: review.effectiveFrom ?? plan.effectiveFrom,
+        status: review.status,
+        version: review.version,
+        slots: classLessons,
+        weeklyTargets,
+        conflicts: review.conflicts ?? [],
+        readyToPublish: Boolean(review.readyToPublish),
+      };
+
       this._setState({
         status: 'content',
+        classOptions: classes,
+        selectedClass,
         draft,
-        // Only the class's OWN subjects are offerable — Physics never lands
-        // on a JSS timetable because it is not on the picker at all.
-        subjects: subjectsPage.items
-          .filter((s) => s.classes.includes(label))
-          .sort((a, b) => (inClass(b) ? 1 : 0) - (inClass(a) ? 1 : 0)),
-        teachers: teachersPage.items,
+        assignments,
+        notice: existing
+          ? 'Opened the existing draft for this academic term.'
+          : published
+            ? 'Created a new draft revision seeded from the currently published term timetable.'
+            : 'Created a new draft for this academic term.',
         errorText: null,
       });
     } catch (error) {
       this._setState({
         status: 'error',
-        errorText: error instanceof ApiError ? error.message : 'Could not open the timetable.',
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'Could not open the term timetable.',
       });
     }
   }
 
-  /** Fill one period and save the whole draft (small payloads, demo-friendly).
-      Changing an activity period to a subject clears the activity field too,
-      so the server's "either a subject or an activity, not both" rule passes. */
-  async fillSlot(day, period, subject, teacherName) {
+  async refresh() {
     const draft = this.state.draft;
-    if (!draft || this.state.saving) return;
-    const slots = draft.slots.map((s) =>
-      s.day === day && s.period === period ? { ...s, subject, teacherName, activity: null } : s,
-    );
+    if (!draft) return;
     this._setState({ saving: true, errorText: null });
     try {
-      const saved = await this.model.saveDraft(draft.id, { slots });
-      this._setState({ saving: false, draft: saved.draft });
+      const review = await this.model.draftById(draft.id);
+      const assignments = this.state.assignments;
+      const classLessons = (review.lessons ?? [])
+        .filter((lesson) => String(lesson.classId) === String(draft.classId))
+        .sort((a, b) => a.weekday - b.weekday || a.startMinute - b.startMinute)
+        .map((lesson, index, all) => lessonView(
+          lesson,
+          all.filter((item) => item.weekday === lesson.weekday && item.startMinute < lesson.startMinute).length,
+        ));
+      this._setState({
+        saving: false,
+        assignments,
+        draft: {
+          ...draft,
+          status: review.status,
+          version: review.version,
+          effectiveFrom: review.effectiveFrom,
+          slots: classLessons,
+          weeklyTargets: (review.weeklyTargets ?? []).filter(
+            (target) => String(target.classId) === String(draft.classId),
+          ),
+          conflicts: review.conflicts ?? [],
+          readyToPublish: Boolean(review.readyToPublish),
+        },
+      });
     } catch (error) {
       this._setState({
         saving: false,
-        errorText: error instanceof ApiError ? error.message : 'The period was not saved.',
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'Could not refresh the term timetable.',
       });
     }
   }
 
-  /** Point an empty period at an activity instead of a subject. */
-  async fillActivity(day, period, activity) {
-    const draft = this.state.draft;
-    if (!draft || this.state.saving) return;
-    const slots = draft.slots.map((s) =>
-      s.day === day && s.period === period
-        ? { ...s, subject: null, teacherName: null, activity }
-        : s,
-    );
-    this._setState({ saving: true, errorText: null });
-    try {
-      const saved = await this.model.saveDraft(draft.id, { slots });
-      this._setState({ saving: false, draft: saved.draft });
-    } catch (error) {
-      this._setState({
-        saving: false,
-        errorText: error instanceof ApiError ? error.message : 'The period was not saved.',
-      });
-    }
-  }
-
-  /** Set one period's time — two 24-hour HH:MM values, end strictly after
-      start. Returns false (with errorText set) when the times are invalid. */
-  async setTime(day, period, start, end) {
+  async saveLesson(fields) {
     const draft = this.state.draft;
     if (!draft || this.state.saving) return false;
-    const startProblem = timeError(start);
-    if (startProblem) {
-      this._setState({ errorText: `Period ${period} start — ${startProblem}` });
+    const assignment = this.state.assignments.find(
+      (item) => String(item.id) === String(fields.assignmentId),
+    );
+    if (!assignment) {
+      this._setState({ errorText: 'Choose an active teaching assignment for this class.' });
       return false;
     }
-    const endProblem = timeError(end);
-    if (endProblem) {
-      this._setState({ errorText: `Period ${period} end — ${endProblem}` });
+    const weekday = DAYS.indexOf(fields.day) + 1;
+    const startMinute = minuteOf(fields.start);
+    const durationMinutes = Number(fields.durationMinutes);
+    if (weekday < 1 || startMinute === null) {
+      this._setState({ errorText: 'Choose a weekday and a valid start time such as 08:30.' });
       return false;
     }
-    if (minutesOf(end) <= minutesOf(start)) {
+    if (![30, 60].includes(durationMinutes)) {
+      this._setState({ errorText: 'A lesson must be 30 or 60 minutes.' });
+      return false;
+    }
+    if (startMinute < 480 || startMinute + durationMinutes > 780 ||
+        startMinute % 30 !== 0 ||
+        (startMinute < 720 && startMinute + durationMinutes > 690) ||
+        (weekday === 5 && startMinute + durationMinutes > 720) ||
+        (weekday === 3 && startMinute < 510 && Boolean(this.state.selectedClass?.wednesdayPt))) {
       this._setState({
-        errorText: `Period ${period}: the end must be after the start — e.g. 08:00 – 08:40, never the same time twice.`,
+        errorText: 'Use a 30/60 minute slot between 08:00 and 13:00. Avoid the 11:30 break and Friday sports period.',
       });
       return false;
     }
-    const label = `${start} – ${end}`;
-    const slots = draft.slots.map((s) =>
-      s.day === day && s.period === period ? { ...s, time: label, start, end } : s,
-    );
-    this._setState({ saving: true, errorText: null });
+    const body = {
+      assignmentId: assignment.id,
+      weekday,
+      start: fields.start,
+      durationMinutes,
+      room: String(fields.room ?? '').trim(),
+    };
+    this._setState({ saving: true, errorText: null, notice: null });
     try {
-      const saved = await this.model.saveDraft(draft.id, { slots });
-      this._setState({ saving: false, draft: saved.draft, notice: `Period time set — ${label}.` });
+      if (fields.lessonId) {
+        await this.model.updateLesson(draft.id, fields.lessonId, body, draft.version);
+      } else {
+        await this.model.addLesson(draft.id, body, draft.version);
+      }
+      await this.refresh();
+      this._setState({
+        notice: fields.lessonId
+          ? 'The lesson was updated. The whole term plan version has been refreshed.'
+          : 'The lesson was added to the term plan.',
+      });
       return true;
     } catch (error) {
       this._setState({
         saving: false,
-        errorText:
-          error instanceof ApiError
-            ? error.message
-            : 'The time was not saved — check the times and try again.',
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'The lesson was not saved.',
       });
       return false;
     }
   }
 
-  /** Append a new period to a day: a subject with its teacher, or an activity. */
-  async appendSlot(day, payload) {
+  async removeSlot(lessonId) {
     const draft = this.state.draft;
-    if (!draft || this.state.saving) return;
-    const nextPeriod = draft.slots.filter((s) => s.day === day).length + 1;
-    if (nextPeriod > MAX_PERIODS_PER_DAY) return;
-    const slots = [
-      ...draft.slots,
-      {
-        day,
-        period: nextPeriod,
-        time: periodTime(nextPeriod),
-        subject: null,
-        teacherName: null,
-        activity: null,
-        ...payload,
-      },
-    ];
-    this._setState({ saving: true, errorText: null });
+    if (!draft || this.state.saving || !lessonId) return false;
+    this._setState({ saving: true, errorText: null, notice: null });
     try {
-      const saved = await this.model.saveDraft(draft.id, { slots });
-      this._setState({ saving: false, draft: saved.draft });
+      await this.model.removeLesson(draft.id, lessonId, draft.version);
+      await this.refresh();
+      this._setState({ notice: 'The lesson was removed from the term plan.' });
+      return true;
     } catch (error) {
       this._setState({
         saving: false,
-        errorText: error instanceof ApiError ? error.message : 'The period was not added.',
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'The lesson was not removed.',
       });
-    }
-  }
-
-  /** Remove a period from a day; that day renumbers, keeping each period's time. */
-  async removeSlot(day, period) {
-    const draft = this.state.draft;
-    if (!draft || this.state.saving) return;
-    const rest = draft.slots.filter((s) => s.day !== day);
-    const dayRest = draft.slots
-      .filter((s) => s.day === day && s.period !== period)
-      .sort((a, b) => a.period - b.period)
-      .map((s, i) => ({ ...s, period: i + 1 }));
-    this._setState({ saving: true, errorText: null });
-    try {
-      const saved = await this.model.saveDraft(draft.id, { slots: [...rest, ...dayRest] });
-      this._setState({ saving: false, draft: saved.draft });
-    } catch (error) {
-      this._setState({
-        saving: false,
-        errorText: error instanceof ApiError ? error.message : 'The period was not removed.',
-      });
-    }
-  }
-
-  async sendForReview() {
-    const draft = this.state.draft;
-    if (!draft || this.state.sendingReview) return;
-    this._setState({ sendingReview: true, notice: null, errorText: null });
-    try {
-      const result = await this.model.requestReview(draft.id);
-      this._setState({
-        sendingReview: false,
-        draft: result.draft,
-        notice: 'Sent for review — publish it from "Review and publish the timetable".',
-      });
-    } catch (error) {
-      this._setState({
-        sendingReview: false,
-        notice: null,
-        errorText: error instanceof ApiError ? error.message : 'Could not send for review.',
-      });
+      return false;
     }
   }
 
   onRetry() {
-    return this.state.draft ? this.openForClass(this.state.draft.classLabel) : this.pickClass();
+    return this.state.selectedClass
+      ? this.openForClass(this.state.selectedClass.id)
+      : this.pickClass();
   }
 }
 
