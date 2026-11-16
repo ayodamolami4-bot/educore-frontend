@@ -122,7 +122,7 @@ export default function InvoiceDetailView({ route, navigation }) {
           <RecordList
             items={state.payments.map((p) => ({
               id: p.id,
-              title: `${p.method} · ${p.amountLabel}`,
+              title: `${p.channel || p.source || 'Payment'} · ${p.amountLabel}`,
               meta: `${p.reference} · ${p.paidAt}`,
             }))}
             emptyText="Nothing recorded yet — record the first payment below."
@@ -145,7 +145,7 @@ export default function InvoiceDetailView({ route, navigation }) {
 
           <Text style={styles.fieldLabel}>Method</Text>
           <Pressable style={styles.methodBox} onPress={() => setMethodSheet(true)}>
-            <Text style={styles.methodText}>{state.method}</Text>
+            <Text style={styles.methodText}>{state.method === 'CASH' ? 'Cash' : 'Verified bank transfer'}</Text>
             <Text style={styles.methodCaret}>Change</Text>
           </Pressable>
 
