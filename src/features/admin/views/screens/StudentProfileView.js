@@ -16,7 +16,6 @@ import LabelledField from '../components/LabelledField';
 import { LoadingView, ErrorState, useActionErrorAlert } from '../components/FeedbackViews';
 import { PrimaryButton, SecondaryButton } from './AdminHomeView';
 import { StudentProfilePresenter } from '../../presenters/StudentProfilePresenter';
-import { StudentModel } from '../../models';
 import { StudentModel, AcademicStructureModel } from '../../models';
 import { colors, typography, spacing, statusTone } from '../theme';
 
