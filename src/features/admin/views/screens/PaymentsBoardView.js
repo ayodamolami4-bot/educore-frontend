@@ -1,13 +1,12 @@
 /**
- * AD24 — Payments and money checks (View). Paystack settlements at the top
- * (unmatched ones are tappable to reconcile), the payment ledger under them,
- * and any webhook exceptions at the bottom.
+ * AD24 — Payment ledger, imported/synchronised reconciliation batches and
+ * provider verification exceptions, shown using the backend's real records.
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { Text, Alert, StyleSheet } from 'react-native';
+import { Text } from 'react-native';
 import AdminScaffold from '../components/AdminScaffold';
 import RecordList from '../components/RecordList';
-import { LoadingView, ErrorState, useActionErrorAlert } from '../components/FeedbackViews';
+import { LoadingView, EmptyState, ErrorState, Notice } from '../components/FeedbackViews';
 import { PaymentsBoardPresenter } from '../../presenters/PaymentsBoardPresenter';
 import { FinanceModel } from '../../models';
 import { typography, spacing } from '../theme';
@@ -20,8 +19,6 @@ export default function PaymentsBoardView({ navigation }) {
   useEffect(() => {
     presenter.attach(setState, navigation);
     presenter.load();
-    // Settlements and exceptions change as the office acts, so re-fetch on
-    // every focus after the first.
     const unsubscribe = navigation.addListener('focus', () => {
       if (loadedOnce.current) presenter.load();
       loadedOnce.current = true;
@@ -32,94 +29,79 @@ export default function PaymentsBoardView({ navigation }) {
     };
   }, [presenter, navigation]);
 
-  const confirmMatch = (settlement) => {
-    Alert.alert(
-      'Match this settlement?',
-      `${settlement.amountLabel} from ${settlement.studentName} to ${settlement.invoiceNumber}.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Match', onPress: () => presenter.reconcile(settlement) },
-      ],
-    );
-  };
-
-  const confirmException = (exception) => {
-    Alert.alert(`Exception ${exception.reference}`, exception.detail, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Flag refund',
-        onPress: () => presenter.resolveException(exception, 'refund-flag'),
-      },
-      { text: 'Resolved', onPress: () => presenter.resolveException(exception, 'resolve') },
-    ]);
-  };
-
-  // Match failures and guard refusals pop up.
-  useActionErrorAlert(state.errorText);
-
   return (
     <AdminScaffold
       eyebrow="Fees"
-      title="Payments and money checks"
-      subtitle="Match Paystack money to the invoices it pays."
+      title="Payments and reconciliation"
+      subtitle="Confirmed invoice payments, statement batches and provider verification exceptions."
     >
-      {state.status === 'loading' ? <LoadingView label="Loading payments…" /> : null}
+      {state.status === 'loading' ? <LoadingView label="Loading finance records…" /> : null}
       {state.status === 'error' ? (
         <ErrorState message={state.errorText} onRetry={() => presenter.onRetry()} />
       ) : null}
+      {state.notice ? <Notice text={state.notice} /> : null}
 
       {state.status === 'content' ? (
         <>
-          {state.notice ? <Text style={styles.notice}>{state.notice}</Text> : null}
+          <Text style={styles.section}>Reconciliation batches</Text>
+          {state.settlements.length === 0 ? (
+            <EmptyState
+              title="No settlement batches"
+              description="Imported bank statements and Paystack sync batches will appear here."
+            />
+          ) : (
+            state.settlements.map((batch) => (
+              <RecordList
+                key={batch.id}
+                items={(batch.rows ?? []).map((row) => ({
+                  id: row.id,
+                  title: row.reference + ' · ' + row.amountLabel,
+                  meta: [
+                    'Fee ' + row.feeLabel,
+                    'Net ' + row.netLabel,
+                    row.issue ?? '',
+                    row.resolution ?? '',
+                  ].filter(Boolean).join(' · '),
+                  status: row.reviewState,
+                  raw: row,
+                }))}
+                onPressItem={(item) => presenter.onOpenSettlementRow(item.raw)}
+                emptyText="This batch contains no settlement rows."
+              />
+            ))
+          )}
 
-          <Text style={styles.section}>Paystack settlements</Text>
-          <Text style={styles.hint}>
-            Tap an unmatched settlement to reconcile it to its invoice.
-          </Text>
+          <Text style={styles.section}>Confirmed payment ledger</Text>
           <RecordList
-            items={state.settlements.map((s) => ({
-              id: s.id,
-              title: `${s.studentName} · ${s.amountLabel}`,
-              meta: `${s.reference} · ${s.invoiceNumber} · paid ${s.paidAt}`,
-              status: s.status,
-              raw: s,
-            }))}
-            onPressItem={(row) => {
-              if (row.raw.status === 'Unmatched') confirmMatch(row.raw);
-              else presenter.onOpenSettlementPayment(row.raw);
-            }}
-            emptyText="No Paystack settlements yet."
-          />
-
-          <Text style={styles.section}>Payment ledger</Text>
-          <RecordList
-            items={state.payments.map((p) => ({
-              id: p.id,
-              title: `${p.studentName} · ${p.amountLabel}`,
-              meta: `${p.channel} · ${p.reference} · ${p.paidAt}`,
-              status: p.status,
-              raw: p,
+            items={state.payments.map((payment) => ({
+              id: payment.id,
+              title: payment.studentName + ' · ' + payment.amountLabel,
+              meta: [
+                payment.channel,
+                payment.reference,
+                payment.paidAt,
+                payment.invoiceId ? 'Invoice ' + payment.invoiceId : '',
+              ].filter(Boolean).join(' · '),
+              status: payment.status,
+              raw: payment,
             }))}
             onPressItem={(row) => presenter.onOpenPayment(row.raw)}
-            emptyText="No payments recorded yet."
+            emptyText="No confirmed payments recorded yet."
           />
 
-          <Text style={styles.section}>Exceptions</Text>
+          <Text style={styles.section}>Provider verification exceptions</Text>
           <Text style={styles.hint}>
-            Tap an open exception to resolve it or flag it for refund.
+            These are immutable verification exception records. The current API exposes them for review but does not provide a direct resolve or refund-flag action.
           </Text>
           <RecordList
-            items={state.exceptions.map((e) => ({
-              id: e.id,
-              title: `${e.reference} · ${e.amountLabel}`,
-              meta: `${e.detail} · opened ${e.openedAt}`,
-              status: e.status,
-              raw: e,
+            items={state.exceptions.map((exception) => ({
+              id: exception.id,
+              title: exception.reference + ' · ' + exception.code,
+              meta: exception.createdAt ?? '',
+              status: exception.stateLabel,
+              raw: exception,
             }))}
-            onPressItem={(row) => {
-              if (row.raw.status === 'Open') confirmException(row.raw);
-            }}
-            emptyText="No open exceptions — clean money week."
+            emptyText="No provider verification exceptions."
           />
         </>
       ) : null}
@@ -129,7 +111,5 @@ export default function PaymentsBoardView({ navigation }) {
 
 const styles = StyleSheet.create({
   section: { ...typography.sectionTitle, marginTop: spacing.lg, marginBottom: spacing.sm },
-  hint: { ...typography.label, marginBottom: spacing.sm },
-  notice: { ...typography.label, color: '#2f6b3a', marginBottom: spacing.sm },
-  error: { ...typography.label, color: '#a33a2a', marginBottom: spacing.sm },
+  hint: { ...typography.label, color: '#65727a', marginBottom: spacing.sm },
 });
