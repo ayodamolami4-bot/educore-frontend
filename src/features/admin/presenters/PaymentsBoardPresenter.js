@@ -1,9 +1,15 @@
 /**
- * AD24 — Payments and money checks. Settlements are the Paystack money that
- * arrived; the ledger is every payment row; reconciliation is the office
- * action of matching a settlement to the invoice it pays.
+ * AD24 — Finance reconciliation is represented by imported/synchronised
+ * settlement batches and their exact backend rows. The UI does not invent
+ * invoice matches; a row is only actionable when the backend supplies a
+ * linked payment and supported resolution metadata.
  */
 import { ApiError } from '../api/ApiError';
+
+const moneyLabel = (minor) => '₦' + (Number(minor ?? 0) / 100).toLocaleString('en-NG', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
 
 export class PaymentsBoardPresenter {
   constructor(financeModel) {
@@ -11,13 +17,12 @@ export class PaymentsBoardPresenter {
     this._render = null;
     this._alive = false;
     this.initialState = {
-      status: 'loading', // loading | content | error
+      status: 'loading',
       settlements: [],
       payments: [],
       exceptions: [],
       errorText: null,
       notice: null,
-      busyId: null,
     };
     this.state = this.initialState;
   }
@@ -41,94 +46,59 @@ export class PaymentsBoardPresenter {
   async load() {
     this._setState({ status: 'loading', errorText: null, notice: null });
     try {
-      const [settlements, payments, exceptions] = await Promise.all([
-        this.model.settlements({ page: 1 }),
-        this.model.payments({ page: 1 }),
-        this.model.exceptions({ page: 1 }),
+      const [batches, payments, exceptions] = await Promise.all([
+        this.model.settlements(),
+        this.model.payments(),
+        this.model.exceptions(),
       ]);
+      const settlements = await Promise.all((batches.items ?? []).map(async (summary) => {
+        const detail = await this.model.settlementById(summary.id);
+        const rows = (detail.rows ?? []).map((row) => ({
+          ...row,
+          batchId: detail.id,
+          amountLabel: moneyLabel(row.amountMinor),
+          feeLabel: moneyLabel(row.feeMinor),
+          netLabel: moneyLabel(row.netMinor),
+          reviewState: row.issue
+            ? row.resolution ? 'Reviewed' : 'Needs review'
+            : 'Matched',
+        }));
+        return { ...detail, rows };
+      }));
       this._setState({
         status: 'content',
-        settlements: settlements.items || [],
-        payments: payments.items || [],
-        exceptions: exceptions.items || [],
+        settlements,
+        payments: payments.items ?? [],
+        exceptions: (exceptions.items ?? []).map((item) => ({
+          ...item,
+          stateLabel: 'Verification exception',
+        })),
+        errorText: null,
       });
     } catch (error) {
       this._setState({
         status: 'error',
-        errorText: error instanceof ApiError ? error.message : 'Could not load the payments.',
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'Could not load the finance records.',
       });
     }
   }
 
-  /** Open one ledger payment's detail and refund review (AD25). */
   onOpenPayment(payment) {
-    if (this._navigation && payment) {
+    if (this._navigation && payment?.id) {
       this._navigation.navigate('PaymentDetail', { paymentId: payment.id });
     }
   }
 
-  /** A matched settlement opens the payment it settled (its money trail). */
-  onOpenSettlementPayment(settlement) {
-    if (!this._navigation || !settlement) return;
-    const payment = this.state.payments.find((p) => p.reference === settlement.reference);
-    if (payment) {
-      this._navigation.navigate('PaymentDetail', { paymentId: payment.id });
-    } else {
-      this._setState({ notice: 'No ledger row carries this reference yet.' });
-    }
-  }
-
-  /** Match a settlement's payment to the invoice it covers. */
-  async reconcile(settlement) {
-    if (this.state.busyId) return;
-    const payment = this.state.payments.find((p) => p.reference === settlement.reference);
-    if (!payment) {
-      this._setState({
-        notice: 'No ledger row matches this reference — open an exception instead.',
-      });
+  onOpenSettlementRow(row) {
+    if (row?.paymentId) {
+      this.onOpenPayment({ id: row.paymentId });
       return;
     }
-    this._setState({ busyId: payment.id, errorText: null, notice: null });
-    try {
-      await this.model.createReconciliation({
-        paymentId: payment.id,
-        invoiceNumber: settlement.invoiceNumber,
-      });
-      await this.load();
-      this._setState({
-        notice: `Matched ${settlement.amountLabel} from ${settlement.studentName} to ${settlement.invoiceNumber}.`,
-      });
-    } catch (error) {
-      this._setState({
-        errorText:
-          error instanceof ApiError ? error.message : 'The payment could not be reconciled.',
-      });
-    } finally {
-      if (this._alive) this._setState({ busyId: null });
-    }
-  }
-
-  /** Resolve (or flag for refund) a webhook exception. */
-  async resolveException(exception, action = 'resolve') {
-    if (this.state.busyId) return;
-    this._setState({ busyId: exception.id, errorText: null, notice: null });
-    try {
-      await this.model.actOnException(exception.id, { action });
-      await this.load();
-      this._setState({
-        notice:
-          action === 'refund-flag'
-            ? `${exception.reference} is flagged for refund review.`
-            : `${exception.reference} is marked resolved.`,
-      });
-    } catch (error) {
-      this._setState({
-        errorText:
-          error instanceof ApiError ? error.message : 'The exception could not be updated.',
-      });
-    } finally {
-      if (this._alive) this._setState({ busyId: null });
-    }
+    this._setState({
+      notice: row?.issue
+        ? 'This statement row has no linked payment. It must be resolved through a reviewed settlement-row decision.'
+        : 'This statement row has no linked payment record yet.',
+    });
   }
 
   onRetry() {
