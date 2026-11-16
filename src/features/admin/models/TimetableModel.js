@@ -1,49 +1,95 @@
-/** AD14/AD15 — Timetable drafts (build, validate, review, publish) and published timetables. */
-import { api } from '../api/client';
+/** AD14/AD15 — Term timetable plans and individual teaching-assignment lessons. */
+import { api, normalizePage } from '../api/client';
 import { endpoints } from '../api/endpoints';
 
 export const TimetableModel = {
-  /** AD14 — teachers available for a slot (backend already filters clashes). */
-  async assignmentCandidates(query) {
-    return api.get(endpoints.timetable.assignmentCandidates, null, query);
+  /** The backend returns only active teaching assignments for this class. */
+  async assignmentCandidates(query = {}) {
+    return normalizePage(await api.get(
+      endpoints.timetable.assignmentCandidates,
+      null,
+      { classId: query.classId },
+    ));
   },
 
-  async drafts() {
-    return api.get(endpoints.timetable.drafts);
+  async drafts(termId) {
+    return normalizePage(await api.get(
+      endpoints.timetable.drafts,
+      null,
+      { termId },
+    ));
   },
 
   async createDraft(body) {
-    return api.post(endpoints.timetable.drafts, null, body);
+    return api.post(endpoints.timetable.drafts, null, {
+      termId: body.termId,
+      effectiveFrom: body.effectiveFrom,
+      sourcePlanId: body.sourcePlanId ?? null,
+    });
   },
 
+  /** Review is the backend's read model for both draft editing and publication. */
   async draftById(draftId) {
-    return api.get(endpoints.timetable.draftById, { draftId });
+    return api.get(endpoints.timetable.draftReview, { draftId });
   },
 
-  async saveDraft(draftId, body) {
-    return api.patch(endpoints.timetable.draftById, { draftId }, body);
+  async addLesson(draftId, body, version) {
+    return api.post(
+      endpoints.timetable.addLesson,
+      { draftId },
+      {
+        assignmentId: body.assignmentId,
+        weekday: body.weekday,
+        start: body.start,
+        durationMinutes: body.durationMinutes,
+        room: body.room ?? '',
+      },
+      { version },
+    );
   },
 
-  /** Server-side clash detection ,409 with the conflicting slot in details. */
-  async validateDraft(draftId) {
-    return api.post(endpoints.timetable.validateDraft, { draftId });
+  async updateLesson(draftId, lessonId, body, version) {
+    return api.put(
+      endpoints.timetable.replaceLesson,
+      { draftId, lessonId },
+      {
+        assignmentId: body.assignmentId,
+        weekday: body.weekday,
+        start: body.start,
+        durationMinutes: body.durationMinutes,
+        room: body.room ?? '',
+      },
+      { version },
+    );
   },
 
-  async requestReview(draftId) {
-    return api.post(endpoints.timetable.requestReview, { draftId });
+  async removeLesson(draftId, lessonId, version) {
+    return api.post(
+      endpoints.timetable.removeLesson,
+      { draftId, lessonId },
+      undefined,
+      { version },
+    );
   },
 
-  /** Publish makes the timetable visible to teachers/parents/students for the term. */
-  async publishDraft(draftId) {
-    return api.post(endpoints.timetable.publishDraft, { draftId });
+  async reviewDraft(draftId) {
+    return api.get(endpoints.timetable.draftReview, { draftId });
   },
 
-  async published() {
-    return api.get(endpoints.timetable.published);
+  async publishDraft(draftId, version) {
+    return api.post(
+      endpoints.timetable.publishDraft,
+      { draftId },
+      undefined,
+      { version },
+    );
   },
 
-  async publishedById(timetableId) {
-    return api.get(endpoints.timetable.publishedById, { timetableId });
+  async published(query = {}) {
+    return api.get(endpoints.timetable.published, null, {
+      classId: query.classId,
+      on: query.on,
+    });
   },
 };
 
