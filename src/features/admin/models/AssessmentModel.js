@@ -1,4 +1,4 @@
-/** AD18 — Assessment policies (grading rules) and assessment cycles (exam windows). */
+/** AD18 — Fixed grading policy and assessment-cycle approvals. */
 import { api } from '../api/client';
 import { endpoints } from '../api/endpoints';
 
@@ -7,39 +7,41 @@ export const AssessmentModel = {
     return api.get(endpoints.assessment.policies);
   },
 
-  async createPolicy(body) {
-    return api.post(endpoints.assessment.policies, null, body);
-  },
-
-  /** Lock stops further edits before marks entry begins. */
-  async lockPolicy(policyId) {
-    return api.post(endpoints.assessment.lockPolicy, { policyId });
-  },
-
-  /** The admin's explicit unlock — editable again until the next lock. */
-  async unlockPolicy(policyId) {
-    return api.post(endpoints.assessment.unlockPolicy, { policyId });
-  },
-
-  async cycles() {
-    return api.get(endpoints.assessment.cycles);
-  },
-
-  async createCycle(body) {
-    return api.post(endpoints.assessment.cycles, null, body);
+  async cycles(query = {}) {
+    return api.get(endpoints.assessment.cycles, null, query);
   },
 
   async cycleById(cycleId) {
     return api.get(endpoints.assessment.cycleById, { cycleId });
   },
 
-  async updateCycle(cycleId, body) {
-    return api.patch(endpoints.assessment.cycleById, { cycleId }, body);
+  async createCycle(body) {
+    return api.post(endpoints.assessment.cycles, null, body);
   },
 
-  /** Publish the mark-entry schedule so teachers see their deadlines. */
-  async publishSchedule(cycleId) {
-    return api.post(endpoints.assessment.publishSchedule, { cycleId });
+  async approvePolicy(cycleId, body, version) {
+    return api.post(
+      'assessment-cycles/{cycleId}/approve-policy',
+      { cycleId },
+      {
+        policyVersion: body.policyVersion,
+        reason: String(body.reason ?? '').trim(),
+      },
+      { version },
+    );
+  },
+
+  async openCycle(cycleId, body, version) {
+    return api.post(
+      'assessment-cycles/{cycleId}/open',
+      { cycleId },
+      {
+        opensAt: body.opensAt,
+        closesAt: body.closesAt,
+        reason: String(body.reason ?? '').trim(),
+      },
+      { version },
+    );
   },
 };
 
