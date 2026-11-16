@@ -17,6 +17,7 @@ export default function ConversationView({ route, navigation: _navigation }) {
   const [presenter] = useState(() => new ConversationPresenter(MessagesModel));
   const [state, setState] = useState(presenter.initialState);
   const [replyText, setReplyText] = useState('');
+  const [closeReason, setCloseReason] = useState('');
   const conversationId = route.params?.conversationId;
 
   useEffect(() => {
@@ -56,7 +57,7 @@ export default function ConversationView({ route, navigation: _navigation }) {
             <View style={styles.closedBanner}>
               <StatusBadge label="Closed" tone="muted" />
               <Text style={styles.closedHint}>
-                This thread is closed — replies are blocked. Reopen it to continue the conversation.
+                This thread is closed — the backend does not permit reopening it.
               </Text>
             </View>
           ) : null}
@@ -93,30 +94,37 @@ export default function ConversationView({ route, navigation: _navigation }) {
                 <PrimaryButton
                   label={state.sending ? 'Sending…' : 'Send message'}
                   disabled={!replyText.trim() || state.sending || state.savingThread}
-                  onPress={() => {
-                    presenter.onSend(replyText);
-                    setReplyText('');
+                  onPress={async () => {
+                    const sent = await presenter.onSend(replyText);
+                    if (sent) setReplyText('');
                   }}
                 />
               </View>
             </>
           ) : null}
 
-          <View style={styles.threadActions}>
-            {isClosed ? (
-              <SecondaryButton
-                label={state.savingThread ? 'Reopening…' : 'Reopen thread'}
-                disabled={state.savingThread}
-                onPress={() => presenter.reopenConversation()}
+          {!isClosed ? (
+            <View style={styles.threadActions}>
+              <Text style={styles.hint}>Closure reason (required for the audit record)</Text>
+              <TextInput
+                style={styles.input}
+                value={closeReason}
+                onChangeText={setCloseReason}
+                placeholder="Explain why this conversation is being closed"
+                placeholderTextColor={colors.muted}
+                editable={!state.savingThread}
+                maxLength={500}
               />
-            ) : (
               <SecondaryButton
-                label={state.savingThread ? 'Closing…' : 'Close / block thread'}
-                disabled={state.savingThread}
-                onPress={() => presenter.closeConversation()}
+                label={state.savingThread ? 'Closing…' : 'Close conversation'}
+                disabled={state.savingThread || closeReason.trim().length < 5}
+                onPress={async () => {
+                  const closed = await presenter.closeConversation(closeReason);
+                  if (closed) setCloseReason('');
+                }}
               />
-            )}
-          </View>
+            </View>
+          ) : null}
         </View>
       ) : null}
     </AdminScaffold>
@@ -145,6 +153,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   closedHint: { ...typography.label, color: colors.muted },
+  hint: { ...typography.label, color: colors.muted, marginTop: spacing.sm },
   sendBtn: { marginTop: spacing.md },
   threadActions: { marginTop: spacing.md },
   input: {
