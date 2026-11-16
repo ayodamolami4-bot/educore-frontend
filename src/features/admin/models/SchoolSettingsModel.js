@@ -1,6 +1,7 @@
 /** AD10 — School workspace settings, administrator records and activation. */
 import { api, normalizePage } from '../api/client';
 import { endpoints } from '../api/endpoints';
+import { getActiveContext } from '../api/client';
 
 const itemsOf = (value) => normalizePage(value).items;
 
@@ -51,6 +52,8 @@ export const SchoolSettingsModel = {
   },
 
   async adminMemberships() {
+    const role = String(getActiveContext().role ?? '').toUpperCase();
+    if (!['PRINCIPAL', 'SCHOOL_OFFICE'].includes(role)) return { items: [], total: 0 };
     const page = normalizePage(await api.get(endpoints.settings.adminMemberships, null, { limit: 100 }));
     const items = page.items
       .filter((item) => String(item.role ?? '').toUpperCase() !== 'TEACHER')
