@@ -8,9 +8,8 @@ import { View, Text, Alert, StyleSheet } from 'react-native';
 import AdminScaffold from '../components/AdminScaffold';
 import RecordList from '../components/RecordList';
 import SelectSheet from '../components/SelectSheet';
-import AdminScaffoldUnused from '../components/AdminScaffold';
-import { PrimaryButton, SecondaryButton } from './AdminHomeView';
-import { LoadingView, ErrorState, useActionErrorAlert, Notice } from '../components/FeedbackViews';
+import { PrimaryButton } from './AdminHomeView';
+import { LoadingView, ErrorState, useActionErrorAlert } from '../components/FeedbackViews';
 import LabelledField from '../components/LabelledField';
 import { SettingsPresenter } from '../../presenters/SettingsPresenter';
 import { SchoolSettingsModel } from '../../models';
@@ -126,7 +125,7 @@ export default function AdminSettingsView({ navigation }) {
 
       {state.status === 'content' ? (
         <View>
-          {state.notice ? <Notice text={state.notice} /> : null}
+          {state.notice ? <Text style={styles.notice}>{state.notice}</Text> : null}
 
           <Text style={styles.section}>School information</Text>
           <View style={styles.infoCard}>
@@ -215,7 +214,7 @@ export default function AdminSettingsView({ navigation }) {
               </View>
             </>
           ) : (
-            <Notice text="Administrator registration, role changes and access suspension are restricted to the Principal account." />
+            <Text style={styles.notice}>Administrator registration, role changes and access suspension are restricted to the Principal account.</Text>
           )}
         </View>
       ) : null}
@@ -255,6 +254,7 @@ export default function AdminSettingsView({ navigation }) {
 
 const styles = StyleSheet.create({
   section: { ...typography.sectionTitle, marginTop: spacing.lg, marginBottom: spacing.sm },
+  notice: { ...typography.body, color: colors.primary, marginBottom: spacing.sm },
   body: { ...typography.body, color: colors.muted, marginBottom: spacing.sm },
   infoCard: {
     backgroundColor: colors.white,
