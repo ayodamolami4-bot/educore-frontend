@@ -42,10 +42,13 @@ export default function CalendarView({ navigation }) {
   const selectedSession = state.sessions.find((item) => item.id === termSessionId) ?? null;
 
   useEffect(() => {
-    if (!termSessionId && state.sessions.length) {
-      const active = state.calendar?.activeSessionId ?? state.sessions[0].id;
-      setTermSessionId(active);
-    }
+    if (termSessionId || !state.sessions.length) return undefined;
+    let current = true;
+    const activeSessionId = state.calendar?.activeSessionId ?? state.sessions[0].id;
+    Promise.resolve().then(() => {
+      if (current) setTermSessionId(activeSessionId);
+    });
+    return () => { current = false; };
   }, [state.sessions, state.calendar?.activeSessionId, termSessionId]);
 
   const createSession = async () => {
