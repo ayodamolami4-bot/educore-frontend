@@ -60,11 +60,16 @@ export default function AdminSettingsView({ navigation }) {
   }, [presenter, navigation]);
 
   useEffect(() => {
-    if (!state.settings) return;
-    setAddress(state.settings.address ?? '');
-    setPhone(state.settings.phone ?? '');
-    setEmail(state.settings.email ?? '');
-    setWednesdayPtEnabled(Boolean(state.settings.wednesdayPtEnabled));
+    if (!state.settings) return undefined;
+    let active = true;
+    Promise.resolve().then(() => {
+      if (!active) return;
+      setAddress(state.settings.address ?? '');
+      setPhone(state.settings.phone ?? '');
+      setEmail(state.settings.email ?? '');
+      setWednesdayPtEnabled(Boolean(state.settings.wednesdayPtEnabled));
+    });
+    return () => { active = false; };
   }, [state.settings]);
 
   useActionErrorAlert(state.errorText);
