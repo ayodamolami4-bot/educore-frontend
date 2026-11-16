@@ -64,6 +64,7 @@ export class StudentFormPresenter {
     this._guardianSearchSeq = 0;
     this._choiceSearchSeq = 0;
     this._metadata = null;
+    this._credentialIssueInProgress = false;
     this.initialState = {
       status: 'loading',
       mode: 'enrol',
@@ -78,6 +79,10 @@ export class StudentFormPresenter {
       metadataFields: [],
       metadataVersion: null,
       subjectChoiceGroups: [],
+      createdRecord: null,
+      credentials: { student: null, parent: null },
+      credentialStatus: 'idle',
+      credentialError: null,
     };
     this.state = this.initialState;
   }
@@ -98,6 +103,60 @@ export class StudentFormPresenter {
     this._render(this.state);
   }
 
+  async onRetryCredentials() {
+    const created = this.state.createdRecord;
+    if (!created?.id || this._credentialIssueInProgress) return;
+    this._credentialIssueInProgress = true;
+    this._setState({ credentialStatus: 'issuing', credentialError: null });
+
+    let credentials = {
+      student: this.state.credentials?.student ?? null,
+      parent: this.state.credentials?.parent ?? null,
+    };
+
+    try {
+      if (!credentials.student) {
+        const studentSlip = await this.model.issueActivationSlip('STUDENT', created.id);
+        credentials = { ...credentials, student: studentSlip };
+        this._setState({ credentials });
+      }
+
+      const guardianId =
+        created.guardianId ??
+        created.guardian?.id ??
+        created.guardians?.find((item) => item?.active !== false)?.id ??
+        created.guardians?.[0]?.id;
+
+      if (!guardianId) {
+        throw new Error(
+          'The student was registered, but the server did not return the linked guardian ID. Parent access cannot be issued yet.',
+        );
+      }
+
+      if (!credentials.parent) {
+        const parentSlip = await this.model.issueActivationSlip('GUARDIAN', guardianId);
+        credentials = { ...credentials, parent: parentSlip };
+        this._setState({ credentials });
+      }
+
+      this._setState({
+        credentials,
+        credentialStatus: 'ready',
+        credentialError: null,
+      });
+    } catch (error) {
+      this._setState({
+        credentials,
+        credentialStatus: 'failed',
+        credentialError: error instanceof ApiError
+          ? error.message
+          : error?.message || 'The student was registered, but account access slips could not be issued.',
+      });
+    } finally {
+      this._credentialIssueInProgress = false;
+    }
+  }
+
   async load(studentId) {
     this._studentId = studentId ?? null;
     this._setState({
@@ -107,6 +166,10 @@ export class StudentFormPresenter {
       guardianMatches: [],
       guardianSearchState: 'idle',
       linkGuardianId: null,
+      createdRecord: null,
+      credentials: { student: null, parent: null },
+      credentialStatus: 'idle',
+      credentialError: null,
     });
     try {
       const [form, student] = await Promise.all([
@@ -407,12 +470,15 @@ export class StudentFormPresenter {
 
       this._setState({
         status: 'accepted',
-        notice: `${created.fullName} enrolled as ${created.admissionNumber}. Account provisioning has been queued.`,
+        createdRecord: created,
+        credentials: { student: null, parent: null },
+        credentialStatus: 'pending',
+        credentialError: null,
+        notice: `${created.fullName} enrolled as ${created.admissionNumber}.`,
       });
-      if (this._navigation && created?.id) {
-        const replace = this._navigation.replace || this._navigation.navigate;
-        replace.call(this._navigation, 'StudentProfile', { studentId: created.id });
-      }
+      // Issue both real backend slips immediately so the School Office can
+      // hand over each login ID and one-time activation code after enrolment.
+      await this.onRetryCredentials();
     } catch (error) {
       this._setState({
         status: 'failed',
