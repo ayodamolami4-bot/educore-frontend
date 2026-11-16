@@ -17,7 +17,6 @@ export function TE15ReportsScreen() {
   const [data, setData] = useState(null);
   const [kind, setKind] = useState('');
   const kindRef = useRef(kind);
-  kindRef.current = kind;
   const [cycleId, setCycleId] = useState('');
   const [assignmentId, setAssignmentId] = useState('');
   const [format, setFormat] = useState('PDF');
@@ -43,6 +42,10 @@ export function TE15ReportsScreen() {
       if (isActive()) setError(reason?.message ?? 'Could not load the reports available to this teacher.');
     }
   }, [model, context.schoolId]);
+
+  useEffect(() => {
+    kindRef.current = kind;
+  }, [kind]);
 
   useEffect(() => {
     let active = true;
