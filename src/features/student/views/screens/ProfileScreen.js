@@ -1,8 +1,7 @@
 /**
- * ST13 — Profile / academic history. The student's bio, guardian contact,
- * admission info, the academic-history (terms enrolled), and the
- * external-results + historical-report-attachments lists (both seeded empty
- * in demo mode so the student sees the empty states the real backend fills).
+ * ST13 — Student school record, academic history, external results and
+ * published historical report attachments. Only fields exposed to the
+ * authenticated Student role are displayed here.
  */
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
@@ -53,20 +52,12 @@ export default function ProfileScreen({ route }) {
       ) : null}
       {state.status === 'content' && p ? (
         <View>
-          <Text style={styles.section}>Personal details</Text>
+          <Text style={styles.section}>School record</Text>
           <Field label="Full name" value={p.studentName} />
           <Field label="Admission number" value={p.admissionNumber} />
-          <Field label="Date of birth" value={p.dateOfBirth} />
-          <Field label="Gender" value={p.gender} />
+          <Field label="Student status" value={p.status} />
           <Field label="Class" value={p.classLabel} />
           {p.department ? <Field label="Department" value={p.department} /> : null}
-          <Field label="Admission date" value={p.admissionDate} />
-
-          <Text style={styles.section}>Guardian</Text>
-          <Field label="Name" value={p.guardianName} />
-          <Field label="Phone" value={p.guardianPhone} />
-          <Field label="Email" value={p.guardianEmail} />
-          <Field label="Address" value={p.address} />
 
           <Text style={styles.section}>Academic history</Text>
           {p.academicHistory && p.academicHistory.length > 0 ? (
