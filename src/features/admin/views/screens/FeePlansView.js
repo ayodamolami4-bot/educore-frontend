@@ -68,7 +68,7 @@ export default function FeePlansView({ navigation }) {
   useEffect(() => {
     presenter.attach(setState, navigation);
     presenter.load();
-    void loadTerms();
+    void Promise.resolve().then(() => loadTerms());
     const unsubscribe = navigation.addListener('focus', () => {
       if (loadedOnce.current) {
         presenter.load({ showLoading: false });
