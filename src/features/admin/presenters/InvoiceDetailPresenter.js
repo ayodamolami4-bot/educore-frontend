@@ -1,7 +1,7 @@
 /**
- * AD23 — One invoice: what is billed, what has been paid, and the office
- * action of recording a cash/transfer/POS payment. Money math stays in the
- * API; the demo clamps to the balance with the same rule.
+ * AD23 — Invoice detail and a versioned office payment record.
+ * Amounts are converted to kobo for the API; the backend validates balance,
+ * part-payment policy, evidence and the invoice version.
  */
 import { ApiError } from '../api/ApiError';
 
@@ -13,10 +13,10 @@ export class InvoiceDetailPresenter {
     this._alive = false;
     this._invoiceId = null;
     this.initialState = {
-      status: 'loading', // loading | content | error
+      status: 'loading',
       invoice: null,
       payments: [],
-      method: 'Cash',
+      method: 'CASH',
       saving: false,
       notice: null,
       errorText: null,
@@ -44,20 +44,21 @@ export class InvoiceDetailPresenter {
     this._invoiceId = invoiceId;
     this._setState({ status: 'loading', errorText: null });
     try {
-      const [invoice, payments] = await Promise.all([
-        this.model.invoiceById(invoiceId),
-        this.model.invoicePayments(invoiceId),
-      ]);
+      const invoice = await this.model.invoiceById(invoiceId);
+      const payments = invoice.confirmedPayments ?? [];
       this._setState({
         status: 'content',
         invoice,
-        payments: (payments && payments.items) || [],
+        payments,
+        errorText: null,
       });
+      return invoice;
     } catch (error) {
       this._setState({
         status: 'error',
-        errorText: error instanceof ApiError ? error.message : 'Could not load this invoice.',
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'Could not load this invoice.',
       });
+      return null;
     }
   }
 
@@ -65,64 +66,79 @@ export class InvoiceDetailPresenter {
     return this.load(this._invoiceId);
   }
 
-  /** Balance in naira from the numeric fields the API sends. */
-  balanceNumber(invoice) {
-    const amount = Number(invoice && invoice.amount) || 0;
-    const paid = Number(invoice && invoice.paid) || 0;
-    return Math.max(0, amount - paid);
+  balanceMinor(invoice) {
+    return Math.max(0, Number(invoice?.balanceMinor ?? 0));
   }
 
   onPickMethod(method) {
+    if (!['CASH', 'BANK'].includes(method)) return;
     this._setState({ method });
   }
 
-  async recordPayment({ amount, method, reference }) {
-    if (this.state.saving) return;
-    const value = Number(String(amount).replace(/[^0-9.]/g, ''));
-    if (!value || value <= 0) {
-      this._setState({ errorText: 'Enter the amount in naira — numbers only.' });
-      return;
+  async recordPayment({ amount, method, reference, verificationReference, reason }) {
+    if (this.state.saving) return false;
+    const value = Number(String(amount ?? '').replace(/[^0-9.]/g, ''));
+    const amountMinor = Math.round(value * 100);
+    if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) {
+      this._setState({ errorText: 'Enter a valid payment amount in naira.' });
+      return false;
     }
-    const balance = this.balanceNumber(this.state.invoice);
+    const invoice = this.state.invoice;
+    const balance = this.balanceMinor(invoice);
     if (balance <= 0) {
-      this._setState({
-        errorText:
-          'This bill is already fully paid — there is nothing left to record. The payments list below shows what came in.',
-      });
-      return;
+      this._setState({ errorText: 'This invoice has no outstanding balance.' });
+      return false;
     }
-    if (value > balance) {
-      const name = (this.state.invoice && this.state.invoice.studentName) || 'the student';
+    if (amountMinor > balance) {
       this._setState({
-        errorText:
-          `That payment is ₦${(value - balance).toLocaleString('en-NG')} more than what ` +
-          `${name} owes. This bill still has ₦${balance.toLocaleString('en-NG')} outstanding — ` +
-          `enter ₦${balance.toLocaleString('en-NG')} or less. For anything extra, record it on a new bill or raise a refund.`,
+        errorText: 'The payment exceeds the outstanding balance of ' + (balance / 100).toLocaleString('en-NG', { style: 'currency', currency: 'NGN' }) + '.',
       });
-      return;
+      return false;
     }
+    if (!invoice?.partialAllowed && amountMinor !== balance) {
+      this._setState({ errorText: 'This invoice does not allow part payments. Enter the exact outstanding balance.' });
+      return false;
+    }
+    if (!['CASH', 'BANK'].includes(method)) {
+      this._setState({ errorText: 'Choose Cash or verified Bank Transfer.' });
+      return false;
+    }
+    if (String(reference ?? '').trim().length < 3) {
+      this._setState({ errorText: 'Enter the receipt or bank reference (at least 3 characters).' });
+      return false;
+    }
+    if (String(verificationReference ?? '').trim().length < 5) {
+      this._setState({ errorText: 'Enter the independent verification evidence reference (at least 5 characters).' });
+      return false;
+    }
+    if (String(reason ?? '').trim().length < 5) {
+      this._setState({ errorText: 'Enter a recording reason (at least 5 characters).' });
+      return false;
+    }
+    if (!Number.isSafeInteger(invoice.version) || invoice.version < 1) {
+      this._setState({ errorText: 'The invoice version is missing. Refresh before recording a payment.' });
+      return false;
+    }
+
     this._setState({ saving: true, errorText: null, notice: null });
     try {
-      const result = await this.model.manualPayment(this._invoiceId, {
-        amount: value,
+      await this.model.manualPayment(this._invoiceId, {
+        amountMinor,
         method,
-        reference: reference || undefined,
-      });
-      if (result && result.ok === false) {
-        this._setState({ errorText: result.error || 'The payment could not be recorded.' });
-        return;
-      }
+        reference: String(reference).trim(),
+        verificationReference: String(verificationReference).trim(),
+        reason: String(reason).trim(),
+      }, invoice.version);
       await this.load(this._invoiceId);
-      const balanceAfter = Number((result && result.balanceAfter) || 0);
       this._setState({
-        notice: `Recorded ${method.toLowerCase()} payment of ₦${value.toLocaleString(
-          'en-NG',
-        )}. Balance is now ₦${balanceAfter.toLocaleString('en-NG')}.`,
+        notice: 'Payment recorded and confirmed. The invoice balance has been refreshed from the school ledger.',
       });
+      return true;
     } catch (error) {
       this._setState({
-        errorText: error instanceof ApiError ? error.message : 'The payment could not be recorded.',
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'The payment could not be recorded.',
       });
+      return false;
     } finally {
       if (this._alive) this._setState({ saving: false });
     }
