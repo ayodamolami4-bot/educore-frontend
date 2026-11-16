@@ -4,7 +4,6 @@
  * admission numbers, placement, metadata versions and guardian relationships.
  */
 import { api, normalizePage } from '../api/client';
-import { endpoints } from '../api/endpoints';
 
 const itemsOf = (payload) => {
   if (Array.isArray(payload)) return payload;
