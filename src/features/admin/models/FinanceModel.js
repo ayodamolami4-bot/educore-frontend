@@ -170,7 +170,25 @@ export const FinanceModel = {
   },
 
   async adjustmentById(adjustmentId) {
-    return api.get(endpoints.finance.adjustmentById, { adjustmentId });
+    const raw = await api.get(endpoints.finance.adjustmentById, { adjustmentId });
+    return {
+      ...raw,
+      invoiceId: raw.invoiceId ?? raw.invoice_id,
+      paymentId: raw.paymentId ?? raw.payment_id,
+      amountMinor: raw.amountMinor ?? raw.amount_minor,
+      createdAt: raw.createdAt ?? raw.created_at,
+      evidenceReference: raw.evidenceReference ?? raw.evidence_reference,
+      status: ({
+        REQUESTED: 'Pending',
+        APPROVED: 'Approved',
+        REJECTED: 'Rejected',
+        CONFIRMED: 'Refund confirmed',
+        PROCESSING: 'Processing',
+        UNKNOWN: 'Unknown',
+      })[String(raw.state ?? '').toUpperCase()] ?? raw.state,
+      amountLabel: moneyLabel(raw.amountMinor ?? raw.amount_minor),
+      reference: raw.evidenceReference ?? raw.evidence_reference ?? '',
+    };
   },
 
   async requestAdjustment(invoiceId, body) {
@@ -281,9 +299,10 @@ export const FinanceModel = {
   // Refund-only convenience methods for AD25.
   async refundRequests(query = {}) {
     const all = await this.adjustmentRequests();
-    const refunds = all.items.filter((item) =>
-      item.kind === 'REFUND' &&
-      (!query.paymentId || item.paymentId === query.paymentId)
+    const summaries = all.items.filter((item) => item.kind === 'REFUND');
+    const details = await Promise.all(summaries.map((item) => this.refundById(item.id)));
+    const refunds = details.filter((item) =>
+      !query.paymentId || String(item.paymentId) === String(query.paymentId)
     );
     return { items: refunds, total: refunds.length, page: 1, pages: 1 };
   },
