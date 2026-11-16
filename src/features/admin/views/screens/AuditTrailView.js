@@ -7,7 +7,7 @@ import { View, Text, Pressable, Alert, StyleSheet } from 'react-native';
 import AdminScaffold from '../components/AdminScaffold';
 import RecordList from '../components/RecordList';
 import { LoadingView, ErrorState } from '../components/FeedbackViews';
-import { AuditTrailPresenter, AUDIT_CATEGORIES } from '../../presenters/AuditTrailPresenter';
+import { AuditTrailPresenter } from '../../presenters/AuditTrailPresenter';
 import { AuditTrailModel } from '../../models';
 import { colors, typography, spacing } from '../theme';
 
@@ -44,7 +44,7 @@ export default function AuditTrailView({ navigation }) {
       {state.status === 'content' ? (
         <View>
           <View style={styles.chipRow}>
-            {AUDIT_CATEGORIES.map((c) => (
+            {state.categories.map((c) => (
               <Pressable
                 key={c}
                 style={[styles.chip, state.category === c && styles.chipOn]}
