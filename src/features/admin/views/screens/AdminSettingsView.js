@@ -4,7 +4,7 @@
  * staff and activation endpoints rather than unsupported profile settings.
  */
 import React, { useEffect, useState } from 'react';
-import { View, Text, Alert, StyleSheet } from 'react-native';
+import { View, Text, Alert, Switch, StyleSheet } from 'react-native';
 import AdminScaffold from '../components/AdminScaffold';
 import RecordList from '../components/RecordList';
 import SelectSheet from '../components/SelectSheet';
@@ -37,6 +37,11 @@ const sessionLabel = (session) => {
 export default function AdminSettingsView({ navigation }) {
   const [presenter] = useState(() => new SettingsPresenter(SchoolSettingsModel));
   const [state, setState] = useState(presenter.initialState);
+  const [address, setAddress] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [wednesdayPtEnabled, setWednesdayPtEnabled] = useState(false);
+  const [settingsReason, setSettingsReason] = useState('');
   const [newAdminName, setNewAdminName] = useState('');
   const [newAdminPhone, setNewAdminPhone] = useState('');
   const [newAdminEmail, setNewAdminEmail] = useState('');
@@ -51,6 +56,14 @@ export default function AdminSettingsView({ navigation }) {
     presenter.load();
     return () => presenter.detach();
   }, [presenter, navigation]);
+
+  useEffect(() => {
+    if (!state.settings) return;
+    setAddress(state.settings.address ?? '');
+    setPhone(state.settings.phone ?? '');
+    setEmail(state.settings.email ?? '');
+    setWednesdayPtEnabled(Boolean(state.settings.wednesdayPtEnabled));
+  }, [state.settings]);
 
   useActionErrorAlert(state.errorText);
 
@@ -135,9 +148,73 @@ export default function AdminSettingsView({ navigation }) {
             <Text style={styles.infoLine}>Currency: {state.settings?.currency ?? 'Not configured'}</Text>
             {schoolDayLabel ? <Text style={styles.infoLine}>{schoolDayLabel}</Text> : null}
             <Text style={styles.infoHint}>
-              School identity and contact details are managed during school setup. This backend exposes the published academic metadata here as read-only information.
+              The school name and academic session are established during school setup. The fields below update supported school contact and timetable settings.
             </Text>
           </View>
+
+          <Text style={styles.section}>School contact and timetable settings</Text>
+          <LabelledField
+            label="School address"
+            value={address}
+            displayValue={address || 'No address recorded'}
+            onChangeText={canManageAdministrators ? setAddress : undefined}
+          />
+          <LabelledField
+            label="Contact phone"
+            value={phone}
+            displayValue={phone || 'No phone recorded'}
+            onChangeText={canManageAdministrators ? setPhone : undefined}
+            keyboardType="phone-pad"
+          />
+          <LabelledField
+            label="Contact email"
+            value={email}
+            displayValue={email || 'No email recorded'}
+            onChangeText={canManageAdministrators ? setEmail : undefined}
+            keyboardType="email-address"
+          />
+          <View style={styles.switchRow}>
+            <View style={styles.switchCopy}>
+              <Text style={styles.switchTitle}>Wednesday PE period</Text>
+              <Text style={styles.infoHint}>Changing this setting may require a timetable review.</Text>
+            </View>
+            <Switch
+              value={wednesdayPtEnabled}
+              onValueChange={setWednesdayPtEnabled}
+              disabled={!canManageAdministrators || state.saving}
+            />
+          </View>
+          {canManageAdministrators ? (
+            <>
+              <LabelledField
+                label="Reason for settings change"
+                placeholder="Record why these school settings are changing"
+                value={settingsReason}
+                onChangeText={setSettingsReason}
+              />
+              <View style={styles.actionsWrap}>
+                <PrimaryButton
+                  label={state.saving ? 'Saving settings…' : 'Save school settings'}
+                  disabled={state.saving || settingsReason.trim().length < 5}
+                  onPress={async () => {
+                    const saved = await presenter.saveSettings({
+                      address,
+                      phone,
+                      email,
+                      wednesdayPtEnabled,
+                      reason: settingsReason,
+                    });
+                    if (saved) {
+                      setSettingsReason('');
+                      presenter.load();
+                    }
+                  }}
+                />
+              </View>
+            </>
+          ) : (
+            <Text style={styles.infoHint}>Only the Principal can change school settings.</Text>
+          )}
 
           <Text style={styles.section}>Administrator access</Text>
           <Text style={styles.body}>
@@ -266,5 +343,8 @@ const styles = StyleSheet.create({
   schoolName: { ...typography.body, color: colors.text, fontWeight: '700', marginBottom: spacing.sm },
   infoLine: { ...typography.body, marginBottom: spacing.xs },
   infoHint: { ...typography.label, color: colors.muted, marginTop: spacing.sm },
+  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+  switchCopy: { flex: 1, paddingRight: spacing.md },
+  switchTitle: { ...typography.body, color: colors.text, fontWeight: '600' },
   actionsWrap: { marginTop: spacing.md },
 });
