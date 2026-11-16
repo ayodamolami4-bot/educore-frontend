@@ -4,7 +4,7 @@
  * contracts. It never invents admission numbers, class identifiers,
  * metadata versions or guardian verification evidence.
  */
-import { ApiError } from '../api/ApiError';
+import { ApiError } from '../api/ApiError.js';
 import {
   cleanText,
   isValidDateOfBirth,
@@ -13,7 +13,7 @@ import {
   normalizeDateOfBirth,
   normalizeEmail,
   normalizePhone,
-} from '../utils/validators';
+} from '../utils/validators.js';
 
 const EMPTY_VALUES = {
   firstName: '',
