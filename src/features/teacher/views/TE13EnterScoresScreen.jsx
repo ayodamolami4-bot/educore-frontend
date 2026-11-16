@@ -34,26 +34,28 @@ export function TE13EnterScoresScreen() {
 
   const readOnly = data?.state === 'SUBMITTED';
 
-  const load = async () => {
-    await Promise.resolve();
-    if (!cycleId || !assignmentId) {
-      setError('Open a subject mark package from TE12 before entering scores.');
-      return;
-    }
-    setError('');
-    try {
-      const sheet = await model.scores(context.schoolId, cycleId, assignmentId);
-      setData(sheet);
-      const first = sheet.students?.[0] ?? null;
-      setSelectedStudent(first?.id ?? '');
-      setForm(formFrom(first));
-    } catch (reason) {
-      setError(reason?.message ?? 'Could not load this assessment sheet.');
-    }
-  };
-
-  useEffect(() => { void load(); }, [model, context.schoolId, cycleId, assignmentId]);
-
+  useEffect(() => {
+    let active = true;
+    void Promise.resolve().then(async () => {
+      if (!active) return;
+      if (!cycleId || !assignmentId) {
+        setError('Open a subject mark package from TE12 before entering scores.');
+        return;
+      }
+      setError('');
+      try {
+        const sheet = await model.scores(context.schoolId, cycleId, assignmentId);
+        if (!active) return;
+        setData(sheet);
+        const first = sheet.students?.[0] ?? null;
+        setSelectedStudent(first?.id ?? '');
+        setForm(formFrom(first));
+      } catch (reason) {
+        if (active) setError(reason?.message ?? 'Could not load this assessment sheet.');
+      }
+    });
+    return () => { active = false; };
+  }, [model, context.schoolId, cycleId, assignmentId]);
   const selectStudent = (id) => {
     setSelectedStudent(id);
     setForm(formFrom(data?.students?.find((item) => item.id === id)));
