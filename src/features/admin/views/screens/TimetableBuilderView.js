@@ -25,7 +25,6 @@ export default function TimetableBuilderView({ navigation, route }) {
   );
   const [state, setState] = useState(presenter.initialState);
   const selectedClassRef = useRef(state.selectedClass);
-  selectedClassRef.current = state.selectedClass;
   const loadedOnce = useRef(false);
   const [classSheet, setClassSheet] = useState(!route.params?.classId);
   const [assignmentSheet, setAssignmentSheet] = useState(false);
@@ -42,6 +41,10 @@ export default function TimetableBuilderView({ navigation, route }) {
   const draft = state.draft;
   const isDraft = draft?.status === 'DRAFT';
   const filledCount = draft?.slots?.length ?? 0;
+
+  useEffect(() => {
+    selectedClassRef.current = state.selectedClass;
+  }, [state.selectedClass]);
 
   useEffect(() => {
     presenter.attach(setState, navigation);
