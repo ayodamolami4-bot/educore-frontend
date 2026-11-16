@@ -3,15 +3,13 @@
  * filter chips; every row opens the guardian's profile. Re-fetches on focus.
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
+import { View, Text, TextInput, StyleSheet } from 'react-native';
 import AdminScaffold from '../components/AdminScaffold';
 import RecordList from '../components/RecordList';
 import { LoadingView, ErrorState } from '../components/FeedbackViews';
 import { GuardianListPresenter } from '../../presenters/GuardianListPresenter';
 import { GuardianModel } from '../../models';
 import { colors, typography, spacing } from '../theme';
-
-const STATUSES = ['all', 'Active', 'Invited'];
 
 export default function GuardianListView({ navigation }) {
   const [presenter] = useState(() => new GuardianListPresenter(GuardianModel));
@@ -58,28 +56,15 @@ export default function GuardianListView({ navigation }) {
         <View>
           <TextInput
             style={styles.search}
-            placeholder="Search name, phone, email or child"
+            placeholder="Search guardian or child name, phone or admission number"
             placeholderTextColor={colors.muted}
             value={state.query.q}
             onChangeText={(t) => presenter.onSearch(t)}
           />
-          <View style={styles.chipRow}>
-            {STATUSES.map((s) => (
-              <Pressable
-                key={s}
-                style={[styles.chip, state.query.status === s && styles.chipOn]}
-                onPress={() => presenter.onFilterStatus(s)}
-              >
-                <Text style={[styles.chipText, state.query.status === s && styles.chipTextOn]}>
-                  {s === 'all' ? 'All' : s}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
           <RecordList
             items={rows}
             onPressItem={(row) => presenter.onOpenGuardian(row.raw)}
-            emptyText="No guardians match — try clearing the search or filter."
+            emptyText="No guardians match this search."
           />
         </View>
       ) : null}
@@ -99,16 +84,4 @@ const styles = StyleSheet.create({
     minHeight: 46,
     marginBottom: spacing.sm,
   },
-  chipRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
-  chip: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    borderRadius: 999,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    backgroundColor: colors.white,
-  },
-  chipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { ...typography.label, color: colors.muted },
-  chipTextOn: { color: colors.white },
 });
