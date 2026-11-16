@@ -1,23 +1,82 @@
 /**
- * AD26 — Preview promotion or completion (Presenter). A preview computes
- * who would promote / repeat / graduate from the official marks; the office
- * reviews it row by row, adjusts decisions and saves them. Validating and
- * confirming belong to AD27.
+ * AD26 — Prepare and review a promotion preview from published school records.
+ * Decisions are local until saved individually through the versioned API.
  */
 import { ApiError } from '../api/ApiError';
 
+const itemsOf = (value) =>
+  Array.isArray(value?.items) ? value.items : Array.isArray(value) ? value : [];
+
+const decisionLabel = (value) => ({
+  PROMOTE: 'Promote',
+  REPEAT: 'Repeat',
+  JSS_COMPLETE: 'Complete JSS',
+  GRADUATE: 'Graduate',
+  REVIEW: 'Review required',
+}[String(value ?? '').toUpperCase()] ?? 'Needs decision');
+
+const classLabelOf = (item) =>
+  [item?.level, item?.arm].filter(Boolean).join(' ') || 'School class';
+
+function previewView(raw, classes, sessions) {
+  const sourceClass = classes.find((item) => item.id === raw.sourceClassId) ?? {};
+  const sourceSession = sessions.find((item) => item.id === raw.sourceSessionId) ?? {};
+  const targetClasses = classes.filter((item) => item.sessionId === raw.targetSessionId);
+  const rows = itemsOf(raw.rows).map((row) => {
+    const recommendation = row.recommendation ?? {};
+    const recommendationCode = String(recommendation.recommendation ?? '').toUpperCase();
+    const decisionCode = row.decision ? String(row.decision).toUpperCase() : null;
+    const targetClass = classes.find((item) => item.id === row.targetClassId);
+    return {
+      ...row,
+      fullName: row.studentName ?? 'Student record',
+      recommendationCode,
+      recommendationReasons: itemsOf(recommendation.reasons),
+      average: recommendation.annualMean ?? null,
+      passPercent: recommendation.passPercent ?? null,
+      decisionCode,
+      decision: decisionLabel(decisionCode),
+      decisionReason: row.reason ?? '',
+      evidenceReference: row.evidenceReference ?? '',
+      department: row.department ?? '',
+      targetClassLabel: targetClass ? classLabelOf(targetClass) : '',
+    };
+  });
+  const countBy = (codes) => rows.filter((row) =>
+    codes.includes(row.decisionCode ?? row.recommendationCode)
+  ).length;
+
+  return {
+    ...raw,
+    classLabel: classLabelOf(sourceClass),
+    sessionLabel: sourceSession.name ?? 'Academic session',
+    sourceLevel: raw.sourceLevel ?? sourceClass.level ?? '',
+    status: String(raw.state).toUpperCase() === 'CONFIRMED' ? 'Confirmed' : 'Preview',
+    rows,
+    targetClasses,
+    summary: {
+      promote: countBy(['PROMOTE', 'JSS_COMPLETE']),
+      repeat: countBy(['REPEAT']),
+      graduate: countBy(['GRADUATE']),
+      review: countBy(['REVIEW']),
+    },
+  };
+}
+
 export class PromotionPreviewPresenter {
-  constructor(promotionModel, structureModel) {
+  constructor(promotionModel, structureModel, calendarModel) {
     this.model = promotionModel;
     this.structureModel = structureModel;
+    this.calendarModel = calendarModel;
     this._render = null;
     this._navigation = null;
     this._alive = false;
     this.initialState = {
-      status: 'loading', // loading | content | error
+      status: 'loading',
       previews: [],
       classOptions: [],
-      preview: null, // the opened preview with rows
+      sessions: [],
+      preview: null,
       notice: null,
       errorText: null,
       saving: false,
@@ -41,24 +100,38 @@ export class PromotionPreviewPresenter {
     this._render(this.state);
   }
 
+  _view(raw) {
+    return previewView(raw, this.state.classOptions, this.state.sessions);
+  }
+
   async load() {
     this._setState({ status: 'loading', errorText: null });
     try {
-      const [page, classesPage] = await Promise.all([
+      const [page, classesPayload, sessionOptions] = await Promise.all([
         this.model.previews(),
         this.structureModel.classes(),
+        this.calendarModel.sessionOptions(),
       ]);
+      const classes = itemsOf(classesPayload).map((item) => ({
+        ...item,
+        classLabel: classLabelOf(item),
+      }));
+      const sessions = itemsOf(sessionOptions.sessions);
+      const rawPreviews = itemsOf(page);
+      const details = await Promise.all(
+        rawPreviews.map((item) => this.model.previewById(item.id)),
+      );
       this._setState({
         status: 'content',
-        previews: page.items,
-        classOptions: classesPage.items,
+        previews: details.map((item) => this._view(item)),
+        classOptions: classes,
+        sessions,
         errorText: null,
       });
     } catch (error) {
       this._setState({
         status: 'error',
-        errorText:
-          error instanceof ApiError ? error.message : 'Could not load the promotion previews.',
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'Could not load promotion sessions, classes and previews.',
       });
     }
   }
@@ -67,25 +140,27 @@ export class PromotionPreviewPresenter {
     return this.load();
   }
 
-  /** Compute a fresh preview for a class from the official marks. */
-  async buildPreview(classLabel) {
+  async buildPreview(selection) {
     if (this.state.saving) return;
+    if (!selection?.sourceSessionId || !selection?.sourceClassId) {
+      this._setState({ errorText: 'Choose the source session and class first.' });
+      return;
+    }
     this._setState({ saving: true, notice: null, errorText: null });
     try {
-      const result = await this.model.createPreview({ classLabel });
+      const result = await this.model.createPreview(selection);
+      const preview = this._view(result);
       this._setState({
         saving: false,
-        previews: result.existing ? this.state.previews : [...this.state.previews, result.preview],
-        preview: result.preview,
-        notice: result.existing
-          ? `${classLabel} already has a preview — opened it for you.`
-          : `${classLabel} preview computed — review each student, then save your decisions.`,
+        previews: [preview, ...this.state.previews.filter((item) => item.id !== preview.id)],
+        preview,
+        notice: `${preview.classLabel} preview computed from published reports. Review each student and save explicit outcomes.`,
       });
     } catch (error) {
       this._setState({
         saving: false,
         notice: null,
-        errorText: error instanceof ApiError ? error.message : 'The preview could not be computed.',
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'The preview could not be computed.',
       });
     }
   }
@@ -94,35 +169,49 @@ export class PromotionPreviewPresenter {
     this._setState({ saving: true, notice: null, errorText: null });
     try {
       const result = await this.model.previewById(previewId);
-      this._setState({ saving: false, preview: result.preview });
+      const preview = this._view(result);
+      this._setState({ saving: false, preview });
     } catch (error) {
       this._setState({
         saving: false,
         notice: null,
-        errorText: error instanceof ApiError ? error.message : 'Could not open the preview.',
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'Could not open the preview.',
       });
     }
   }
 
   closePreview() {
-    this._setState({ preview: null });
+    this._setState({ preview: null, notice: null, errorText: null });
   }
 
-  /** Local decision change — saved in one pass with saveDecisions(). */
-  setDecision(studentId, decision) {
+  setDecision(studentId, decisionCode, details = {}) {
     const preview = this.state.preview;
     if (!preview || preview.status === 'Confirmed') return;
-    const rows = preview.rows.map((r) =>
-      String(r.studentId) === String(studentId) ? { ...r, decision } : r,
+    const rows = preview.rows.map((row) =>
+      String(row.studentId) === String(studentId)
+        ? {
+            ...row,
+            decisionCode,
+            decision: decisionLabel(decisionCode),
+            decisionReason: String(details.reason ?? '').trim(),
+            targetClassId: details.targetClassId ?? null,
+            department: details.department ?? '',
+            evidenceReference: String(details.evidenceReference ?? '').trim(),
+            targetClassLabel:
+              preview.targetClasses.find((item) => item.id === details.targetClassId)?.classLabel ?? '',
+          }
+        : row,
     );
+    const countBy = (codes) => rows.filter((row) => codes.includes(row.decisionCode)).length;
     this._setState({
       preview: {
         ...preview,
         rows,
         summary: {
-          promote: rows.filter((r) => r.decision === 'Promote').length,
-          repeat: rows.filter((r) => r.decision === 'Repeat').length,
-          graduate: rows.filter((r) => r.decision === 'Graduate').length,
+          promote: countBy(['PROMOTE', 'JSS_COMPLETE']),
+          repeat: countBy(['REPEAT']),
+          graduate: countBy(['GRADUATE']),
+          review: rows.length - countBy(['PROMOTE', 'JSS_COMPLETE', 'REPEAT', 'GRADUATE']),
         },
       },
     });
@@ -133,27 +222,19 @@ export class PromotionPreviewPresenter {
     if (!preview || this.state.saving) return;
     this._setState({ saving: true, notice: null, errorText: null });
     try {
-      const result = await this.model.saveDecisions(preview.id, {
-        decisions: preview.rows.map((r) => ({ studentId: r.studentId, decision: r.decision })),
-      });
-      // What saving actually does: the class's outcomes are recorded. Students
-      // only MOVE when AD27 confirms — JSS1 A/B/C then become JSS2, and so on.
-      // The notice no longer suggests which class to compute next: the office
-      // picks the next class themselves, and naming one was more distracting
-      // than helpful.
+      const result = await this.model.saveDecisions(preview);
+      const updated = this._view(result);
       this._setState({
         saving: false,
-        preview: result.preview,
-        previews: this.state.previews.map((p) => (p.id === result.preview.id ? result.preview : p)),
-        notice:
-          `Decisions saved for ${result.preview.classLabel} — students move up (or repeat, or ` +
-          `graduate) only when this preview is confirmed in "Approve promotion and graduation".`,
+        preview: updated,
+        previews: this.state.previews.map((item) => item.id === updated.id ? updated : item),
+        notice: `Reviewed outcomes saved for ${updated.classLabel}. Students do not move until the Principal confirms this batch.`,
       });
     } catch (error) {
       this._setState({
         saving: false,
         notice: null,
-        errorText: error instanceof ApiError ? error.message : 'The decisions were not saved.',
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'The decisions were not saved.',
       });
     }
   }
