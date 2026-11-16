@@ -310,6 +310,41 @@ export class TeacherModel {
       this.get(schoolId, '/teaching-assignments'),
     ]);
 
+    // The calendar and published examination list are term-scoped. Derive
+    // those term IDs from the teacher's assigned classes; never request
+    // school-wide examination drafts or assume a term.
+    const classItems = itemsOf(classPage);
+    const sessionIds = [...new Set(classItems.map((item) => item.sessionId).filter(Boolean))];
+    const calendars = await Promise.all(sessionIds.map((sessionId) =>
+      this.get(schoolId, '/calendar', { sessionId })
+    ));
+    const calendarTerms = calendars.flatMap((calendar) =>
+      itemsOf(calendar.terms).map((term) => ({ ...term, sessionId: calendar.sessionId }))
+    );
+    const examinationPages = await Promise.all(calendarTerms.map((term) =>
+      this.get(schoolId, '/examinations', { termId: term.id })
+    ));
+    const calendarExceptions = calendars.flatMap((calendar) =>
+      itemsOf(calendar.exceptions).map((item) => ({
+        ...item,
+        sessionId: calendar.sessionId,
+        timezone: calendar.timezone ?? 'Africa/Lagos',
+      }))
+    );
+    const examinations = examinationPages.flatMap((page) =>
+      itemsOf(page).map((item) => ({
+        ...item,
+        classLabel: classLabel({ level: item.level, arm: item.arm }),
+        date: item.onDate ?? '',
+        time: [item.startMinute, item.endMinute].every(Number.isFinite)
+          ? [item.startMinute, item.endMinute].map((minute) =>
+              `${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`
+            ).join('–')
+          : '',
+        title: item.subjectName ?? 'Examination',
+      }))
+    ).filter((item) => item.date >= on);
+
     const dayKeys = ['mon', 'tue', 'wed', 'thu', 'fri'];
     const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
     const minuteLabel = (value) => {
@@ -358,7 +393,7 @@ export class TeacherModel {
     }
 
     const classMap = new Map();
-    for (const item of itemsOf(classPage)) {
+    for (const item of classItems) {
       classMap.set(item.id, { id: item.id, label: classLabel(item), classTeacher: item.classTeacher });
     }
     for (const lesson of lessons) {
@@ -396,6 +431,11 @@ export class TeacherModel {
       duties,
       todayEvents: duties,
       timezone: weekly.timezone ?? daily.timezone ?? 'Africa/Lagos',
+      calendarTerms,
+      calendarExceptions: calendarExceptions.sort((a, b) => String(a.onDate).localeCompare(String(b.onDate))),
+      examinations: examinations.sort((a, b) =>
+        String(a.date).localeCompare(String(b.date)) || (a.startMinute ?? 0) - (b.startMinute ?? 0)
+      ),
     };
   }
 
@@ -768,11 +808,13 @@ export class TeacherModel {
     return {
       ...sheet,
       policy: {
-        ca1: sheet.policy?.ca1Weight ?? sheet.policy?.ca1 ?? '',
-        ca2: sheet.policy?.ca2Weight ?? sheet.policy?.ca2 ?? '',
-        exam: sheet.policy?.examWeight ?? sheet.policy?.exam ?? '',
-        total: sheet.policy?.total ?? '',
-        precision: sheet.policy?.precision ?? '',
+        ca1: sheet.policy?.ca1Maximum ?? sheet.policy?.ca1 ?? '',
+        ca2: sheet.policy?.ca2Maximum ?? sheet.policy?.ca2 ?? '',
+        exam: sheet.policy?.examMaximum ?? sheet.policy?.exam ?? '',
+        total: sheet.policy?.total ?? 100,
+        precision: sheet.policy?.decimalPlaces != null
+          ? `${sheet.policy.decimalPlaces} decimal place${sheet.policy.decimalPlaces === 1 ? '' : 's'}`
+          : sheet.policy?.precision ?? '',
       },
       students: itemsOf(sheet.rows).map((row) => ({
         id: row.studentId,
