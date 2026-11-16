@@ -1,6 +1,5 @@
 /** AD34 — School change history across role-authorised service audit streams. */
-import { api } from '../api/client';
-import { getActiveContext } from '../api/client';
+import { api, getActiveContext } from '../api/client';
 
 const DOMAIN_LABELS = {
   academics: 'Academics',
