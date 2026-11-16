@@ -11,9 +11,17 @@ export function TE01HomeScreen() {
   const { context, openShared, model } = useTeacher();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    void model.dashboard(context.schoolId).then((d) => { setData(d); setLoading(false); });
+    let active = true;
+    setLoading(true);
+    setError('');
+    void model.dashboard(context.schoolId)
+      .then((d) => { if (active) setData(d); })
+      .catch((reason) => { if (active) setError(reason?.message ?? 'Could not load your teacher workspace.'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, [model, context.schoolId]);
 
   return (
@@ -32,6 +40,8 @@ export function TE01HomeScreen() {
           </View>
         )}
       </Card>
+
+      {error ? <Notice text={error} tone="error" /> : null}
 
       <Card title="Today and next actions">
         {(data?.actions ?? []).map((a) => (
