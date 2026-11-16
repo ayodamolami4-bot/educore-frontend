@@ -28,7 +28,7 @@ function sessionLabel(session) {
   return [session.name ?? session.label ?? 'Academic session', dates].filter(Boolean).join(' · ');
 }
 
-export default function ImportsExportsView({ navigation }) {
+export default function ImportsExportsView() {
   const [presenter] = useState(() =>
     new ImportsExportsPresenter(DataTransferModel, StudentModel, TeacherModel, CalendarModel)
   );
