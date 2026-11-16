@@ -1,21 +1,43 @@
 /**
- * AD19 — Review and publish results. Mark packages flow from teachers to the
- * admin; report batches are published here, which is what puts report cards
- * in the Student/Parent apps.
+ * AD19 — Review assessment cycles, return individual subject sheets or the
+ * complete class package, then publish the official report snapshots.
  */
 import { ApiError } from '../api/ApiError';
 
+function cycleLabel(cycle) {
+  return [
+    cycle.classLabel || 'Assigned class',
+    cycle.termLabel || 'Assessment term',
+    cycle.revision ? 'Revision ' + cycle.revision : '',
+  ].filter(Boolean).join(' · ');
+}
+
+function instantOf(date, time) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date ?? '')) ||
+      !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(String(time ?? ''))) {
+    throw new Error('Use YYYY-MM-DD for the date and HH:MM for the time.');
+  }
+  const value = new Date(date + 'T' + time + ':00+01:00');
+  if (Number.isNaN(value.getTime())) throw new Error('The correction deadline is invalid.');
+  return value.toISOString();
+}
+
 export class ResultsReviewPresenter {
-  constructor(resultsModel) {
+  constructor(resultsModel, role = '') {
     this.model = resultsModel;
+    this.role = role;
     this._render = null;
+    this._navigation = null;
     this._alive = false;
     this.initialState = {
-      status: 'loading', // loading | content | error
-      packages: [],
-      batches: [],
+      status: 'loading',
+      cycles: [],
+      selectedCycle: null,
+      review: null,
+      selectedSheet: null,
+      busy: false,
       errorText: null,
-      busyId: null, // row mid-action
+      notice: null,
     };
     this.state = this.initialState;
   }
@@ -39,107 +61,219 @@ export class ResultsReviewPresenter {
   async load() {
     this._setState({ status: 'loading', errorText: null });
     try {
-      const [packages, batches] = await Promise.all([
-        this.model.markPackages({ page: 1 }),
-        this.model.reportBatches({ page: 1 }),
-      ]);
+      const page = await this.model.cycles();
       this._setState({
         status: 'content',
-        packages: packages.items || [],
-        batches: batches.items || [],
+        cycles: page.items.map((cycle) => ({ ...cycle, label: cycleLabel(cycle) })),
+        selectedCycle: null,
+        review: null,
+        selectedSheet: null,
+        errorText: null,
       });
     } catch (error) {
       this._setState({
         status: 'error',
-        errorText: error instanceof ApiError ? error.message : 'Could not load the results.',
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'Could not load assessment cycles.',
       });
-    }
-  }
-
-  /** Send a package back to its teacher with the reason (demo uses one). */
-  async returnPackage(packageId, reason) {
-    if (this.state.busyId) return;
-    this._setState({ busyId: packageId, errorText: null });
-    try {
-      await this.model.returnPackage(packageId, { reason });
-      await this.load();
-    } catch (error) {
-      this._setState({
-        errorText: error instanceof ApiError ? error.message : 'The package could not be returned.',
-      });
-    } finally {
-      if (this._alive) this._setState({ busyId: null });
-    }
-  }
-
-  /** Admin signs off a submitted (or resubmitted) package — it is Approved and
-      waits for its report batch to be published. Only the admin office does
-      this; teachers only submit. */
-  async approvePackage(packageId, note) {
-    if (this.state.busyId) return;
-    this._setState({ busyId: packageId, errorText: null });
-    try {
-      await this.model.approvePackage(packageId, { note });
-      await this.load();
-    } catch (error) {
-      this._setState({
-        errorText: error instanceof ApiError ? error.message : 'The package could not be approved.',
-      });
-    } finally {
-      if (this._alive) this._setState({ busyId: null });
-    }
-  }
-
-  /** Publish → report cards appear in the Student/Parent apps. */
-  async publishBatch(batchId) {
-    if (this.state.busyId) return;
-    this._setState({ busyId: batchId, errorText: null });
-    try {
-      await this.model.publishBatch(batchId);
-      await this.load();
-    } catch (error) {
-      this._setState({
-        errorText: error instanceof ApiError ? error.message : 'The batch could not be published.',
-      });
-    } finally {
-      if (this._alive) this._setState({ busyId: null });
-    }
-  }
-
-  /** Draft / returned batches: the office re-checks them and sends for review. */
-  async submitBatch(batchId) {
-    if (this.state.busyId) return;
-    this._setState({ busyId: batchId, errorText: null });
-    try {
-      await this.model.submitBatch(batchId);
-      await this.load();
-    } catch (error) {
-      this._setState({
-        errorText:
-          error instanceof ApiError ? error.message : 'The batch could not be sent for review.',
-      });
-    } finally {
-      if (this._alive) this._setState({ busyId: null });
-    }
-  }
-
-  async reopenBatch(batchId) {
-    if (this.state.busyId) return;
-    this._setState({ busyId: batchId, errorText: null });
-    try {
-      await this.model.reopenBatch(batchId);
-      await this.load();
-    } catch (error) {
-      this._setState({
-        errorText: error instanceof ApiError ? error.message : 'The batch could not be reopened.',
-      });
-    } finally {
-      if (this._alive) this._setState({ busyId: null });
     }
   }
 
   onRetry() {
     return this.load();
+  }
+
+  async openCycle(cycle) {
+    if (!cycle?.id) return;
+    this._setState({ busy: true, errorText: null, notice: null });
+    try {
+      const review = await this.model.reviewCycle(cycle.id);
+      this._setState({
+        selectedCycle: cycle,
+        review,
+        selectedSheet: null,
+        busy: false,
+      });
+    } catch (error) {
+      this._setState({
+        busy: false,
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'Could not open this assessment cycle.',
+      });
+    }
+  }
+
+  closeCycle() {
+    this._setState({ selectedCycle: null, review: null, selectedSheet: null, notice: null, errorText: null });
+  }
+
+  selectSheet(sheet) {
+    this._setState({ selectedSheet: sheet, errorText: null, notice: null });
+  }
+
+  async refresh() {
+    if (!this.state.selectedCycle) return this.load();
+    const cycle = this.state.selectedCycle;
+    this._setState({ busy: true, errorText: null });
+    try {
+      const [review, page] = await Promise.all([
+        this.model.reviewCycle(cycle.id),
+        this.model.cycles(),
+      ]);
+      const current = page.items.find((item) => item.id === cycle.id) ?? cycle;
+      this._setState({
+        cycles: page.items.map((item) => ({ ...item, label: cycleLabel(item) })),
+        selectedCycle: current,
+        review,
+        selectedSheet: this.state.selectedSheet
+          ? review.sheets.find((sheet) => sheet.assignmentId === this.state.selectedSheet.assignmentId) ?? null
+          : null,
+        busy: false,
+      });
+    } catch (error) {
+      this._setState({
+        busy: false,
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'Could not refresh the cycle review.',
+      });
+    }
+  }
+
+  async returnSheet(reason) {
+    const cycle = this.state.selectedCycle;
+    const sheet = this.state.selectedSheet;
+    const why = String(reason ?? '').trim();
+    if (!cycle || !sheet || this.state.busy) return false;
+    if (!['PRINCIPAL', 'SCHOOL_OFFICE'].includes(this.role)) {
+      this._setState({ errorText: 'Your role cannot return a subject sheet.' });
+      return false;
+    }
+    if (sheet.state !== 'SUBMITTED') {
+      this._setState({ errorText: 'Only a submitted subject sheet can be returned.' });
+      return false;
+    }
+    if (why.length < 5) {
+      this._setState({ errorText: 'Enter a return reason of at least five characters.' });
+      return false;
+    }
+    if (!Number.isSafeInteger(sheet.version) || sheet.version < 1) {
+      this._setState({ errorText: 'The subject-sheet version is missing. Refresh the review.' });
+      return false;
+    }
+    this._setState({ busy: true, errorText: null, notice: null });
+    try {
+      await this.model.returnSheet(cycle.id, sheet.assignmentId, why, sheet.version);
+      await this.refresh();
+      this._setState({ notice: 'The subject sheet was returned to its assigned teacher.' });
+      return true;
+    } catch (error) {
+      this._setState({
+        busy: false,
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'The subject sheet was not returned.',
+      });
+      return false;
+    }
+  }
+
+  async returnReview(reason) {
+    const cycle = this.state.selectedCycle;
+    const review = this.state.review;
+    const why = String(reason ?? '').trim();
+    if (!cycle || !review || this.state.busy) return false;
+    if (!['PRINCIPAL', 'SCHOOL_OFFICE'].includes(this.role)) {
+      this._setState({ errorText: 'Your role cannot return the class package.' });
+      return false;
+    }
+    if (review.state !== 'REVIEW') {
+      this._setState({ errorText: 'Only a class package submitted for review can be returned.' });
+      return false;
+    }
+    if (why.length < 5 || !Number.isSafeInteger(review.version) || review.version < 1) {
+      this._setState({ errorText: 'Enter a return reason of at least five characters and refresh if the cycle version is missing.' });
+      return false;
+    }
+    this._setState({ busy: true, errorText: null, notice: null });
+    try {
+      await this.model.returnReview(cycle.id, why, review.version);
+      await this.refresh();
+      this._setState({ notice: 'The class package was returned for correction.' });
+      return true;
+    } catch (error) {
+      this._setState({
+        busy: false,
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'The class package was not returned.',
+      });
+      return false;
+    }
+  }
+
+  async publish(fields) {
+    const cycle = this.state.selectedCycle;
+    const review = this.state.review;
+    if (!cycle || !review || this.state.busy) return false;
+    if (this.role !== 'PRINCIPAL') {
+      this._setState({ errorText: 'Only a Principal can publish report cards.' });
+      return false;
+    }
+    if (review.state !== 'REVIEW' || !review.readyToPublish) {
+      this._setState({ errorText: 'The cycle must be submitted for review and report completeness checks must pass before publishing.' });
+      return false;
+    }
+    const remark = String(fields.principalRemark ?? '').trim();
+    if (remark.length < 5) {
+      this._setState({ errorText: 'Enter a Principal remark of at least five characters.' });
+      return false;
+    }
+    if (!Number.isSafeInteger(review.version) || review.version < 1) {
+      this._setState({ errorText: 'The cycle version is missing. Refresh the review.' });
+      return false;
+    }
+    this._setState({ busy: true, errorText: null, notice: null });
+    try {
+      await this.model.publishCycle(cycle.id, {
+        principalRemark: remark,
+        nextResumptionOn: fields.nextResumptionOn,
+      }, review.version);
+      await this.refresh();
+      this._setState({ notice: 'The Principal published the official report snapshots for this assessment cycle.' });
+      return true;
+    } catch (error) {
+      this._setState({
+        busy: false,
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'The report cards were not published.',
+      });
+      return false;
+    }
+  }
+
+  async reopen(fields) {
+    const cycle = this.state.selectedCycle;
+    const review = this.state.review;
+    if (!cycle || !review || this.state.busy) return false;
+    if (this.role !== 'PRINCIPAL') {
+      this._setState({ errorText: 'Only a Principal can reopen published results.' });
+      return false;
+    }
+    const why = String(fields.reason ?? '').trim();
+    if (why.length < 5 || !Number.isSafeInteger(review.version) || review.version < 1) {
+      this._setState({ errorText: 'Enter a correction reason of at least five characters.' });
+      return false;
+    }
+    try {
+      const closesAt = instantOf(fields.closesOn, fields.closesTime);
+      this._setState({ busy: true, errorText: null, notice: null });
+      await this.model.reopenCycle(cycle.id, {
+        assignmentId: this.state.selectedSheet?.assignmentId ?? null,
+        reason: why,
+        closesAt,
+      }, review.version);
+      await this.refresh();
+      this._setState({ notice: 'A reasoned correction window has been opened.' });
+      return true;
+    } catch (error) {
+      this._setState({
+        busy: false,
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'The correction window was not opened.',
+      });
+      return false;
+    }
   }
 }
 
