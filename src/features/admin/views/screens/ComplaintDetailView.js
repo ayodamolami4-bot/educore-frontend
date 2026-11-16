@@ -4,7 +4,7 @@
  * at the bottom. Closing asks twice (confirm alert) per the handoff.
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, StyleSheet } from 'react-native';
 import AdminScaffold from '../components/AdminScaffold';
 import StatusBadge from '../components/StatusBadge';
 import { LoadingView, ErrorState, useActionErrorAlert } from '../components/FeedbackViews';
@@ -38,13 +38,6 @@ export default function ComplaintDetailView({ route, navigation }) {
   }, [presenter, caseId, navigation]);
 
   const c = state.complaint;
-
-  const confirmClose = () => {
-    Alert.alert('Close this case?', 'Closed cases stay in the history but stop counting as open.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Close case', style: 'destructive', onPress: () => presenter.onStateAction('close') },
-    ]);
-  };
 
   // State-machine refusals pop up instead of inline text.
   useActionErrorAlert(state.errorText);
@@ -103,7 +96,7 @@ export default function ComplaintDetailView({ route, navigation }) {
           )}
           {c.status === 'Closed' ? (
             <Text style={styles.closedHint}>
-              This case is closed — replies are blocked. Reopen it below to send a new reply.
+              This case is closed — public replies are blocked.
             </Text>
           ) : (
             <>
@@ -204,7 +197,6 @@ export default function ComplaintDetailView({ route, navigation }) {
           ) : (
             <Text style={styles.closedHint}>This case is closed and remains available as an audit record.</Text>
           )}
-        </View>
         </View>
       ) : null}
     </AdminScaffold>
