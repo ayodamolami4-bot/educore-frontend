@@ -7,11 +7,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import AdminScaffold from '../components/AdminScaffold';
 import RecordList from '../components/RecordList';
-import StatusBadge from '../components/StatusBadge';
 import { LoadingView, EmptyState, ErrorState } from '../components/FeedbackViews';
 import { GuardianProfilePresenter } from '../../presenters/GuardianProfilePresenter';
 import { GuardianModel } from '../../models';
-import { colors, typography, spacing, statusTone } from '../theme';
+import { colors, typography, spacing } from '../theme';
 
 export default function GuardianProfileView({ route, navigation }) {
   const [presenter] = useState(() => new GuardianProfilePresenter(GuardianModel));
@@ -52,7 +51,7 @@ export default function GuardianProfileView({ route, navigation }) {
       eyebrow="People"
       title={g ? g.fullName : 'Guardian profile'}
       subtitle={
-        g ? `${g.relationship} of the linked student${g.childrenCount > 1 ? 's' : ''}` : undefined
+        g ? `${g.childrenCount} linked student record${g.childrenCount === 1 ? '' : 's'}` : undefined
       }
     >
       {state.status === 'loading' ? <LoadingView label="Loading the guardian…" /> : null}
@@ -62,24 +61,16 @@ export default function GuardianProfileView({ route, navigation }) {
 
       {state.status === 'content' && g ? (
         <View>
-          <View style={styles.badgeRow}>
-            <StatusBadge label={g.status} tone={statusTone[g.status] || 'muted'} />
-            <Text style={styles.meta}>
-              {g.status === 'Active'
-                ? 'Uses the Parent app'
-                : 'Invite sent — waiting to be accepted'}
-            </Text>
-          </View>
-
-          <Text style={styles.fact}>{g.phone}</Text>
-          <Text style={styles.fact}>{g.email}</Text>
+          <Text style={styles.meta}>Guardian contact record</Text>
+          <Text style={styles.fact}>{g.phone || 'No phone number recorded'}</Text>
+          <Text style={styles.fact}>{g.email || 'No email address recorded'}</Text>
 
           <Text style={styles.section}>Children linked</Text>
           <RecordList
             items={(g.children || []).map((c) => ({
               id: `${c.studentId}-${c.relationship}`,
               title: c.name,
-              meta: `${c.classLabel} · ${c.relationship}`,
+              meta: [c.relationship, c.linkStatus].filter(Boolean).join(' · '),
             }))}
             onPressItem={(row) => {
               const child = (g.children || []).find(
@@ -96,7 +87,6 @@ export default function GuardianProfileView({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  badgeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.xs },
   meta: { ...typography.label, color: colors.muted },
   fact: { ...typography.body, marginTop: spacing.sm },
   section: { ...typography.sectionTitle, marginTop: spacing.lg, marginBottom: spacing.sm },
