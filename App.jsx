@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
@@ -38,6 +38,10 @@ export default function App() {
   const [services, setServices] = useState(null),
     [error, setError] = useState('');
   const [fontsLoaded, fontError] = useFonts(Ionicons.font);
+  // A web icon-font failure must not block access to the school workspace.
+  // Text labels remain usable even if decorative icon glyphs cannot load.
+  const fontsReady = fontsLoaded || (Platform.OS === 'web' && Boolean(fontError));
+  const blockingFontError = Boolean(fontError) && Platform.OS !== 'web';
   useEffect(() => {
     let mounted = true;
     void createServices()
@@ -57,12 +61,12 @@ export default function App() {
     <SafeAreaProvider>
       <StatusBar style="dark" />
       <AppBoundary>
-        {error || fontError ? (
+        {error || blockingFontError ? (
           <Starting
             error
             message={error || 'App fonts could not be loaded. Restart and try again.'}
           />
-        ) : !services || !fontsLoaded ? (
+        ) : !services || !fontsReady ? (
           <Starting message="Opening your school workspace…" />
         ) : (
           <ServicesProvider services={services}>
