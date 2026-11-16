@@ -44,18 +44,22 @@ export function TE17MessagesScreen() {
 
   useEffect(() => {
     let active = true;
-    setContacts(null);
-    setGuardianId('');
-    if (!selectedStudentId) return () => { active = false; };
-    model.threadContacts(context.schoolId, selectedStudentId)
-      .then((value) => {
+    const load = async () => {
+      await Promise.resolve();
+      if (!active) return;
+      setContacts(null);
+      setGuardianId('');
+      if (!selectedStudentId) return;
+      try {
+        const value = await model.threadContacts(context.schoolId, selectedStudentId);
         if (!active) return;
         setContacts(value);
         setGuardianId(value.guardians[0]?.id ?? '');
-      })
-      .catch((reason) => {
+      } catch (reason) {
         if (active) setError(reason?.message ?? 'This student is not eligible for a family conversation.');
-      });
+      }
+    };
+    void load();
     return () => { active = false; };
   }, [model, context.schoolId, selectedStudentId]);
 
