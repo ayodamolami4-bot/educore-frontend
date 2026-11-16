@@ -1,22 +1,26 @@
 /**
- * AD21 — Set fees and issue bills. List the plans, create a plan for a
- * class, then issue its bills (one invoice per ACTIVE student in the class).
+ * AD21 — Fee plans use immutable issue previews. A plan is created as a
+ * draft; only a Principal can publish it, then a reviewed roster batch is
+ * confirmed to issue the resulting invoices.
  */
 import { ApiError } from '../api/ApiError';
 
 export class FeePlansPresenter {
-  constructor(feePlanModel) {
+  constructor(feePlanModel, role) {
     this.model = feePlanModel;
+    this.role = role ?? '';
     this._render = null;
     this._navigation = null;
     this._alive = false;
     this.initialState = {
-      status: 'loading', // loading | content | error
+      status: 'loading',
       plans: [],
       notice: null,
       errorText: null,
-      busyId: null, // plan currently being issued
-      savingPlan: false, // new-plan form submission
+      busyId: null,
+      savingPlan: false,
+      previewBatch: null,
+      confirmingBatch: false,
     };
     this.state = this.initialState;
   }
@@ -41,11 +45,15 @@ export class FeePlansPresenter {
     if (showLoading !== false) this._setState({ status: 'loading', errorText: null });
     try {
       const page = await this.model.list();
-      this._setState({ status: 'content', plans: page.items, errorText: null });
+      this._setState({
+        status: 'content',
+        plans: page.items,
+        errorText: null,
+      });
     } catch (error) {
       this._setState({
         status: 'error',
-        errorText: error instanceof ApiError ? error.message : 'Could not load the fee plans.',
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'Could not load the fee plans.',
       });
     }
   }
@@ -54,72 +62,137 @@ export class FeePlansPresenter {
     return this.load();
   }
 
-  /**
-   * Create one Draft plan per selected class from the form fields (the View
-   * owns the inputs). Duplicate class+name is refused by the API per class,
-   * so a multi-class create can partly succeed — the notice says what happened.
-   */
   async createPlan(fields) {
-    if (this.state.savingPlan) return;
-    const classes = Array.isArray(fields.classes) ? fields.classes : [];
-    if (classes.length === 0) {
-      this._setState({ notice: null, errorText: 'Pick at least one class for the plan.' });
-      return;
+    if (this.state.savingPlan) return false;
+    const classIds = Array.isArray(fields.classIds) ? [...new Set(fields.classIds.filter(Boolean))] : [];
+    if (!fields.termId) {
+      this._setState({ notice: null, errorText: 'Choose the academic term this fee plan belongs to.' });
+      return false;
     }
-    if (!fields.title || !fields.title.trim()) {
-      this._setState({ notice: null, errorText: 'Name the plan, e.g. First Term tuition.' });
-      return;
+    if (classIds.length === 0) {
+      this._setState({ notice: null, errorText: 'Pick at least one current class.' });
+      return false;
     }
-    if (!fields.amount || fields.amount <= 0) {
-      this._setState({ notice: null, errorText: 'Enter the amount in naira.' });
-      return;
+    if (!String(fields.title ?? '').trim() || String(fields.title).trim().length < 3) {
+      this._setState({ notice: null, errorText: 'Enter a fee-plan name with at least three characters.' });
+      return false;
     }
+    const amountMinor = Number(fields.amountMinor);
+    if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) {
+      this._setState({ notice: null, errorText: 'Enter a valid amount in kobo.' });
+      return false;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(fields.dueOn ?? ''))) {
+      this._setState({ notice: null, errorText: 'Enter the due date in YYYY-MM-DD format.' });
+      return false;
+    }
+
     this._setState({ savingPlan: true, notice: null, errorText: null });
-    const created = [];
-    let lastError = null;
-    for (const classLabel of classes) {
-      try {
-        await this.model.create({ classLabel, title: fields.title, amount: fields.amount });
-        created.push(classLabel);
-      } catch (error) {
-        lastError = error instanceof ApiError ? error.message : 'The plan was not saved.';
-      }
+    try {
+      await this.model.create({
+        termId: fields.termId,
+        name: String(fields.title).trim(),
+        classIds,
+        lines: [{
+          description: String(fields.title).trim(),
+          amountMinor,
+          quantity: 1,
+        }],
+        dueOn: fields.dueOn,
+        partialAllowed: Boolean(fields.partialAllowed),
+      });
+      this._setState({
+        savingPlan: false,
+        notice: 'Draft fee plan created. A Principal must publish it before invoices can be issued.',
+      });
+      await this.load({ showLoading: false });
+      return true;
+    } catch (error) {
+      this._setState({
+        savingPlan: false,
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'The fee plan was not saved.',
+      });
+      return false;
     }
-    if (created.length === 0) {
-      this._setState({ savingPlan: false, notice: null, errorText: lastError });
-      return;
-    }
-    const skipped = classes.length - created.length;
-    this._setState({
-      savingPlan: false,
-      notice:
-        `Draft plan created for ${created.length} class${created.length === 1 ? '' : 'es'}` +
-        (skipped > 0 ? ` — ${skipped} skipped (already had this plan)` : '') +
-        '. Issue it when ready.',
-    });
-    await this.load({ showLoading: false });
   }
 
-  /** Issue the bills for one plan: one invoice per ACTIVE student in the class. */
   async issuePlan(plan) {
-    if (this.state.busyId) return;
-    this._setState({ busyId: plan.id, notice: null, errorText: null });
+    if (this.state.busyId || !plan?.id) return;
+    if (plan.state === 'DRAFT' || plan.status === 'Draft') {
+      if (this.role !== 'PRINCIPAL') {
+        this._setState({ errorText: 'This draft needs publication by a Principal before the issue preview can be prepared.' });
+        return;
+      }
+      this._setState({ busyId: plan.id, notice: null, errorText: null });
+      try {
+        await this.model.publish(plan.id, plan.version);
+      } catch (error) {
+        this._setState({
+          busyId: null,
+          errorText: error instanceof ApiError ? error.message : error?.message ?? 'The fee plan could not be published.',
+        });
+        return;
+      }
+    } else {
+      this._setState({ busyId: plan.id, notice: null, errorText: null });
+    }
+
     try {
-      const result = await this.model.issue(plan.id);
+      const detail = await this.model.byId(plan.id);
+      if (detail.state !== 'PUBLISHED') {
+        throw new Error('The fee plan is not published. Ask a Principal to publish it first.');
+      }
+      const preview = await this.model.issuePreview(plan.id, { classIds: detail.classIds });
       this._setState({
         busyId: null,
-        notice: `Bills issued to ${result.issued} student${
-          result.issued === 1 ? '' : 's'
-        } — see Student invoices.`,
+        previewBatch: {
+          ...preview,
+          issuedCount: (preview.rows ?? []).filter((row) => row.action === 'ISSUE').length,
+          alreadyIssuedCount: (preview.rows ?? []).filter((row) => row.action === 'ALREADY_ISSUED').length,
+          planName: detail.name,
+        },
+        notice: 'Review the exact student roster before confirming invoice creation.',
+        errorText: null,
       });
       await this.load({ showLoading: false });
     } catch (error) {
       this._setState({
         busyId: null,
-        notice: null,
-        errorText: error instanceof ApiError ? error.message : 'The bills were not issued.',
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'The invoice preview could not be prepared.',
       });
     }
+  }
+
+  async confirmPreview() {
+    const batch = this.state.previewBatch;
+    if (!batch?.id || this.state.confirmingBatch) return false;
+    if (!Number.isSafeInteger(batch.version) || batch.version < 1) {
+      this._setState({ errorText: 'The issue preview is missing its version. Refresh the plan and prepare a new preview.' });
+      return false;
+    }
+    this._setState({ confirmingBatch: true, errorText: null, notice: null });
+    try {
+      await this.model.confirmIssue(batch.id, batch.version);
+      const issued = batch.issuedCount ?? 0;
+      this._setState({
+        confirmingBatch: false,
+        previewBatch: null,
+        notice: 'Invoice batch confirmed. ' + issued + ' new invoice' + (issued === 1 ? '' : 's') + ' issued; previously issued students were skipped.',
+      });
+      await this.load({ showLoading: false });
+      return true;
+    } catch (error) {
+      this._setState({
+        confirmingBatch: false,
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'The invoice batch could not be confirmed.',
+      });
+      return false;
+    }
+  }
+
+  clearPreview() {
+    if (this.state.confirmingBatch) return;
+    this._setState({ previewBatch: null, notice: null, errorText: null });
   }
 }
 
