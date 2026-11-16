@@ -48,15 +48,45 @@ export default function StudentHomeScreen({ route }) {
   useActionErrorAlert(state.errorText);
 
   const ov = state.overview;
-  const go = (screen, params) => navigation.navigate(screen, { studentId, ...(params || {}) });
+  const bannerDetails = [ov?.classLabel, ov?.sessionLabel, ov?.termLabel]
+    .filter(Boolean)
+    .join(' · ');
+  const homeDetails = [
+    ov?.classLabel,
+    ov?.formTeacherName ? `Form teacher: ${ov.formTeacherName}` : '',
+  ].filter(Boolean).join(' · ');
+
+  const go = (screen, params = {}) => {
+    const targetParams = { studentId, ...params };
+    const tabs = navigation.getParent();
+
+    if (screen === 'Assignments' || screen === 'AssignmentDetail') {
+      tabs?.navigate('AssignmentsTab', { screen, params: targetParams });
+      return;
+    }
+    if (screen === 'Reports') {
+      tabs?.navigate('ReportsTab', { screen: 'Reports', params: targetParams });
+      return;
+    }
+    if (screen === 'Notices') {
+      tabs?.navigate('NoticesTab', { screen: 'Notices' });
+      return;
+    }
+    if (screen === 'Profile') {
+      tabs?.navigate('ProfileTab', { screen: 'Profile', params: targetParams });
+      return;
+    }
+
+    navigation.navigate(screen, targetParams);
+  };
 
   return (
     <StudentScaffold
       bannerTop={ov ? ov.studentName : 'Loading…'}
-      bannerBottom={ov ? `${ov.classLabel} · ${ov.sessionLabel} · ${ov.termLabel}` : ''}
+      bannerBottom={ov ? bannerDetails : ''}
       eyebrow="Home"
       title={`Welcome, ${ov ? ov.studentName.split(' ')[0] : ''}`}
-      subtitle={ov ? `${ov.classLabel} · form teacher: ${ov.formTeacherName}` : ''}
+      subtitle={ov ? homeDetails : ''}
     >
       {state.status === 'loading' ? <LoadingView label="Loading your home…" /> : null}
       {state.status === 'error' ? (
@@ -92,7 +122,7 @@ export default function StudentHomeScreen({ route }) {
                 <View style={styles.rowMain}>
                   <Text style={styles.rowTitle}>{a.title}</Text>
                   <Text style={styles.rowMeta}>
-                    {a.subject} · due {a.dueAt}
+                    {a.subject} · {a.dueAt ? `due ${a.dueAt}` : 'No due date'}
                   </Text>
                 </View>
                 <Text style={styles.chevron}>›</Text>
