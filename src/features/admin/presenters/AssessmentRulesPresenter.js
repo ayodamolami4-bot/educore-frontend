@@ -1,20 +1,34 @@
 /**
- * AD18 — Set exams and grading rules. One active policy per term: the CA vs
- * exam split, the pass mark, and the score each grade starts at. The server
- * checks the arithmetic; lock freezes the policy for the term.
+ * AD18 — The grading policy is adopted by the backend and is not editable.
+ * The Principal approves that frozen policy on each assessment cycle and
+ * opens the cycle's mark-entry window with an audited reason.
  */
 import { ApiError } from '../api/ApiError';
-import { gradingArithmeticError } from '../utils/validators';
+
+function instantOf(date, time) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date ?? '')) ||
+      !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(String(time ?? ''))) {
+    throw new Error('Use a date in YYYY-MM-DD and a time in 24-hour HH:MM format.');
+  }
+  const value = new Date(date + 'T' + time + ':00+01:00');
+  if (Number.isNaN(value.getTime())) throw new Error('The mark-entry date or time is invalid.');
+  return value.toISOString();
+}
 
 export class AssessmentRulesPresenter {
-  constructor(assessmentModel) {
+  constructor(assessmentModel, role = '') {
     this.model = assessmentModel;
+    this.role = role;
     this._render = null;
     this._navigation = null;
     this._alive = false;
     this.initialState = {
-      status: 'loading', // loading | content | error
+      status: 'loading',
       policy: null,
+      configuration: '',
+      approvalGuidance: '',
+      cycles: [],
+      selectedCycle: null,
       notice: null,
       errorText: null,
       saving: false,
@@ -41,12 +55,27 @@ export class AssessmentRulesPresenter {
   async load() {
     this._setState({ status: 'loading', errorText: null });
     try {
-      const page = await this.model.policies();
-      this._setState({ status: 'content', policy: page.items[0] || null });
+      const [policyResponse, cycleResponse] = await Promise.all([
+        this.model.policies(),
+        this.model.cycles(),
+      ]);
+      const cycles = Array.isArray(cycleResponse?.items) ? cycleResponse.items : [];
+      const selectedCycle = this.state.selectedCycle
+        ? cycles.find((item) => item.id === this.state.selectedCycle.id) ?? null
+        : null;
+      this._setState({
+        status: 'content',
+        policy: policyResponse.policy ?? null,
+        configuration: policyResponse.configuration ?? '',
+        approvalGuidance: policyResponse.approval ?? '',
+        cycles,
+        selectedCycle,
+        errorText: null,
+      });
     } catch (error) {
       this._setState({
         status: 'error',
-        errorText: error instanceof ApiError ? error.message : 'Could not load the grading rules.',
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'Could not load the adopted grading policy and assessment cycles.',
       });
     }
   }
@@ -55,91 +84,90 @@ export class AssessmentRulesPresenter {
     return this.load();
   }
 
-  /**
-   * Save the policy. The POST acts as an update while the policy is unlocked
-   * — the server validates the arithmetic (weights sum to 100, grade bands
-   * descend) and answers with a clear error otherwise.
-   */
-  async save(fields) {
-    const policy = this.state.policy;
-    if (!policy || this.state.saving) return;
-    this._setState({ saving: true, notice: null, errorText: null });
+  selectCycle(cycle) {
+    this._setState({ selectedCycle: cycle, notice: null, errorText: null });
+  }
+
+  async approvePolicy(reason) {
+    const cycle = this.state.selectedCycle;
+    if (this.role !== 'PRINCIPAL') {
+      this._setState({ errorText: 'Only a Principal can approve the adopted grading policy for an assessment cycle.' });
+      return false;
+    }
+    if (!cycle || cycle.state !== 'DRAFT' || cycle.policyApprovedAt) {
+      this._setState({ errorText: 'Only a draft cycle with an unapproved policy can be approved.' });
+      return false;
+    }
+    const why = String(reason ?? '').trim();
+    if (why.length < 5) {
+      this._setState({ errorText: 'Enter an approval reason of at least five characters.' });
+      return false;
+    }
+    const policyVersion = Number(this.state.policy?.version);
+    if (!Number.isSafeInteger(policyVersion) || policyVersion < 1 ||
+        !Number.isSafeInteger(cycle.version) || cycle.version < 1) {
+      this._setState({ errorText: 'The policy or cycle version is missing. Refresh and try again.' });
+      return false;
+    }
+
+    this._setState({ saving: true, errorText: null, notice: null });
     try {
-      const result = await this.model.createPolicy(fields);
-      this._setState({
-        saving: false,
-        policy: result.policy,
-        notice: 'Grading rules saved — every report card now uses them.',
-      });
+      await this.model.approvePolicy(cycle.id, { policyVersion, reason: why }, cycle.version);
+      this._setState({ saving: false, notice: 'The adopted grading policy has been approved for this cycle.' });
+      await this.load();
+      const current = this.state.cycles.find((item) => item.id === cycle.id);
+      if (current) this._setState({ selectedCycle: current });
+      return true;
     } catch (error) {
       this._setState({
         saving: false,
-        notice: null,
-        errorText: error instanceof ApiError ? error.message : 'The rules were not saved.',
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'The policy approval was not saved.',
       });
+      return false;
     }
   }
 
-  /**
-   * Lock for the term. Lock used to send only the policy id, so whatever
-   * was TYPED on screen was silently ignored and a wrong set of numbers
-   * still "locked" (with the old saved values). Now the on-screen values
-   * run the SAME arithmetic check as save first: a wrong policy is refused
-   * with its reason and nothing is locked, a changed-but-valid policy is
-   * saved and then locked in one press.
-   */
-  async lock(fields) {
-    const policy = this.state.policy;
-    if (!policy || this.state.saving) return;
-    const candidate = {
-      caWeight: fields && fields.caWeight !== undefined ? fields.caWeight : policy.caWeight,
-      examWeight: fields && fields.examWeight !== undefined ? fields.examWeight : policy.examWeight,
-      passMark: fields && fields.passMark !== undefined ? fields.passMark : policy.passMark,
-      grades: fields && fields.grades !== undefined ? fields.grades : policy.grades,
-    };
-    const problem = gradingArithmeticError(candidate);
-    if (problem) {
-      // Keep the typed values on screen so the admin can fix exactly the
-      // number the message names. The saved policy stays unlocked.
-      this._setState({ errorText: `${problem} Fix the rules before locking.` });
-      return;
+  async openCycle(fields) {
+    const cycle = this.state.selectedCycle;
+    if (this.role !== 'PRINCIPAL') {
+      this._setState({ errorText: 'Only a Principal can open an assessment cycle.' });
+      return false;
     }
-    this._setState({ saving: true, notice: null, errorText: null });
-    try {
-      await this.model.createPolicy(candidate); // persists any edits made since the last save
-      const result = await this.model.lockPolicy(policy.id);
-      this._setState({
-        saving: false,
-        policy: result.policy,
-        notice: 'Grading rules locked — nothing can change while marks are being entered.',
-      });
-    } catch (error) {
-      this._setState({
-        saving: false,
-        notice: null,
-        errorText: error instanceof ApiError ? error.message : 'The rules were not locked.',
-      });
+    if (!cycle || !['DRAFT', 'OPEN'].includes(cycle.state)) {
+      this._setState({ errorText: 'Only a draft or open cycle can be updated. Published cycles require the correction workflow.' });
+      return false;
     }
-  }
+    if (!Number.isSafeInteger(cycle.version) || cycle.version < 1) {
+      this._setState({ errorText: 'The cycle version is missing. Refresh before opening the window.' });
+      return false;
+    }
 
-  /** The admin can unlock again — the change lands in the audit trail. */
-  async unlock() {
-    const policy = this.state.policy;
-    if (!policy || this.state.saving) return;
-    this._setState({ saving: true, notice: null, errorText: null });
+    const why = String(fields.reason ?? '').trim();
+    if (why.length < 5) {
+      this._setState({ errorText: 'Enter a reason of at least five characters.' });
+      return false;
+    }
+
     try {
-      const result = await this.model.unlockPolicy(policy.id);
-      this._setState({
-        saving: false,
-        policy: result.policy,
-        notice: 'Grading rules unlocked — edit them, then lock again before marks entry.',
-      });
+      const opensAt = instantOf(fields.opensOn, fields.opensTime);
+      const closesAt = instantOf(fields.closesOn, fields.closesTime);
+      if (new Date(closesAt) <= new Date(opensAt)) {
+        this._setState({ errorText: 'The closing time must be later than the opening time.' });
+        return false;
+      }
+      this._setState({ saving: true, errorText: null, notice: null });
+      await this.model.openCycle(cycle.id, { opensAt, closesAt, reason: why }, cycle.version);
+      this._setState({ saving: false, notice: 'The mark-entry window is open. The policy approval is recorded on the cycle.' });
+      await this.load();
+      const current = this.state.cycles.find((item) => item.id === cycle.id);
+      if (current) this._setState({ selectedCycle: current });
+      return true;
     } catch (error) {
       this._setState({
         saving: false,
-        notice: null,
-        errorText: error instanceof ApiError ? error.message : 'The rules were not unlocked.',
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'The assessment cycle could not be opened.',
       });
+      return false;
     }
   }
 }
