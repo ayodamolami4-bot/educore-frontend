@@ -13,7 +13,7 @@ import { PrimaryButton, SecondaryButton } from './AdminHomeView';
 import { FeePlansPresenter } from '../../presenters/FeePlansPresenter';
 import { FeePlanModel, CalendarModel } from '../../models';
 import useFeeClassOptions from '../components/useFeeClassOptions';
-import { getActiveContext } from '../../api/client';
+import { api, getActiveContext } from '../../api/client';
 import { colors, typography, spacing } from '../theme';
 
 export default function FeePlansView({ navigation }) {
@@ -33,32 +33,45 @@ export default function FeePlansView({ navigation }) {
   const [formDueOn, setFormDueOn] = useState('');
   const [partialAllowed, setPartialAllowed] = useState(false);
 
-  const loadTerms = () => {
-    CalendarModel.snapshot()
-      .then((snapshot) => {
-        const sessionById = new Map((snapshot.sessions ?? []).map((s) => [s.id, s.name]));
-        const available = (snapshot.terms ?? []).map((term) => ({
+  const loadTerms = async () => {
+    try {
+      const [metadata, sessionsPayload] = await Promise.all([
+        api.get('metadata'),
+        CalendarModel.sessions(),
+      ]);
+      const sessions = Array.isArray(sessionsPayload?.items)
+        ? sessionsPayload.items
+        : Array.isArray(sessionsPayload) ? sessionsPayload : [];
+      const pages = await Promise.all(
+        sessions.map((session) => CalendarModel.terms(session.id))
+      );
+      const sessionById = new Map(sessions.map((session) => [session.id, session.name]));
+      const available = pages.flatMap((page, index) => {
+        const items = Array.isArray(page?.items) ? page.items : Array.isArray(page) ? page : [];
+        return items.map((term) => ({
           ...term,
-          optionLabel: (sessionById.get(term.sessionId) ?? 'School session') + ' · Term ' + term.number,
+          optionLabel: (sessionById.get(sessions[index].id) ?? 'School session') + ' · Term ' + term.number,
         }));
-        setTerms(available);
-        setTermsError('');
-        if (!pickedTermId) {
-          const active = available.find((term) => term.sessionId === snapshot.activeSessionId) ?? available[0];
-          setPickedTermId(active?.id ?? '');
-        }
-      })
-      .catch((reason) => setTermsError(reason?.message ?? 'Could not load academic terms.'));
+      });
+      setTerms(available);
+      setTermsError('');
+      if (!pickedTermId) {
+        const active = available.find((term) => term.sessionId === metadata.activeSessionId) ?? available[0];
+        setPickedTermId(active?.id ?? '');
+      }
+    } catch (reason) {
+      setTermsError(reason?.message ?? 'Could not load academic terms.');
+    }
   };
 
   useEffect(() => {
     presenter.attach(setState, navigation);
     presenter.load();
-    loadTerms();
+    void loadTerms();
     const unsubscribe = navigation.addListener('focus', () => {
       if (loadedOnce.current) {
         presenter.load({ showLoading: false });
-        loadTerms();
+        void loadTerms();
       }
       loadedOnce.current = true;
     });
