@@ -72,11 +72,11 @@ export default function ReportsScreen({ route }) {
             {report.termLabel} · {report.classLabel}
           </Text>
           <Text style={styles.meta}>Average: {report.average}%</Text>
-          <Text style={styles.meta}>Class teacher's remark</Text>
+          <Text style={styles.meta}>Class teacher&apos;s remark</Text>
           <Text style={styles.remark}>{report.overallRemark || 'No class teacher remark recorded.'}</Text>
           {report.principalRemark ? (
             <View>
-              <Text style={styles.meta}>Principal's remark</Text>
+              <Text style={styles.meta}>Principal&apos;s remark</Text>
               <Text style={styles.remark}>{report.principalRemark}</Text>
             </View>
           ) : null}
