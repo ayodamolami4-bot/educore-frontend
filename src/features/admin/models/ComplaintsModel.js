@@ -25,8 +25,48 @@ const entryView = (entry) => ({
 });
 
 export const ComplaintsModel = {
-  async list(query) {
-    return normalizePage(await api.get(endpoints.complaints.list, null, query));
+  async list(filters = {}) {
+    const items = [];
+    let cursor;
+    let response;
+    do {
+      response = await api.get(endpoints.complaints.list, null, {
+        cursor,
+        limit: 100,
+      });
+      const page = normalizePage(response);
+      items.push(...page.items);
+      cursor = response?.hasMore
+        ? (response.nextCursor ?? page.items.at(-1)?.id ?? null)
+        : null;
+    } while (cursor);
+
+    const statusFilter = String(filters.status ?? 'all').toLowerCase();
+    const search = String(filters.q ?? filters.search ?? '').trim().toLowerCase();
+    const mapped = items.map((item) => ({
+      ...item,
+      status: statusLabel(item.state),
+      guardianName: 'Linked guardian',
+      studentName: item.studentId ? 'Student record' : 'No student linked',
+      classLabel: '',
+      channel: item.intakeChannel ?? '',
+      openedAt: item.createdAt ?? '',
+      owner: item.ownerId ? 'Assigned' : 'Unassigned',
+      subject: item.subject ?? item.category ?? 'School case',
+    }));
+    const filtered = mapped.filter((item) => {
+      const matchesStatus = statusFilter === 'all' || item.status.toLowerCase() === statusFilter;
+      const haystack = [
+        item.subject,
+        item.category,
+        item.studentName,
+        item.studentId,
+        item.channel,
+        item.status,
+      ].join(' ').toLowerCase();
+      return matchesStatus && (!search || haystack.includes(search));
+    });
+    return { items: filtered, total: filtered.length, pages: 1 };
   },
 
   async create(body) {
@@ -54,7 +94,7 @@ export const ComplaintsModel = {
     return {
       ...raw,
       status: statusLabel(raw.state),
-      owner: raw.ownerId ?? 'Unassigned',
+      owner: raw.ownerId ? 'Assigned' : 'Unassigned',
       guardianName: 'Linked guardian',
       openedAt: publicEntries[0]?.at ?? '',
       channel: raw.intakeChannel ?? '',
