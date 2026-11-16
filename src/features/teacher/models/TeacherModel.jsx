@@ -1186,13 +1186,6 @@ export class TeacherModel {
     );
   }
 
-  reviewDraft(schoolId, assignmentId, studentId) {
-    return this.get(
-      schoolId,
-      `/assignments/${encodeURIComponent(assignmentId)}/submissions/${encodeURIComponent(studentId)}/review-draft`
-    );
-  }
-
   saveReviewDraft(schoolId, assignmentId, studentId, body, version) {
     return this.command(
       schoolId,
