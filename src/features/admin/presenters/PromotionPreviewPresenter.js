@@ -48,6 +48,7 @@ export function previewView(raw, classes, sessions) {
 
   return {
     ...raw,
+    computedAt: raw.createdAt ?? raw.computedAt ?? '',
     classLabel: classLabelOf(sourceClass),
     sessionLabel: sourceSession.name ?? 'Academic session',
     sourceLevel: raw.sourceLevel ?? sourceClass.level ?? '',
