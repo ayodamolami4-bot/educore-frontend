@@ -34,6 +34,7 @@ export default function FeePlansView({ navigation }) {
   const [partialAllowed, setPartialAllowed] = useState(false);
 
   const loadTerms = async () => {
+    await Promise.resolve();
     try {
       const [metadata, sessionsPayload] = await Promise.all([
         api.get('metadata'),
