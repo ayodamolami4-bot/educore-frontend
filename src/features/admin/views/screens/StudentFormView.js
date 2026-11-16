@@ -3,11 +3,12 @@
  * Uses backend-issued class IDs and school metadata; no fallback demo classes.
  */
 import React, { useEffect, useState } from 'react';
+import * as Clipboard from 'expo-clipboard';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import AdminScaffold from '../components/AdminScaffold';
 import SelectSheet from '../components/SelectSheet';
 import LabelledField from '../components/LabelledField';
-import { PrimaryButton } from './AdminHomeView';
+import { PrimaryButton, SecondaryButton } from './AdminHomeView';
 import { ErrorState, LoadingView, useActionErrorAlert } from '../components/FeedbackViews';
 import { StudentFormPresenter } from '../../presenters/StudentFormPresenter';
 import { StudentModel } from '../../models';
@@ -32,6 +33,7 @@ export default function StudentFormView({ route, navigation }) {
   const [presenter] = useState(() => new StudentFormPresenter(StudentModel));
   const [state, setState] = useState(presenter.initialState);
   const [sheet, setSheet] = useState(null);
+  const [copyNotice, setCopyNotice] = useState('');
 
   useEffect(() => {
     presenter.attach(setState, navigation);
@@ -51,6 +53,27 @@ export default function StudentFormView({ route, navigation }) {
 
   useActionErrorAlert(state.errorText, 'Student record not saved');
 
+  const copyAccessDetails = async (label, credential) => {
+    if (!credential?.loginId || !credential?.activationCode) return;
+    const content = [
+      `EduCore ${label} access`,
+      `Login ID: ${credential.loginId}`,
+      `One-time activation code: ${credential.activationCode}`,
+      'Activate the account and create a personal password before signing in.',
+    ].join('\n');
+    try {
+      await Clipboard.setStringAsync(content);
+      setCopyNotice(`${label} access details copied.`);
+    } catch {
+      setCopyNotice('Copy was unavailable. Select the login ID and activation code to copy them manually.');
+    }
+  };
+
+  const registeredStudentName = state.createdRecord?.fullName ||
+    [v.firstName, v.lastName].filter(Boolean).join(' ');
+  const registeredParentName = state.createdRecord?.guardian?.fullName ||
+    state.createdRecord?.guardians?.[0]?.fullName || v.guardianName;
+
   return (
     <AdminScaffold
       eyebrow="Students"
@@ -64,7 +87,7 @@ export default function StudentFormView({ route, navigation }) {
         <ErrorState message={state.errorText} onRetry={() => presenter.load(route.params?.studentId)} />
       ) : null}
 
-      {['ready', 'saving', 'accepted', 'failed'].includes(state.status) ? (
+      {['ready', 'saving', 'failed'].includes(state.status) ? (
         <>
           <Text style={styles.section}>Student</Text>
           <View style={styles.row}>
@@ -276,6 +299,51 @@ export default function StudentFormView({ route, navigation }) {
         </>
       ) : null}
 
+      {isAccepted ? (
+        <View style={styles.credentialsPanel}>
+          <Text style={styles.section}>Registration complete</Text>
+          <Text style={styles.notice}>
+            {state.notice || 'The student record has been saved.'}
+          </Text>
+          {state.credentialStatus === 'issuing' ? (
+            <Text style={styles.hint}>Creating the student and parent access slips…</Text>
+          ) : null}
+          {state.credentialError ? (
+            <Text style={styles.credentialError}>{state.credentialError}</Text>
+          ) : null}
+
+          {state.credentials?.student ? (
+            <AccessCredentialCard
+              title="Student account"
+              personName={registeredStudentName}
+              credential={state.credentials.student}
+              onCopy={() => copyAccessDetails('Student', state.credentials.student)}
+            />
+          ) : null}
+          {state.credentials?.parent ? (
+            <AccessCredentialCard
+              title="Parent / guardian account"
+              personName={registeredParentName}
+              credential={state.credentials.parent}
+              onCopy={() => copyAccessDetails('Parent', state.credentials.parent)}
+            />
+          ) : null}
+
+          {state.credentialStatus === 'ready' ? (
+            <Text style={styles.hint}>
+              Both access slips are ready. Activate each account with its login ID and one-time code, then create a separate password.
+            </Text>
+          ) : null}
+          {state.credentialStatus === 'failed' ? (
+            <PrimaryButton
+              label="Retry missing access slip"
+              onPress={() => presenter.onRetryCredentials()}
+            />
+          ) : null}
+          {copyNotice ? <Text style={styles.notice}>{copyNotice}</Text> : null}
+        </View>
+      ) : null}
+
       <SelectSheet
         visible={sheet === 'gender'}
         label="Recorded sex"
@@ -312,12 +380,50 @@ export default function StudentFormView({ route, navigation }) {
   );
 }
 
+function AccessCredentialCard({ title, personName, credential, onCopy }) {
+  return (
+    <View style={styles.credentialCard}>
+      <Text style={styles.credentialTitle}>{title}</Text>
+      {personName ? <Text style={styles.credentialPerson}>{personName}</Text> : null}
+      <Text style={styles.credentialLabel}>Login ID</Text>
+      <Text selectable style={styles.credentialValue}>{credential.loginId}</Text>
+      <Text style={styles.credentialLabel}>One-time activation code</Text>
+      <Text selectable style={styles.credentialValue}>{credential.activationCode}</Text>
+      <Text style={styles.credentialHint}>
+        This code activates the account; it is not the account password.
+      </Text>
+      <SecondaryButton label="Copy access details" onPress={onCopy} />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: spacing.sm },
   half: { flex: 1 },
   section: { ...typography.sectionTitle, marginTop: spacing.md, marginBottom: spacing.sm },
   hint: { ...typography.label, color: colors.muted, marginTop: spacing.md, marginBottom: spacing.sm },
   notice: { ...typography.label, color: colors.muted, marginTop: spacing.sm, textAlign: 'center' },
+  credentialsPanel: { marginTop: spacing.md, gap: spacing.sm },
+  credentialCard: {
+    backgroundColor: colors.white,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: spacing.md,
+    marginTop: spacing.sm,
+    gap: spacing.xs,
+  },
+  credentialTitle: { ...typography.sectionTitle, color: colors.primary },
+  credentialPerson: { ...typography.body, fontWeight: '600' },
+  credentialLabel: { ...typography.label, color: colors.muted, marginTop: spacing.xs },
+  credentialValue: {
+    ...typography.body,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    paddingVertical: spacing.xs,
+  },
+  credentialHint: { ...typography.label, color: colors.muted, marginBottom: spacing.xs },
+  credentialError: { ...typography.label, color: '#a33a2a', marginVertical: spacing.sm },
   choiceGroup: { marginTop: spacing.xs },
   guardianMatches: {
     backgroundColor: colors.white,

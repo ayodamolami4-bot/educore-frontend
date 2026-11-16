@@ -159,6 +159,33 @@ export const StudentModel = {
     return api.post('students', null, body);
   },
 
+  // Returns the one-time school-issued access slip. The activation code is
+  // deliberately kept only in the immediate registration response/UI state.
+  async issueActivationSlip(type, subjectId) {
+    const accountType = String(type ?? '').toUpperCase();
+    if (!['STUDENT', 'GUARDIAN'].includes(accountType) || !subjectId) {
+      throw new Error('A valid student or guardian record is required to issue access.');
+    }
+    const slip = await api.post(
+      'onboarding/{type}/{subjectId}/activation-slips',
+      { type: accountType, subjectId },
+      {},
+    );
+    if (
+      typeof slip?.loginId !== 'string' ||
+      !slip.loginId ||
+      typeof slip?.activationCode !== 'string' ||
+      !slip.activationCode
+    ) {
+      throw new Error('The school server did not return a complete activation slip.');
+    }
+    return {
+      loginId: slip.loginId,
+      activationCode: slip.activationCode,
+      expiresAt: slip.expiresAt ?? null,
+    };
+  },
+
   async retryProvisioning(subjectId) {
     return api.post('provisioning/STUDENT/{subjectId}/retry', { subjectId });
   },
