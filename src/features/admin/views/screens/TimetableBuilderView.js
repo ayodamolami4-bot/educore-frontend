@@ -7,7 +7,7 @@ import { View, Text, TextInput, Alert, StyleSheet } from 'react-native';
 import AdminScaffold from '../components/AdminScaffold';
 import RecordList from '../components/RecordList';
 import SelectSheet from '../components/SelectSheet';
-import { LoadingView, ErrorState, Notice, EmptyState } from '../components/FeedbackViews';
+import { LoadingView, ErrorState, Notice } from '../components/FeedbackViews';
 import { PrimaryButton, SecondaryButton } from './AdminHomeView';
 import { TimetableBuilderPresenter } from '../../presenters/TimetableBuilderPresenter';
 import { TimetableModel, AcademicStructureModel, CalendarModel } from '../../models';
