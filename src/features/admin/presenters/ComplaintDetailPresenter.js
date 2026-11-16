@@ -1,7 +1,7 @@
 /**
- * AD32 — One complaint. Shows the case, its replies to the guardian and the
- * internal notes, and the state-machine buttons (start review, resolve,
- * close). Every action posts through the Model and reloads the case.
+ * AD32 — One complaint. Public replies and private office notes are entries
+ * in the same backend record, with role-safe visibility. Every mutation uses
+ * the complaint version and reloads the accepted record.
  */
 import { ApiError } from '../api/ApiError';
 
@@ -12,12 +12,12 @@ export class ComplaintDetailPresenter {
     this._alive = false;
     this._caseId = null;
     this.initialState = {
-      status: 'loading', // loading | content | error
+      status: 'loading',
       complaint: null,
       replies: [],
       notes: [],
       errorText: null,
-      saving: null, // which action is mid-flight
+      saving: null,
     };
     this.state = this.initialState;
   }
@@ -42,22 +42,21 @@ export class ComplaintDetailPresenter {
     this._caseId = caseId;
     this._setState({ status: 'loading', errorText: null });
     try {
-      const [complaint, replies, notes] = await Promise.all([
-        this.model.byId(caseId),
-        this.model.replies(caseId),
-        this.model.internalNotes(caseId),
-      ]);
+      const complaint = await this.model.byId(caseId);
       this._setState({
         status: 'content',
         complaint,
-        replies: (replies && replies.items) || [],
-        notes: (notes && notes.items) || [],
+        replies: complaint.replies ?? [],
+        notes: complaint.notes ?? [],
+        errorText: null,
       });
+      return complaint;
     } catch (error) {
       this._setState({
         status: 'error',
-        errorText: error instanceof ApiError ? error.message : 'Could not load this complaint.',
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'Could not load this complaint.',
       });
+      return null;
     }
   }
 
@@ -65,51 +64,77 @@ export class ComplaintDetailPresenter {
     return this.load(this._caseId);
   }
 
-  /** Reply goes to the guardian (Parent app inbox). */
   async onReply(text) {
-    const trimmed = String(text || '').trim();
-    if (!trimmed || this.state.saving) return;
+    const trimmed = String(text ?? '').trim();
+    const complaint = this.state.complaint;
+    if (!trimmed || this.state.saving || !complaint) return false;
+    if (['Resolved', 'Closed'].includes(complaint.status)) {
+      this._setState({ errorText: 'A resolved or closed case cannot receive a public reply. Request a review through the permitted case workflow.' });
+      return false;
+    }
     this._setState({ saving: 'reply', errorText: null });
     try {
-      await this.model.addReply(this._caseId, { text: trimmed });
-      const replies = await this.model.replies(this._caseId);
-      this._setState({ saving: null, replies: (replies && replies.items) || [] });
+      await this.model.addReply(this._caseId, { body: trimmed }, complaint.version);
+      await this.load(this._caseId);
+      return true;
     } catch (error) {
       this._setState({
         saving: null,
-        errorText: error instanceof ApiError ? error.message : 'The reply could not be sent.',
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'The reply could not be sent.',
       });
+      return false;
+    } finally {
+      if (this._alive) this._setState({ saving: null });
     }
   }
 
-  /** Internal notes stay inside the office — guardians never see them. */
   async onAddNote(text) {
-    const trimmed = String(text || '').trim();
-    if (!trimmed || this.state.saving) return;
+    const trimmed = String(text ?? '').trim();
+    const complaint = this.state.complaint;
+    if (!trimmed || this.state.saving || !complaint) return false;
     this._setState({ saving: 'note', errorText: null });
     try {
-      await this.model.addInternalNote(this._caseId, { text: trimmed });
-      const notes = await this.model.internalNotes(this._caseId);
-      this._setState({ saving: null, notes: (notes && notes.items) || [] });
+      await this.model.addInternalNote(this._caseId, { body: trimmed }, complaint.version);
+      await this.load(this._caseId);
+      return true;
     } catch (error) {
       this._setState({
         saving: null,
-        errorText: error instanceof ApiError ? error.message : 'The note could not be saved.',
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'The note could not be saved.',
       });
+      return false;
+    } finally {
+      if (this._alive) this._setState({ saving: null });
     }
   }
 
-  /** State machine moves — the backend validates the transitions. */
-  async onStateAction(action) {
-    if (this.state.saving) return;
+  async onStateAction(action, reason) {
+    const complaint = this.state.complaint;
+    if (this.state.saving || !complaint) return false;
+    const trimmed = String(reason ?? '').trim();
+    if (trimmed.length < 5) {
+      this._setState({ errorText: 'Enter a reason of at least five characters for the case history.' });
+      return false;
+    }
+    if (action === 'close' && complaint.status !== 'Resolved') {
+      this._setState({ errorText: 'Resolve the case before closing it.' });
+      return false;
+    }
+    if (complaint.status === 'Closed') {
+      this._setState({ errorText: 'Closed cases cannot be reopened or changed.' });
+      return false;
+    }
+
     this._setState({ saving: action, errorText: null });
     try {
-      await this.model.stateAction(this._caseId, { action });
+      await this.model.stateAction(this._caseId, { action, reason: trimmed }, complaint.version);
       await this.load(this._caseId);
+      return true;
     } catch (error) {
       this._setState({
-        errorText: error instanceof ApiError ? error.message : 'The case could not be updated.',
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'The case could not be updated.',
       });
+      return false;
     } finally {
       if (this._alive) this._setState({ saving: null });
     }
