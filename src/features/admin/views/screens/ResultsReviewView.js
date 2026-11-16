@@ -6,7 +6,7 @@ import React, { useEffect, useState } from 'react';
 import { Text, TextInput, View, StyleSheet } from 'react-native';
 import AdminScaffold from '../components/AdminScaffold';
 import RecordList from '../components/RecordList';
-import { LoadingView, ErrorState, EmptyState, Notice } from '../components/FeedbackViews';
+import { LoadingView, ErrorState, Notice } from '../components/FeedbackViews';
 import { PrimaryButton, SecondaryButton } from './AdminHomeView';
 import { ResultsReviewPresenter } from '../../presenters/ResultsReviewPresenter';
 import { ResultsModel } from '../../models';
@@ -211,7 +211,7 @@ export default function ResultsReviewView({ navigation }) {
             <View style={styles.actionCard}>
               <Text style={styles.section}>Publish official report cards</Text>
               <Text style={styles.hint}>
-                The backend publishes immutable report snapshots for the cycle's active students. It will reject this action unless all sheets, marks and class remarks are complete.
+                The backend publishes immutable report snapshots for the cycle&apos;s active students. It will reject this action unless all sheets, marks and class remarks are complete.
               </Text>
               <TextInput
                 style={styles.input}
