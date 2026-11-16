@@ -3,7 +3,7 @@
  * filter chips; every row opens the guardian's profile. Re-fetches on focus.
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { View, TextInput, StyleSheet } from 'react-native';
 import AdminScaffold from '../components/AdminScaffold';
 import RecordList from '../components/RecordList';
 import { LoadingView, ErrorState } from '../components/FeedbackViews';
