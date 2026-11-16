@@ -49,7 +49,9 @@ export default function AdminSettingsView({ navigation }) {
   const [roleSheet, setRoleSheet] = useState(false);
   const [memberRole, setMemberRole] = useState(null);
   const [roleEditSheet, setRoleEditSheet] = useState(false);
-  const canManageAdministrators = String(getActiveContext().role ?? '').toUpperCase() === 'PRINCIPAL';
+  const activeRole = String(getActiveContext().role ?? '').toUpperCase();
+  const canManageAdministrators = activeRole === 'PRINCIPAL';
+  const canViewStaffDirectory = ['PRINCIPAL', 'SCHOOL_OFFICE'].includes(activeRole);
 
   useEffect(() => {
     presenter.attach(setState, navigation);
@@ -216,21 +218,25 @@ export default function AdminSettingsView({ navigation }) {
             <Text style={styles.infoHint}>Only the Principal can change school settings.</Text>
           )}
 
-          <Text style={styles.section}>Administrator access</Text>
-          <Text style={styles.body}>
-            The directory shows school administrator accounts only. Subject teachers remain in the Teacher directory.
-          </Text>
-          <RecordList
-            items={state.memberships.map((membership) => ({
-              id: membership.id,
-              title: membership.fullName,
-              meta: `${roleLabel(membership.role)} · Staff no. ${membership.staffNumber ?? 'pending'} · Account: ${membership.accessStatus}`,
-              status: membership.active ? 'Active' : 'Suspended',
-              raw: membership,
-            }))}
-            onPressItem={(row) => onMemberPress(row.raw)}
-            emptyText="No administrator records are available."
-          />
+          {canViewStaffDirectory ? (
+            <>
+              <Text style={styles.section}>Administrator access</Text>
+              <Text style={styles.body}>
+                The directory shows school administrator accounts only. Subject teachers remain in the Teacher directory.
+              </Text>
+              <RecordList
+                items={state.memberships.map((membership) => ({
+                  id: membership.id,
+                  title: membership.fullName,
+                  meta: `${roleLabel(membership.role)} · Staff no. ${membership.staffNumber ?? 'pending'} · Account: ${membership.accessStatus}`,
+                  status: membership.active ? 'Active' : 'Suspended',
+                  raw: membership,
+                }))}
+                onPressItem={(row) => onMemberPress(row.raw)}
+                emptyText="No administrator records are available."
+              />
+            </>
+          ) : null}
 
           {canManageAdministrators ? (
             <>
