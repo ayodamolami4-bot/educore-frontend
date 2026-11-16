@@ -15,12 +15,21 @@ export function TE01HomeScreen() {
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
-    setError('');
-    void model.dashboard(context.schoolId)
-      .then((d) => { if (active) setData(d); })
-      .catch((reason) => { if (active) setError(reason?.message ?? 'Could not load your teacher workspace.'); })
-      .finally(() => { if (active) setLoading(false); });
+    const load = async () => {
+      await Promise.resolve();
+      if (!active) return;
+      setLoading(true);
+      setError('');
+      try {
+        const dashboard = await model.dashboard(context.schoolId);
+        if (active) setData(dashboard);
+      } catch (reason) {
+        if (active) setError(reason?.message ?? 'Could not load your teacher workspace.');
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    void load();
     return () => { active = false; };
   }, [model, context.schoolId]);
 
