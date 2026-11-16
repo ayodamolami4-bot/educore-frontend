@@ -56,8 +56,8 @@ export const endpoints = {
   auditTrail: 'activity/{domain}',
 
   settings: {
-    get: 'metadata',
-    update: 'metadata',
+    get: 'settings',
+    update: 'settings',
     adminMemberships: 'staff',
     adminMembershipById: 'staff/{staffId}/access',
     adminInvitations: 'onboarding/{type}/{subjectId}/invitations',
