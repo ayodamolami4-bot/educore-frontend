@@ -3,7 +3,7 @@
  * JSON is previewed in-app; CSV/PDF are generated server-side from the same
  * query and saved/shared from the device.
  */
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
@@ -52,6 +52,8 @@ const SELECT_FILTERS = new Set([
 export default function ReportsView({ navigation }) {
   const [presenter] = useState(() => new ReportsPresenter(ReportsModel));
   const [state, setState] = useState(presenter.initialState);
+  const statusRef = useRef(state.status);
+  statusRef.current = state.status;
   const [kindSheet, setKindSheet] = useState(false);
   const [filterSheet, setFilterSheet] = useState(false);
   const [filterTarget, setFilterTarget] = useState('');
@@ -60,7 +62,7 @@ export default function ReportsView({ navigation }) {
     presenter.attach(setState, navigation);
     presenter.load();
     const unsubscribe = navigation.addListener('focus', () => {
-      if (state.status === 'content') presenter.load();
+      if (statusRef.current === 'content') presenter.load();
     });
     return () => {
       unsubscribe?.remove?.();
