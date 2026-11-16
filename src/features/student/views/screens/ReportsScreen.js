@@ -1,8 +1,8 @@
 /**
  * ST09/ST10 — Results list + report card. The list shows the student's
  * published report cards; tapping one opens the card with its subject
- * scores, average, position and the form teacher's remark. An export button
- * requests a PDF via POST /exports.
+ * scores, average and the class teacher's remark. Report data and marks are
+ * published snapshots; the PDF is downloaded from the report endpoint.
  */
 import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
@@ -54,7 +54,7 @@ export default function ReportsScreen({ route }) {
             items={state.items.map((r) => ({
               id: r.id,
               title: `${r.termLabel} · ${r.classLabel}`,
-              meta: `Average ${r.average}% · ${r.position}`,
+              meta: `Average ${r.average}%`,
               status: 'Published',
             }))}
             onPressItem={(row) => presenter.open(studentId, row.id)}
@@ -71,17 +71,22 @@ export default function ReportsScreen({ route }) {
           <Text style={styles.section}>
             {report.termLabel} · {report.classLabel}
           </Text>
-          <Text style={styles.meta}>
-            Average: {report.average}% · Position: {report.position}
-          </Text>
-          <Text style={styles.meta}>Form teacher: {report.formTeacherName}</Text>
-          <Text style={styles.remark}>{report.overallRemark}</Text>
+          <Text style={styles.meta}>Average: {report.average}%</Text>
+          <Text style={styles.meta}>Class teacher's remark</Text>
+          <Text style={styles.remark}>{report.overallRemark || 'No class teacher remark recorded.'}</Text>
+          {report.principalRemark ? (
+            <View>
+              <Text style={styles.meta}>Principal's remark</Text>
+              <Text style={styles.remark}>{report.principalRemark}</Text>
+            </View>
+          ) : null}
 
           <Text style={styles.section}>Subjects</Text>
           <View style={styles.table}>
             <View style={styles.tableHeader}>
               <Text style={[styles.tableCell, styles.tableHeadCell, { flex: 2 }]}>Subject</Text>
-              <Text style={[styles.tableCell, styles.tableHeadCell]}>CA</Text>
+              <Text style={[styles.tableCell, styles.tableHeadCell]}>CA1</Text>
+              <Text style={[styles.tableCell, styles.tableHeadCell]}>CA2</Text>
               <Text style={[styles.tableCell, styles.tableHeadCell]}>Exam</Text>
               <Text style={[styles.tableCell, styles.tableHeadCell]}>Total</Text>
               <Text style={[styles.tableCell, styles.tableHeadCell]}>Grade</Text>
@@ -89,10 +94,11 @@ export default function ReportsScreen({ route }) {
             {report.subjects.map((s, i) => (
               <View key={i} style={styles.tableRow}>
                 <Text style={[styles.tableCell, { flex: 2 }]}>{s.subject}</Text>
-                <Text style={styles.tableCell}>{s.caScore}</Text>
-                <Text style={styles.tableCell}>{s.examScore}</Text>
-                <Text style={styles.tableCell}>{s.total}</Text>
-                <Text style={[styles.tableCell, { fontWeight: '700' }]}>{s.grade}</Text>
+                <Text style={styles.tableCell}>{s.ca1 ?? '—'}</Text>
+                <Text style={styles.tableCell}>{s.ca2 ?? '—'}</Text>
+                <Text style={styles.tableCell}>{s.examScore ?? '—'}</Text>
+                <Text style={styles.tableCell}>{s.total ?? '—'}</Text>
+                <Text style={[styles.tableCell, { fontWeight: '700' }]}>{s.grade || '—'}</Text>
               </View>
             ))}
           </View>
