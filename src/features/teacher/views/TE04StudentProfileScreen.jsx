@@ -17,15 +17,23 @@ export function TE04StudentProfileScreen() {
 
   useEffect(() => {
     let active = true;
-    setData(null);
-    setError('');
-    if (!studentId || !classId) {
-      setError('Open a student from the roster of one of your assigned classes.');
-      return () => { active = false; };
-    }
-    model.studentProfile(context.schoolId, classId, studentId)
-      .then((value) => { if (active) setData(value); })
-      .catch((reason) => { if (active) setError(reason?.message ?? 'Could not load this student record.'); });
+    const load = async () => {
+      await Promise.resolve();
+      if (!active) return;
+      setData(null);
+      setError('');
+      if (!studentId || !classId) {
+        setError('Open a student from the roster of one of your assigned classes.');
+        return;
+      }
+      try {
+        const value = await model.studentProfile(context.schoolId, classId, studentId);
+        if (active) setData(value);
+      } catch (reason) {
+        if (active) setError(reason?.message ?? 'Could not load this student record.');
+      }
+    };
+    void load();
     return () => { active = false; };
   }, [model, context.schoolId, classId, studentId]);
 
