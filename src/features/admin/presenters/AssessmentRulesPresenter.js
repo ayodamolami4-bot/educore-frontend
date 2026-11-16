@@ -60,8 +60,8 @@ export class AssessmentRulesPresenter {
         this.model.cycles(),
       ]);
       const cycles = Array.isArray(cycleResponse?.items) ? cycleResponse.items : [];
-      const selectedCycle = this.state.selectedCycle
-        ? cycles.find((item) => item.id === this.state.selectedCycle.id) ?? null
+      const selectedCycle = this.state.selectedCycle?.id
+        ? await this.model.cycleById(this.state.selectedCycle.id)
         : null;
       this._setState({
         status: 'content',
@@ -84,8 +84,18 @@ export class AssessmentRulesPresenter {
     return this.load();
   }
 
-  selectCycle(cycle) {
-    this._setState({ selectedCycle: cycle, notice: null, errorText: null });
+  async selectCycle(cycle) {
+    if (!cycle?.id) return;
+    this._setState({ saving: true, errorText: null, notice: null });
+    try {
+      const detail = await this.model.cycleById(cycle.id);
+      this._setState({ selectedCycle: detail, saving: false });
+    } catch (error) {
+      this._setState({
+        saving: false,
+        errorText: error instanceof ApiError ? error.message : error?.message ?? 'Could not open this assessment cycle.',
+      });
+    }
   }
 
   async approvePolicy(reason) {
@@ -115,8 +125,7 @@ export class AssessmentRulesPresenter {
       await this.model.approvePolicy(cycle.id, { policyVersion, reason: why }, cycle.version);
       this._setState({ saving: false, notice: 'The adopted grading policy has been approved for this cycle.' });
       await this.load();
-      const current = this.state.cycles.find((item) => item.id === cycle.id);
-      if (current) this._setState({ selectedCycle: current });
+      // load() re-reads the complete cycle, including the approval timestamp and new version.
       return true;
     } catch (error) {
       this._setState({
