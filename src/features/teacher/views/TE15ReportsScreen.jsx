@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { File, Paths } from 'expo-file-system';
@@ -16,31 +16,35 @@ export function TE15ReportsScreen() {
   const { context, model } = useTeacher();
   const [data, setData] = useState(null);
   const [kind, setKind] = useState('');
+  const kindRef = useRef(kind);
+  kindRef.current = kind;
   const [cycleId, setCycleId] = useState('');
   const [assignmentId, setAssignmentId] = useState('');
   const [format, setFormat] = useState('PDF');
   const [report, setReport] = useState(null);
   const [busy, setBusy] = useState('');
-  const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
-
-  const load = async () => {
-    await Promise.resolve();
-    setError('');
-    try {
-      const value = await model.reports(context.schoolId);
-      setData(value);
-      const nextKind = value.types.includes(kind) ? kind : value.types[0] ?? '';
-      setKind(nextKind);
-      const choices = nextKind === BROADSHEET ? value.classReports : value.packages;
-      const first = choices?.[0];
-      setCycleId(first?.cycleId ?? '');
-      setAssignmentId(first?.assignmentId ?? '');
-      setReport(null);
-    } catch (reason) {
-      setError(reason?.message ?? 'Could not load the reports available to this teacher.');
-    }
-  };
+  const [error, setEr  useEffect(() => {
+    let active = true;
+    void Promise.resolve().then(async () => {
+      if (!active) return;
+      setError('');
+      try {
+        const value = await model.reports(context.schoolId);
+        if (!active) return;
+        setData(value);
+        const nextKind = value.types.includes(kindRef.current) ? kindRef.current : value.types[0] ?? '';
+        setKind(nextKind);
+        const choices = nextKind === BROADSHEET ? value.classReports : value.packages;
+        const first = choices?.[0];
+        setCycleId(first?.cycleId ?? '');
+        setAssignmentId(first?.assignmentId ?? '');
+        setReport(null);
+      } catch (reason) {
+        if (active) setError(reason?.message ?? 'Could not load the reports available to this teacher.');
+      }
+    });
+    return () => { active = false; };
+  }, [model, context.schoolId]);
 
   useEffect(() => { void load(); }, [model, context.schoolId]);
 
