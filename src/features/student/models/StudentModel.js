@@ -656,15 +656,9 @@ export const StudentModel = {
     return {
       studentName: student.fullName ?? '',
       admissionNumber: student.admissionNumber ?? '',
-      dateOfBirth: student.dateOfBirth ?? null,
-      gender: student.gender ?? null,
+      status: student.status ?? '',
       classLabel: classLabel(current),
       department: current?.department ?? null,
-      admissionDate: student.admissionDate ?? null,
-      guardianName: null,
-      guardianPhone: null,
-      guardianEmail: null,
-      address: null,
       academicHistory: itemsOf(history).map((entry) => ({
         ...entry,
         sessionLabel: entry.sessionLabel ?? entry.sessionName ?? '',
