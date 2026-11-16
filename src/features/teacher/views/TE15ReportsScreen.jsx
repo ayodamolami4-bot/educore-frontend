@@ -26,7 +26,7 @@ export function TE15ReportsScreen() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
-  const load = useCallback(async (isActive = () => true) => {
+  const loadReports = useCallback(async (isActive = () => true) => {
     setError('');
     try {
       const value = await model.reports(context.schoolId);
@@ -46,16 +46,14 @@ export function TE15ReportsScreen() {
 
   useEffect(() => {
     let active = true;
-    void Promise.resolve().then(() => load(() => active));
+    void Promise.resolve().then(() => loadReports(() => active));
     return () => { active = false; };
-  }, [load]);
-
-  const sourceItems = useMemo(
-    () => kind === BROADSHEET ? (data?.classReports ?? []) : (data?.packages ?? []),
-    [kind, data],
-  );
+  }, [loadReports]);
 
   const cycleOptions = useMemo(() => {
+    const sourceItems = kind === BROADSHEET
+      ? (data?.classReports ?? [])
+      : (data?.packages ?? []);
     const byCycle = new Map();
     for (const item of sourceItems) {
       if (!item.cycleId || byCycle.has(item.cycleId)) continue;
@@ -63,7 +61,7 @@ export function TE15ReportsScreen() {
       byCycle.set(item.cycleId, { value: item.cycleId, label });
     }
     return [...byCycle.values()];
-  }, [sourceItems]);
+  }, [kind, data]);
 
   const assignmentOptions = useMemo(() => (
     (data?.packages ?? [])
@@ -234,7 +232,7 @@ export function TE15ReportsScreen() {
           <Button
             title="Refresh report options"
             variant="secondary"
-            onPress={load}
+            onPress={() => loadReports()}
             disabled={busy !== ''}
           />
         </>
