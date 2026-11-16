@@ -421,7 +421,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.5,
     paddingVertical: spacing.xs,
-    userSelect: 'text',
   },
   credentialHint: { ...typography.label, color: colors.muted, marginBottom: spacing.xs },
   credentialError: { ...typography.label, color: '#a33a2a', marginVertical: spacing.sm },
