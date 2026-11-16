@@ -1,144 +1,293 @@
 /**
- * AD20 — Reports (View). The catalogue of class report batches; tapping a
- * published batch opens a learner's report card (subjects, scores, grade
- * bands), and every batch exports.
+ * AD20 — Run a permitted school report with its catalogue-defined filters.
+ * JSON is previewed in-app; CSV/PDF are generated server-side from the same
+ * query and saved/shared from the device.
  */
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Share } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { File, Paths } from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import AdminScaffold from '../components/AdminScaffold';
 import RecordList from '../components/RecordList';
-import StatusBadge from '../components/StatusBadge';
-import { LoadingView, ErrorState, useActionErrorAlert } from '../components/FeedbackViews';
+import SelectSheet from '../components/SelectSheet';
+import {
+  LoadingView,
+  ErrorState,
+  EmptyState,
+  Notice,
+} from '../components/FeedbackViews';
 import { PrimaryButton, SecondaryButton } from './AdminHomeView';
 import { ReportsPresenter } from '../../presenters/ReportsPresenter';
 import { ReportsModel } from '../../models';
 import { colors, typography, spacing } from '../theme';
 
+const FILTER_LABELS = {
+  sessionId: 'Academic session',
+  termId: 'Academic term',
+  classId: 'Class',
+  studentId: 'Student',
+  department: 'Department',
+  from: 'From date',
+  to: 'To date',
+  cycleId: 'Assessment cycle',
+  assignmentId: 'Assigned subject sheet',
+};
+
+const DEPARTMENTS = [
+  { value: 'SCIENCE', label: 'Science' },
+  { value: 'ARTS', label: 'Arts' },
+  { value: 'COMMERCIAL', label: 'Commercial' },
+];
+
+const SELECT_FILTERS = new Set([
+  'sessionId',
+  'termId',
+  'classId',
+  'studentId',
+  'department',
+  'cycleId',
+  'assignmentId',
+]);
+
 export default function ReportsView({ navigation }) {
   const [presenter] = useState(() => new ReportsPresenter(ReportsModel));
   const [state, setState] = useState(presenter.initialState);
+  const [kindSheet, setKindSheet] = useState(false);
+  const [filterSheet, setFilterSheet] = useState(false);
+  const [filterTarget, setFilterTarget] = useState('');
 
   useEffect(() => {
     presenter.attach(setState, navigation);
     presenter.load();
-    return () => presenter.detach();
+    const unsubscribe = navigation.addListener('focus', () => {
+      if (state.status === 'content') presenter.load();
+    });
+    return () => {
+      unsubscribe?.remove?.();
+      presenter.detach();
+    };
   }, [presenter, navigation]);
 
-  useActionErrorAlert(state.errorText);
+  const entry = state.catalogue.find((item) => item.kind === state.kind);
+  const filterNames = entry?.filters ?? [];
+  const requiredNames = entry?.requiredFilters ?? [];
+  const optionsFor = (name) => ({
+    sessionId: state.options.sessions,
+    termId: state.options.terms,
+    classId: state.options.classes,
+    studentId: state.options.students,
+    department: DEPARTMENTS,
+    cycleId: state.options.cycles,
+    assignmentId: state.options.assignments,
+  })[name] ?? [];
 
-  /** The export the office actually gets: the CSV is built from the data on
-      screen, copied to the clipboard AND opened in the share sheet, where
-      "Save to Files" (or email / WhatsApp) stores it. */
-  const onExport = async () => {
-    await presenter.runExport(state.openBatch);
-    const { fileName, csv } = presenter.buildCsv();
+  const selectedLabel = (name) => {
+    if (name === 'from' || name === 'to') return state.filters[name] ?? '';
+    return optionsFor(name).find((item) => item.value === state.filters[name])?.label ?? '';
+  };
+
+  const openFilter = (name) => {
+    setFilterTarget(name);
+    setFilterSheet(true);
+  };
+
+  const exportFile = async (format) => {
+    const blob = await presenter.export(format);
+    if (!blob) return;
     try {
-      await Clipboard.setStringAsync(csv);
-    } catch {
-      /* clipboard unavailable on this device — the share sheet still works */
-    }
-    try {
-      await Share.share({ title: fileName, message: `${fileName}\n\n${csv}` });
-    } catch {
-      /* the office dismissed the sheet — the clipboard copy remains */
+      const file = new File(
+        Paths.document,
+        state.kind.toLowerCase() + '-' + Date.now() + '.' + format.toLowerCase(),
+      );
+      file.create();
+      await file.write(new Uint8Array(await blob.arrayBuffer()));
+      if (format === 'PDF' && await File.canPreview(file)) {
+        await file.preview({ title: entry?.label ?? 'EduCore report' });
+      } else if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(file.uri, {
+          dialogTitle: 'Share EduCore report',
+          mimeType: format === 'PDF' ? 'application/pdf' : 'text/csv',
+        });
+      } else {
+        setState((current) => ({
+          ...current,
+          notice: 'Report saved to ' + file.uri,
+        }));
+      }
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        errorText: error?.message ?? 'The report was generated but could not be saved or shared.',
+      }));
     }
   };
-  const report = state.report;
+
+  const reportRows = useMemo(() => {
+    if (!state.report) return [];
+    const columns = state.report.columns ?? [];
+    return (state.report.rows ?? []).map((row, index) => ({
+      id: String(row.id ?? row.studentId ?? row.assignmentId ?? index),
+      title: String(
+        row.studentName ??
+        row.teacherName ??
+        row.subject ??
+        row.assignmentId ??
+        row.admissionNumber ??
+        'Record ' + (index + 1)
+      ),
+      meta: columns
+        .filter((column) => !['studentName', 'teacherName', 'subject', 'assignmentId', 'admissionNumber'].includes(column))
+        .map((column) => column + ': ' + (row[column] == null ? '—' : String(row[column])))
+        .join(' · '),
+    }));
+  }, [state.report]);
 
   return (
     <AdminScaffold
       eyebrow="Academics"
-      title={report ? `Report card — ${report.studentName}` : 'Reports'}
-      subtitle={
-        report
-          ? `${report.classLabel} · ${report.termLabel}`
-          : 'Class report batches — open one to see a learner\u2019s report card.'
-      }
-      onBack={report ? () => presenter.closeReport() : undefined}
+      title="School reports"
+      subtitle="Choose a report from the live catalogue, apply its permitted filters and generate an official output."
     >
-      {state.status === 'loading' ? <LoadingView label="Loading the catalogue…" /> : null}
-      {state.status === 'error' ? (
-        <ErrorState message={state.errorText} onRetry={() => presenter.onRetry()} />
-      ) : null}
+      {state.status === 'loading' ? <LoadingView label="Loading report catalogue and filter options…" /> : null}
+      {state.status === 'error' ? <ErrorState message={state.errorText} onRetry={() => presenter.onRetry()} /> : null}
+      {state.errorText && state.status !== 'error' ? <Notice text={state.errorText} tone="error" /> : null}
+      {state.notice ? <Notice text={state.notice} /> : null}
 
-      {state.status === 'content' && !report ? (
-        <View>
-          {state.notice ? <Text style={styles.notice}>{state.notice}</Text> : null}
-          <RecordList
-            items={state.batches.map((b) => ({
-              id: b.id,
-              title: `${b.classLabel} · ${b.termLabel}`,
-              meta: `${b.studentCount} students · published ${b.publishedAt || '—'}`,
-              status: b.status,
-              raw: b,
-            }))}
-            onPressItem={(row) => presenter.openReport(row.raw)}
-            emptyText="No report batches yet."
+      {state.status === 'content' ? (
+        <>
+          <Text style={styles.section}>Report type</Text>
+          <SecondaryButton
+            label={entry?.label ?? 'Choose report type'}
+            onPress={() => setKindSheet(true)}
           />
-          <Text style={styles.hint}>
-            Draft batches have no report cards yet. Published batches open a sample learner&apos;s
-            card.
-          </Text>
-        </View>
-      ) : null}
+          {entry ? (
+            <>
+              <Text style={styles.section}>Filters</Text>
+              <Text style={styles.hint}>
+                {requiredNames.length
+                  ? 'Required: ' + requiredNames.map((name) => FILTER_LABELS[name] ?? name).join(', ')
+                  : 'No mandatory filters for this report type. Narrow the output to the records you need.'}
+              </Text>
+              {filterNames.map((name) => (
+                <View key={name} style={styles.filterRow}>
+                  <Text style={styles.fieldLabel}>
+                    {FILTER_LABELS[name] ?? name}{requiredNames.includes(name) ? ' *' : ''}
+                  </Text>
+                  {SELECT_FILTERS.has(name) ? (
+                    <SecondaryButton
+                      label={selectedLabel(name) || 'Any / choose ' + (FILTER_LABELS[name] ?? name).toLowerCase()}
+                      onPress={() => openFilter(name)}
+                    />
+                  ) : (
+                    <TextInput
+                      style={styles.input}
+                      value={state.filters[name] ?? ''}
+                      onChangeText={(value) => presenter.setFilter(name, value)}
+                      placeholder="YYYY-MM-DD"
+                      placeholderTextColor={colors.muted}
+                      autoCapitalize="none"
+                    />
+                  )}
+                </View>
+              ))}
 
-      {state.status === 'content' && report ? (
-        <View>
-          <Text style={styles.notice}>{state.notice}</Text>
-          <View style={styles.badgeRow}>
-            <StatusBadge
-              label={state.openBatch ? state.openBatch.status : 'Report'}
-              tone={state.openBatch && state.openBatch.status === 'Published' ? 'positive' : 'info'}
-            />
-          </View>
-          <Text style={styles.student}>{report.studentName}</Text>
-          <Text style={styles.meta}>
-            {report.classLabel} · {report.termLabel} · Form teacher: {report.formTeacherName}
-          </Text>
+              <Text style={styles.hint}>
+                The report service limits each result to {state.maximumRows.toLocaleString()} rows and rechecks school permissions when it generates a file.
+              </Text>
+              <PrimaryButton
+                label={state.working ? 'Generating…' : 'Generate JSON preview'}
+                onPress={() => presenter.run()}
+                loading={state.working}
+                disabled={state.working}
+              />
+              <View style={styles.exportActions}>
+                <SecondaryButton
+                  label={state.working ? 'Preparing…' : 'Download CSV'}
+                  onPress={() => exportFile('CSV')}
+                  disabled={state.working}
+                />
+                <SecondaryButton
+                  label={state.working ? 'Preparing…' : 'Download PDF'}
+                  onPress={() => exportFile('PDF')}
+                  disabled={state.working}
+                />
+              </View>
+            </>
+          ) : (
+            <EmptyState title="No report selected" description="Choose a report type to see its permitted filters." />
+          )}
 
-          <Text style={styles.section}>Subjects</Text>
-          <RecordList
-            items={report.subjects.map((s, i) => ({
-              id: `${s.subject}-${i}`,
-              title: s.subject,
-              meta: `CA ${s.caScore} · Exam ${s.examScore} · Total ${s.total} — ${s.grade} (${s.remark})`,
-            }))}
-            emptyText="No subjects on this report."
-          />
-
-          <Text style={styles.summary}>
-            Average {report.average}% · Position {report.position} · &quot;{report.overallRemark}
-            &quot;
-          </Text>
-
-          <View style={styles.actionsWrap}>
-            <PrimaryButton
-              label={state.working ? 'Exporting…' : 'Export as CSV (clipboard + share sheet)'}
-              disabled={state.working}
-              onPress={onExport}
-            />
-            <View style={styles.secondaryWrap}>
-              <SecondaryButton
-                label="Back to the catalogue"
-                onPress={() => presenter.closeReport()}
+          {state.report ? (
+            <View style={styles.preview}>
+              <Text style={styles.section}>{state.report.title ?? entry?.label ?? 'Report preview'}</Text>
+              <Text style={styles.meta}>
+                {state.report.rowCount ?? state.report.rows?.length ?? 0} rows · generated {state.report.generatedAt ?? ''}
+              </Text>
+              {(state.report.notes ?? []).map((note, index) => (
+                <Text key={'note-' + index} style={styles.hint}>{note}</Text>
+              ))}
+              <RecordList
+                items={reportRows}
+                emptyText="The report was generated successfully but contains no matching rows."
               />
             </View>
-          </View>
-        </View>
+          ) : null}
+        </>
       ) : null}
+
+      <SelectSheet
+        visible={kindSheet}
+        label="Choose a report type"
+        options={state.catalogue.map((item) => ({
+          value: item.kind,
+          label: item.label,
+        }))}
+        value={state.kind}
+        onSelect={(value) => {
+          setKindSheet(false);
+          presenter.selectKind(value);
+        }}
+        onClose={() => setKindSheet(false)}
+      />
+      <SelectSheet
+        visible={filterSheet}
+        label={'Choose ' + (FILTER_LABELS[filterTarget] ?? 'filter')}
+        options={optionsFor(filterTarget)}
+        value={state.filters[filterTarget]}
+        onSelect={(value) => {
+          presenter.setFilter(filterTarget, value);
+          setFilterSheet(false);
+        }}
+        onClose={() => setFilterSheet(false)}
+      />
     </AdminScaffold>
   );
 }
 
 const styles = StyleSheet.create({
-  notice: { ...typography.body, color: colors.primary, marginBottom: spacing.sm },
-  hint: { ...typography.label, color: colors.muted, marginTop: spacing.sm },
-  badgeRow: { flexDirection: 'row', marginBottom: spacing.sm },
-  student: { ...typography.sectionTitle },
-  meta: { ...typography.label, color: colors.muted, marginTop: spacing.xs },
-  section: { ...typography.sectionTitle, marginTop: spacing.md, marginBottom: spacing.sm },
-  summary: { ...typography.body, marginTop: spacing.sm },
-  actionsWrap: { marginTop: spacing.md },
-  secondaryWrap: { marginTop: spacing.xs },
+  section: { ...typography.sectionTitle, marginTop: spacing.lg, marginBottom: spacing.sm },
+  hint: { ...typography.label, color: colors.muted, marginTop: spacing.xs, marginBottom: spacing.sm },
+  fieldLabel: { ...typography.label, color: colors.text, marginBottom: spacing.xs },
+  filterRow: { marginBottom: spacing.sm },
+  input: {
+    ...typography.input,
+    color: colors.text,
+    backgroundColor: colors.white,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    minHeight: 44,
+  },
+  exportActions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
+  preview: {
+    marginTop: spacing.lg,
+    backgroundColor: colors.white,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: spacing.md,
+  },
+  meta: { ...typography.label, color: colors.muted, marginBottom: spacing.sm },
 });
