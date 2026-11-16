@@ -59,7 +59,7 @@ export default function MessageInboxView({ navigation }) {
   const chooseGuardian = (guardianId) => {
     presenter.selectGuardian(guardianId);
     setGuardianSheet(false);
-    if (state.targets.length > 1) setTargetSheet(true);
+    if (getActiveContext().role === 'PRINCIPAL') setTargetSheet(true);
   };
 
   const startConversation = async () => {
