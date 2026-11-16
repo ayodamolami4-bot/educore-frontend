@@ -1,14 +1,16 @@
-/** AD34 — School change history (audit trail). Backend records every change. */
-import { api, normalizePage } from '../api/client';
-import { endpoints } from '../api/endpoints';
+/** Legacy AD34 adapter backed by the role-aware audit stream model. */
+import { AuditTrailModel } from './AuditTrailModel';
 
 export const AuditModel = {
   async events(query) {
-    return normalizePage(await api.get(endpoints.audit.events, null, query));
+    return AuditTrailModel.list(query);
   },
 
   async eventById(eventId) {
-    return api.get(endpoints.audit.eventById, { eventId });
+    const page = await AuditTrailModel.list({ limit: 100 });
+    const event = page.items.find((item) => String(item.id) === String(eventId));
+    if (!event) throw new Error('This history entry is not in the currently loaded audit window.');
+    return event;
   },
 };
 
