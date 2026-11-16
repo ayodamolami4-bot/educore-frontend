@@ -225,46 +225,64 @@ export class TeacherModel {
   async studentProfile(schoolId, classId, studentId) {
     if (!studentId) throw localError('Choose a student from the assigned class roster.');
 
-    const from = new Date(Date.now() - 90 * 86400000)
-      .toISOString()
-      .slice(0, 10);
-    const to = todayInLagos();
-
-    const [student, attendance, reports] = await Promise.all([
-      this.get(schoolId, `/students/${encodeURIComponent(studentId)}`),
-      this.get(schoolId, `/students/${encodeURIComponent(studentId)}/attendance`, {
-        from,
-        to,
-      }),
-      this.get(schoolId, `/students/${encodeURIComponent(studentId)}/reports`),
+    const today = todayInLagos();
+    const from = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
+    const [student, attendance, reports, classes, assignments] = await Promise.all([
+      this.get(schoolId, '/students/' + encodeURIComponent(studentId)),
+      this.get(schoolId, '/students/' + encodeURIComponent(studentId) + '/attendance', { from, to: today }),
+      this.get(schoolId, '/students/' + encodeURIComponent(studentId) + '/reports'),
+      this.get(schoolId, '/my-classes'),
+      this.get(schoolId, '/teaching-assignments', { classId }),
     ]);
 
-    const placement = student.currentPlacement ?? student.enrolment ?? {};
+    const enrolments = itemsOf(student.enrolments);
+    const active = enrolments.find((entry) =>
+      (!entry.startsOn || entry.startsOn <= today) &&
+      (!entry.endsOn || entry.endsOn >= today)
+    );
+    const placement = enrolments.find((entry) =>
+      classId && String(entry.classId) === String(classId)
+    ) ?? active ?? enrolments[0] ?? {};
+    const resolvedClassId = placement.classId ?? classId;
+    const assignedClass = itemsOf(classes).find((entry) =>
+      String(entry.id) === String(resolvedClassId)
+    );
+    const assignedSubjects = [...new Set(
+      itemsOf(assignments)
+        .filter((entry) => String(entry.classId) === String(resolvedClassId))
+        .map((entry) => entry.subjectName)
+        .filter(Boolean)
+    )];
 
     const records = [
       ...itemsOf(attendance).map((item) => ({
-        id: `attendance-${item.registerId}-${item.onDate}`,
+        id: 'attendance-' + item.registerId + '-' + item.onDate,
+        category: 'Attendance',
         title: 'Attendance',
-        detail: `${item.onDate ?? ''} · ${item.status ?? ''}`,
+        detail: String(item.onDate ?? '') + ' · ' + String(item.status ?? ''),
         extra: item.reason ?? '',
       })),
       ...itemsOf(reports).map((item) => ({
         id: item.id,
-        title: item.title ?? 'Published report',
-        detail: item.termLabel ?? item.sessionLabel ?? '',
+        category: 'Published results',
+        title: 'Published report',
+        detail: item.revision ? 'Published revision ' + item.revision : '',
         extra: item.publishedAt ?? '',
       })),
     ];
 
     return {
       id: student.id,
+      classId: resolvedClassId ?? null,
       name: student.fullName ?? '',
       code: student.admissionNumber ?? '',
-      classArm: placement.classLabel ?? classLabel(placement),
+      classArm: classLabel(placement),
       state: student.status ?? '',
-      yourSubject: '',
-      classTeacher: '',
-      enrolment: placement.status ?? '',
+      yourSubject: assignedSubjects.join(', '),
+      classTeacherDuty: Boolean(assignedClass?.classTeacher),
+      enrolment: placement.startsOn
+        ? placement.startsOn + (placement.endsOn ? ' – ' + placement.endsOn : ' – current')
+        : '',
       records,
     };
   }
@@ -840,14 +858,39 @@ export class TeacherModel {
   }
 
   async reports(schoolId) {
-    const catalogue = await this.get(schoolId, '/school-reports/catalogue');
-    const types = itemsOf(catalogue).map((item) => item.kind ?? item.name).filter(Boolean);
+    const [catalogue, packages] = await Promise.all([
+      this.get(schoolId, '/school-reports/catalogue'),
+      this.marksPackages(schoolId),
+    ]);
+    const entries = itemsOf(catalogue);
 
     return {
-      types,
-      formats: ['JSON', 'PDF', 'CSV'],
+      types: entries.map((item) => item.kind).filter(Boolean),
+      formats: Array.isArray(catalogue.formats) ? catalogue.formats : ['JSON', 'PDF', 'CSV'],
       catalogue,
+      packages: packages.packages,
+      classReports: packages.classReports,
     };
+  }
+
+  async runReport(schoolId, kind, filters = {}) {
+    if (!kind) throw localError('Choose a permitted report type.');
+    return this.get(schoolId, '/school-reports/' + encodeURIComponent(kind), {
+      ...filters,
+      format: 'JSON',
+    });
+  }
+
+  async exportReport(schoolId, kind, filters = {}, format = 'PDF') {
+    const chosen = String(format).toUpperCase();
+    if (!['PDF', 'CSV'].includes(chosen)) {
+      throw localError('Choose PDF or CSV for a file export.');
+    }
+    return this.client.download(this.path(
+      schoolId,
+      '/school-reports/' + encodeURIComponent(kind),
+      { ...filters, format: chosen }
+    ));
   }
 
   async notices(schoolId) {
@@ -876,11 +919,71 @@ export class TeacherModel {
     return {
       threads: itemsOf(result).map((item) => ({
         ...item,
-        label: item.subject,
-        detail: `${item.target ?? ''} · ${item.studentId ?? ''}`,
+        label: item.subject ?? 'School conversation',
+        detail: (item.target === 'CLASS_TEACHER' ? 'Class-teacher family thread' : item.target ?? 'Conversation') +
+          ' · ' + (item.studentId ?? ''),
         state: item.state,
       })),
     };
+  }
+
+  async threadStudents(schoolId) {
+    const classes = (await this.classes(schoolId)).items.filter((item) => item.classTeacher);
+    const rosters = await Promise.all(classes.map(async (item) => {
+      const workspace = await this.get(
+        schoolId,
+        '/classes/' + encodeURIComponent(item.id) + '/workspace'
+      );
+      return itemsOf(workspace.students).map((student) => ({
+        id: student.id,
+        name: student.fullName ?? student.admissionNumber ?? 'Student',
+        classId: item.id,
+        classLabel: item.label,
+      }));
+    }));
+
+    return rosters.flat().sort((a, b) =>
+      a.name.localeCompare(b.name) || a.classLabel.localeCompare(b.classLabel)
+    );
+  }
+
+  async threadContacts(schoolId, studentId) {
+    if (!studentId) throw localError('Choose a student first.');
+    const context = await this.get(schoolId, '/threads/contacts', { studentId });
+    const guardians = itemsOf(context.guardians)
+      .filter((guardian) => guardian.learningAccess)
+      .map((guardian, index) => ({
+        id: guardian.id,
+        label: guardian.primaryContact ? 'Primary linked guardian' : 'Linked guardian ' + (index + 1),
+        primaryContact: Boolean(guardian.primaryContact),
+      }));
+
+    return {
+      studentId: context.studentId ?? studentId,
+      classId: context.classId ?? null,
+      classTeacherAssigned: Boolean(context.classTeacherId),
+      guardians,
+    };
+  }
+
+  createThread(schoolId, body) {
+    if (!body?.studentId || !body?.guardianId) {
+      throw localError('Choose a student and an eligible linked guardian.');
+    }
+    if (!body.subject?.trim() || body.subject.trim().length < 3) {
+      throw localError('Enter a conversation subject of at least three characters.');
+    }
+    if (!body.body?.trim() || body.body.trim().length < 2) {
+      throw localError('Write the first message before opening the conversation.');
+    }
+    return this.command(schoolId, '/threads', 'POST', {
+      studentId: body.studentId,
+      guardianId: body.guardianId,
+      target: 'CLASS_TEACHER',
+      subject: body.subject.trim(),
+      body: body.body.trim(),
+      fileIds: [],
+    });
   }
 
   async thread(schoolId, threadId) {
@@ -888,22 +991,32 @@ export class TeacherModel {
 
     const thread = await this.get(
       schoolId,
-      `/threads/${encodeURIComponent(threadId)}`
+      '/threads/' + encodeURIComponent(threadId)
     );
 
     const student = thread.studentId
       ? await this.get(
           schoolId,
-          `/students/${encodeURIComponent(thread.studentId)}`
+          '/students/' + encodeURIComponent(thread.studentId)
         )
       : {};
+    const today = todayInLagos();
+    const enrolments = itemsOf(student.enrolments);
+    const placement = enrolments.find((entry) =>
+      (!entry.startsOn || entry.startsOn <= today) &&
+      (!entry.endsOn || entry.endsOn >= today)
+    ) ?? enrolments[0] ?? {};
 
     return {
       ...thread,
+      studentId: thread.studentId ?? student.id ?? null,
+      classId: placement.classId ?? null,
       school: this.context?.schoolName ?? '',
       child: student.fullName ?? '',
-      classArm: classLabel(student.currentPlacement ?? student.enrolment ?? {}),
-      participants: thread.target ?? '',
+      classArm: classLabel(placement),
+      participants: thread.target === 'CLASS_TEACHER'
+        ? 'Linked parent / guardian · class teacher'
+        : thread.target ?? '',
       thread: thread.subject ?? '',
       messages: itemsOf(thread.messages).map((message) => ({
         id: message.id,
