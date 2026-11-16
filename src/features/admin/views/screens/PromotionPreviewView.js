@@ -156,7 +156,7 @@ export default function PromotionPreviewView({ navigation }) {
           />
           <LabelledField
             label="Target academic session"
-            placeholder={sourceClass?.level === 'SSS3' ? 'Not required for SSS3 graduates' : 'Choose the next session'}
+            placeholder={sourceClass?.level === 'SSS3' ? 'Optional for SSS3; choose one if repeats may be needed' : 'Choose the next session'}
             displayValue={state.sessions.find((item) => item.id === targetSessionId)?.name ?? ''}
             onPress={() => setTargetSessionSheet(true)}
           />
@@ -306,8 +306,6 @@ export default function PromotionPreviewView({ navigation }) {
         value={sourceClassId}
         onSelect={(value) => {
           setSourceClassId(value);
-          const selected = state.classOptions.find((item) => item.id === value);
-          if (selected?.level === 'SSS3') setTargetSessionId('');
           setSourceClassSheet(false);
         }}
         onClose={() => setSourceClassSheet(false)}
