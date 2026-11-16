@@ -60,7 +60,7 @@ export default function StudentFormView({ route, navigation }) {
       `Login ID: ${credential.loginId}`,
       `One-time activation code: ${credential.activationCode}`,
       'Activate the account and create a personal password before signing in.',
-    ].join('\\n');
+    ].join('\n');
     try {
       await Clipboard.setStringAsync(content);
       setCopyNotice(`${label} access details copied.`);
