@@ -96,14 +96,13 @@ export const endpoints = {
   timetable: {
     assignmentCandidates: 'teaching-assignments',
     drafts: 'timetable-plans',
-    draftById: 'timetable-plans/{draftId}',
-    validateDraft: 'timetable-plans/{draftId}/review',
-    requestReview: 'timetable-plans/{draftId}/review',
+    addLesson: 'timetable-plans/{draftId}/lessons',
+    draftReview: 'timetable-plans/{draftId}/review',
+    replaceLesson: 'timetable-plans/{draftId}/lessons/{lessonId}',
+    removeLesson: 'timetable-plans/{draftId}/lessons/{lessonId}/remove',
     publishDraft: 'timetable-plans/{draftId}/publish',
     published: 'timetable',
-    publishedById: null,
   },
-
   attendance: {
     overview: 'attendance/overview',
     registers: 'attendance/registers',
