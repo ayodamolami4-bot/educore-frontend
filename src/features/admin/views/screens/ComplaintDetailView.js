@@ -18,6 +18,7 @@ export default function ComplaintDetailView({ route, navigation }) {
   const [state, setState] = useState(presenter.initialState);
   const [replyText, setReplyText] = useState('');
   const [noteText, setNoteText] = useState('');
+  const [actionReason, setActionReason] = useState('');
   const caseId = route.params?.caseId;
   const loadedOnce = useRef(false);
 
@@ -80,7 +81,7 @@ export default function ComplaintDetailView({ route, navigation }) {
           <Text style={styles.section}>What the guardian said</Text>
           <Text style={styles.body}>{c.detail || 'No detail recorded — see the office log.'}</Text>
           <Text style={styles.meta}>
-            Student: {c.studentName || '—'} ({c.classLabel || '—'}) · Channel: {c.channel}
+            Student record: {c.studentId ? 'Linked' : 'Not linked'} · Channel: {c.channel || 'Not recorded'}
           </Text>
 
           <Text style={styles.section}>History</Text>
@@ -118,9 +119,9 @@ export default function ComplaintDetailView({ route, navigation }) {
                 <PrimaryButton
                   label={state.saving === 'reply' ? 'Sending…' : 'Send reply'}
                   disabled={!replyText.trim() || Boolean(state.saving)}
-                  onPress={() => {
-                    presenter.onReply(replyText);
-                    setReplyText('');
+                  onPress={async () => {
+                    const sent = await presenter.onReply(replyText);
+                    if (sent) setReplyText('');
                   }}
                 />
               </View>
@@ -150,39 +151,60 @@ export default function ComplaintDetailView({ route, navigation }) {
             <SecondaryButton
               label={state.saving === 'note' ? 'Saving…' : 'Add internal note'}
               disabled={!noteText.trim() || Boolean(state.saving)}
-              onPress={() => {
-                presenter.onAddNote(noteText);
-                setNoteText('');
+              onPress={async () => {
+                const saved = await presenter.onAddNote(noteText);
+                if (saved) setNoteText('');
               }}
             />
           </View>
 
-          <Text style={styles.section}>Move this case</Text>
-          <View style={styles.actions}>
-            <SecondaryButton
-              label={state.saving === 'start-review' ? 'Saving…' : 'Start review'}
-              disabled={Boolean(state.saving) || c.status !== 'New'}
-              onPress={() => presenter.onStateAction('start-review')}
-            />
-            <SecondaryButton
-              label={state.saving === 'resolve' ? 'Saving…' : 'Mark resolved'}
-              disabled={Boolean(state.saving) || c.status === 'Resolved' || c.status === 'Closed'}
-              onPress={() => presenter.onStateAction('resolve')}
-            />
-            {c.status === 'Closed' ? (
-              <SecondaryButton
-                label={state.saving === 'reopen' ? 'Saving…' : 'Reopen case'}
-                disabled={Boolean(state.saving)}
-                onPress={() => presenter.onStateAction('reopen')}
+          {c.status !== 'Closed' ? (
+            <>
+              <Text style={styles.section}>Move this case</Text>
+              <Text style={styles.hint}>
+                Every case decision needs a reason recorded in the school audit history.
+              </Text>
+              <TextInput
+                style={styles.input}
+                multiline
+                placeholder="Reason for this case action (at least 5 characters)"
+                placeholderTextColor={colors.muted}
+                value={actionReason}
+                onChangeText={setActionReason}
               />
-            ) : (
-              <SecondaryButton
-                label={state.saving === 'close' ? 'Saving…' : 'Close case'}
-                disabled={Boolean(state.saving) || c.status === 'Closed'}
-                onPress={confirmClose}
-              />
-            )}
-          </View>
+              <View style={styles.actions}>
+                <SecondaryButton
+                  label={state.saving === 'start-review' ? 'Saving…' : 'Start review'}
+                  disabled={Boolean(state.saving) || c.status !== 'New' || actionReason.trim().length < 5}
+                  onPress={async () => {
+                    const saved = await presenter.onStateAction('start-review', actionReason);
+                    if (saved) setActionReason('');
+                  }}
+                />
+                <SecondaryButton
+                  label={state.saving === 'resolve' ? 'Saving…' : 'Mark resolved'}
+                  disabled={Boolean(state.saving) || c.status === 'Resolved' || actionReason.trim().length < 5}
+                  onPress={async () => {
+                    const saved = await presenter.onStateAction('resolve', actionReason);
+                    if (saved) setActionReason('');
+                  }}
+                />
+                {c.status === 'Resolved' ? (
+                  <SecondaryButton
+                    label={state.saving === 'close' ? 'Saving…' : 'Close case'}
+                    disabled={Boolean(state.saving) || actionReason.trim().length < 5}
+                    onPress={async () => {
+                      const saved = await presenter.onStateAction('close', actionReason);
+                      if (saved) setActionReason('');
+                    }}
+                  />
+                ) : null}
+              </View>
+            </>
+          ) : (
+            <Text style={styles.closedHint}>This case is closed and remains available as an audit record.</Text>
+          )}
+        </View>
         </View>
       ) : null}
     </AdminScaffold>
