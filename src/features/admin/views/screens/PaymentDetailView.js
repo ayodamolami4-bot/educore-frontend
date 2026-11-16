@@ -1,16 +1,17 @@
 /**
- * AD25 — Payment detail and refund review (View). The payment's facts at the
- * top, the refund requests with their state-machine buttons under them, and
- * the "request refund" form at the bottom. Closing asks twice where needed.
+ * AD25 — Payment detail and fee-adjustment refund review.
+ * This view requests, approves/rejects and confirms a refund already processed
+ * by the provider; it does not pretend the backend can execute refunds itself.
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, StyleSheet } from 'react-native';
 import AdminScaffold from '../components/AdminScaffold';
 import StatusBadge from '../components/StatusBadge';
 import {
   LoadingView,
   EmptyState,
   ErrorState,
+  Notice,
   useActionErrorAlert,
 } from '../components/FeedbackViews';
 import { PrimaryButton, SecondaryButton } from './AdminHomeView';
@@ -21,15 +22,16 @@ import { colors, typography, spacing, statusTone } from '../theme';
 export default function PaymentDetailView({ route, navigation }) {
   const [presenter] = useState(() => new PaymentDetailPresenter(FinanceModel));
   const [state, setState] = useState(presenter.initialState);
-  const [reasonText, setReasonText] = useState('');
+  const [requestReason, setRequestReason] = useState('');
+  const [decisionReason, setDecisionReason] = useState('');
+  const [refundReference, setRefundReference] = useState('');
+  const [verificationReference, setVerificationReference] = useState('');
   const paymentId = route.params?.paymentId;
   const loadedOnce = useRef(false);
 
   useEffect(() => {
     presenter.attach(setState, navigation);
     if (paymentId) presenter.load(paymentId);
-    // Refund statuses change as the office acts, so re-fetch on every focus
-    // after the first.
     const unsubscribe = navigation.addListener('focus', () => {
       if (loadedOnce.current && paymentId) presenter.load(paymentId);
       loadedOnce.current = true;
@@ -40,43 +42,15 @@ export default function PaymentDetailView({ route, navigation }) {
     };
   }, [presenter, paymentId, navigation]);
 
-  const p = state.payment;
-
-  const confirmDecision = (refund, action) => {
-    Alert.alert(
-      action === 'approve' ? 'Approve this refund?' : 'Reject this refund request?',
-      `${refund.studentName} · ${refund.amountLabel} · ${refund.reference}`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: action === 'approve' ? 'Approve' : 'Reject',
-          style: action === 'approve' ? 'default' : 'destructive',
-          onPress: () => presenter.onDecision(refund, action),
-        },
-      ],
-    );
-  };
-
-  const confirmExecute = (refund) => {
-    Alert.alert(
-      'Execute this refund through Paystack?',
-      `${refund.studentName} · ${refund.amountLabel} · ${refund.reference}`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Execute', onPress: () => presenter.onExecute(refund) },
-      ],
-    );
-  };
-
-  // Refund guard refusals pop up instead of inline text.
-  useActionErrorAlert(state.errorText);
+  const payment = state.payment;
+  useActionErrorAlert(state.errorText, 'Payment / refund');
 
   if (!paymentId) {
     return (
       <AdminScaffold eyebrow="Fees" title="Payment detail">
         <EmptyState
           title="No payment selected"
-          hint="Open one from the payment ledger on Payments and money checks."
+          hint="Open a confirmed payment from the payment ledger."
         />
       </AdminScaffold>
     );
@@ -86,72 +60,105 @@ export default function PaymentDetailView({ route, navigation }) {
     <AdminScaffold
       eyebrow="Fees"
       title="Payment detail"
-      subtitle={p ? `${p.studentName} · ${p.reference}` : undefined}
+      subtitle={payment ? [payment.studentName, payment.reference].filter(Boolean).join(' · ') : undefined}
     >
-      {state.status === 'loading' ? <LoadingView label="Loading the payment…" /> : null}
+      {state.status === 'loading' ? <LoadingView label="Loading payment and refund records…" /> : null}
       {state.status === 'error' ? (
         <ErrorState message={state.errorText} onRetry={() => presenter.onRetry()} />
       ) : null}
+      {state.notice ? <Notice text={state.notice} /> : null}
 
-      {state.status === 'content' && p ? (
+      {state.status === 'content' && payment ? (
         <View>
           <View style={styles.badgeRow}>
-            <StatusBadge label={p.status} tone={statusTone[p.status] || 'muted'} />
-            <Text style={styles.meta}>{p.paidAt}</Text>
+            <StatusBadge label={payment.status} tone={statusTone[payment.status] || 'muted'} />
+            <Text style={styles.meta}>{payment.paidAt}</Text>
           </View>
 
-          <Text style={styles.amount}>{p.amountLabel}</Text>
+          <Text style={styles.amount}>{payment.amountLabel}</Text>
           <Text style={styles.meta}>
-            {p.channel} · {p.reference}
-            {p.invoiceNumber ? ` · ${p.invoiceNumber}` : ''}
+            {payment.channel} · {payment.reference}
           </Text>
+          <Text style={styles.meta}>Invoice ID: {payment.invoiceId}</Text>
 
-          <Text style={styles.section}>Refund requests on this payment</Text>
-          {state.notice ? <Text style={styles.notice}>{state.notice}</Text> : null}
+          <Text style={styles.section}>Refund adjustment requests</Text>
           {state.refunds.length === 0 ? (
-            <Text style={styles.muted}>No refund requests yet.</Text>
+            <Text style={styles.muted}>No refund requests have been raised for this payment.</Text>
           ) : (
-            state.refunds.map((r) => (
-              <View key={r.id} style={styles.refundCard}>
+            state.refunds.map((refund) => (
+              <View key={refund.id} style={styles.refundCard}>
                 <View style={styles.refundHead}>
-                  <Text style={styles.refundTitle}>
-                    {r.studentName} · {r.amountLabel}
-                  </Text>
-                  <StatusBadge label={r.status} tone={statusTone[r.status] || 'muted'} />
+                  <Text style={styles.refundTitle}>{refund.amountLabel}</Text>
+                  <StatusBadge label={refund.status} tone={statusTone[refund.status] || 'muted'} />
                 </View>
-                <Text style={styles.refundReason}>{r.reason}</Text>
+                <Text style={styles.refundReason}>{refund.reason}</Text>
                 <Text style={styles.refundMeta}>
-                  Raised {r.createdAt} · {r.reference}
+                  Raised {refund.createdAt ?? 'date unavailable'} · {refund.evidenceReference || 'No evidence reference'}
                 </Text>
-                {r.status === 'Pending' ? (
+
+                {refund.status === 'Pending' ? (
                   <View style={styles.refundActions}>
-                    <SecondaryButton
-                      label={state.saving === `decide:${r.id}` ? 'Saving…' : 'Approve refund'}
-                      disabled={Boolean(state.saving)}
-                      onPress={() => confirmDecision(r, 'approve')}
+                    <Text style={styles.hint}>Principal decision reason (required for approval or rejection)</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={decisionReason}
+                      onChangeText={setDecisionReason}
+                      placeholder="Explain the decision"
+                      placeholderTextColor={colors.muted}
+                      maxLength={500}
                     />
                     <SecondaryButton
-                      label={state.saving === `decide:${r.id}` ? 'Saving…' : 'Reject'}
-                      disabled={Boolean(state.saving)}
-                      onPress={() => confirmDecision(r, 'reject')}
+                      label={state.saving === 'decide:' + refund.id ? 'Saving…' : 'Approve refund'}
+                      disabled={Boolean(state.saving) || decisionReason.trim().length < 5}
+                      onPress={async () => {
+                        const saved = await presenter.onDecision(refund, 'approve', decisionReason);
+                        if (saved) setDecisionReason('');
+                      }}
+                    />
+                    <SecondaryButton
+                      label={state.saving === 'decide:' + refund.id ? 'Saving…' : 'Reject request'}
+                      disabled={Boolean(state.saving) || decisionReason.trim().length < 5}
+                      onPress={async () => {
+                        const saved = await presenter.onDecision(refund, 'reject', decisionReason);
+                        if (saved) setDecisionReason('');
+                      }}
                     />
                   </View>
                 ) : null}
-                {r.status === 'Approved' ? (
+
+                {refund.status === 'Approved' ? (
                   <View style={styles.refundActions}>
-                    <SecondaryButton
-                      label={
-                        state.saving === `execute:${r.id}` ? 'Working…' : 'Execute via Paystack'
-                      }
-                      disabled={Boolean(state.saving)}
-                      onPress={() => confirmExecute(r)}
+                    <Text style={styles.hint}>
+                      Process the refund with the payment provider first. This step verifies and records that provider refund; it does not initiate the transfer.
+                    </Text>
+                    <TextInput
+                      style={styles.input}
+                      value={refundReference}
+                      onChangeText={setRefundReference}
+                      placeholder="Provider refund reference"
+                      placeholderTextColor={colors.muted}
+                    />
+                    <TextInput
+                      style={styles.input}
+                      value={verificationReference}
+                      onChangeText={setVerificationReference}
+                      placeholder="Independent verification evidence"
+                      placeholderTextColor={colors.muted}
                     />
                     <SecondaryButton
-                      label={
-                        state.saving === `confirm:${r.id}` ? 'Saving…' : 'Mark refunded (manual)'
-                      }
-                      disabled={Boolean(state.saving)}
-                      onPress={() => presenter.onConfirmManual(r)}
+                      label={state.saving === 'confirm:' + refund.id ? 'Verifying…' : 'Verify and confirm refund'}
+                      disabled={Boolean(state.saving) || refundReference.trim().length < 3 || verificationReference.trim().length < 5}
+                      onPress={async () => {
+                        const saved = await presenter.onConfirmRefund(
+                          refund,
+                          refundReference,
+                          verificationReference,
+                        );
+                        if (saved) {
+                          setRefundReference('');
+                          setVerificationReference('');
+                        }
+                      }}
                     />
                   </View>
                 ) : null}
@@ -159,25 +166,25 @@ export default function PaymentDetailView({ route, navigation }) {
             ))
           )}
 
-          <Text style={styles.section}>Raise a refund request</Text>
+          <Text style={styles.section}>Request a full refund</Text>
           <Text style={styles.hint}>
-            For full refunds of this payment — the amount and reference are taken from it.
+            The request uses this payment’s actual invoice and allocated payment amount. A Principal must review it independently.
           </Text>
           <TextInput
             style={styles.input}
             multiline
-            placeholder="Why should this payment be refunded?"
+            placeholder="Why should this payment be refunded? (at least 5 characters)"
             placeholderTextColor={colors.muted}
-            value={reasonText}
-            onChangeText={setReasonText}
+            value={requestReason}
+            onChangeText={setRequestReason}
           />
           <View style={styles.sendBtn}>
             <PrimaryButton
-              label={state.saving === 'request' ? 'Saving…' : 'Request refund'}
-              disabled={!reasonText.trim() || Boolean(state.saving)}
-              onPress={() => {
-                presenter.onRequestRefund(reasonText);
-                setReasonText('');
+              label={state.saving === 'request' ? 'Submitting…' : 'Request refund review'}
+              disabled={!requestReason.trim() || requestReason.trim().length < 5 || Boolean(state.saving)}
+              onPress={async () => {
+                const saved = await presenter.onRequestRefund(requestReason);
+                if (saved) setRequestReason('');
               }}
             />
           </View>
@@ -193,9 +200,7 @@ const styles = StyleSheet.create({
   amount: { ...typography.title, marginTop: spacing.md },
   section: { ...typography.sectionTitle, marginTop: spacing.lg, marginBottom: spacing.sm },
   muted: { ...typography.body, color: colors.muted },
-  hint: { ...typography.label, marginBottom: spacing.sm },
-  notice: { ...typography.label, color: '#2f6b3a', marginBottom: spacing.sm },
-  error: { ...typography.label, color: '#a33a2a', marginBottom: spacing.sm },
+  hint: { ...typography.label, color: colors.muted, marginBottom: spacing.sm },
   refundCard: {
     backgroundColor: colors.white,
     borderWidth: StyleSheet.hairlineWidth,
@@ -205,10 +210,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   refundHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  refundTitle: { ...typography.body },
+  refundTitle: { ...typography.body, fontWeight: '700' },
   refundReason: { ...typography.body, color: colors.muted, marginTop: spacing.xs },
   refundMeta: { ...typography.label, color: colors.muted, marginTop: spacing.xs },
-  refundActions: { gap: spacing.sm, marginTop: spacing.sm },
+  refundActions: { gap: spacing.sm, marginTop: spacing.md },
   input: {
     ...typography.input,
     backgroundColor: colors.white,
@@ -217,7 +222,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    minHeight: 56,
+    minHeight: 48,
     marginTop: spacing.xs,
   },
   sendBtn: { marginTop: spacing.md, marginBottom: spacing.sm },
