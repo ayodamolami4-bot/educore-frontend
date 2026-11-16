@@ -62,6 +62,23 @@ export default function FeePlansView({ navigation }) {
     }
   }, []);
 
+  useEffect(() => {
+    presenter.attach(setState, navigation);
+    presenter.load();
+    void Promise.resolve().then(loadTerms);
+    const unsubscribe = navigation.addListener('focus', () => {
+      if (loadedOnce.current) {
+        presenter.load({ showLoading: false });
+        void loadTerms();
+      }
+      loadedOnce.current = true;
+    });
+    return () => {
+      unsubscribe?.remove?.();
+      presenter.detach();
+    };
+  }, [presenter, navigation, loadTerms]);
+
   const toggleClass = (value) => {
     setPickedClasses((prev) =>
       prev.includes(value) ? prev.filter((id) => id !== value) : [...prev, value],
