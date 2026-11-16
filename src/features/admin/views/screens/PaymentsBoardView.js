@@ -3,7 +3,7 @@
  * provider verification exceptions, shown using the backend's real records.
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { Text } from 'react-native';
+import { Text, View, StyleSheet } from 'react-native';
 import AdminScaffold from '../components/AdminScaffold';
 import RecordList from '../components/RecordList';
 import { LoadingView, EmptyState, ErrorState, Notice } from '../components/FeedbackViews';
@@ -51,8 +51,12 @@ export default function PaymentsBoardView({ navigation }) {
             />
           ) : (
             state.settlements.map((batch) => (
-              <RecordList
-                key={batch.id}
+              <View key={batch.id} style={styles.batch}>
+                <Text style={styles.batchTitle}>
+                  {batch.source} · {batch.reference} · {batch.state}
+                </Text>
+                <Text style={styles.hint}>{batch.createdAt}</Text>
+                <RecordList
                 items={(batch.rows ?? []).map((row) => ({
                   id: row.id,
                   title: row.reference + ' · ' + row.amountLabel,
@@ -67,7 +71,8 @@ export default function PaymentsBoardView({ navigation }) {
                 }))}
                 onPressItem={(item) => presenter.onOpenSettlementRow(item.raw)}
                 emptyText="This batch contains no settlement rows."
-              />
+                />
+              </View>
             ))
           )}
 
@@ -111,5 +116,7 @@ export default function PaymentsBoardView({ navigation }) {
 
 const styles = StyleSheet.create({
   section: { ...typography.sectionTitle, marginTop: spacing.lg, marginBottom: spacing.sm },
+  batch: { marginBottom: spacing.md },
+  batchTitle: { ...typography.body, fontWeight: '700', marginBottom: spacing.xs },
   hint: { ...typography.label, color: '#65727a', marginBottom: spacing.sm },
 });
