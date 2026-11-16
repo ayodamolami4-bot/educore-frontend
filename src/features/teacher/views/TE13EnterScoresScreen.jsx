@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { Screen } from '../../../components/Screen';
 import { Button, Card, Field, Notice, Select, ui } from '../../../components/Controls';
 import { BottomNav } from './BottomNav';
@@ -21,6 +21,7 @@ const formFrom = (student) => ({
 });
 
 export function TE13EnterScoresScreen() {
+  const navigation = useNavigation();
   const route = useRoute();
   const { cycleId, assignmentId } = route.params ?? {};
   const { context, model } = useTeacher();
