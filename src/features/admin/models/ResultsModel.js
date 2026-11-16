@@ -1,65 +1,57 @@
-/** AD19 — Review and publish results: mark packages, report batches, review issues. */
+/** AD19 — Assessment cycles, subject-sheet returns and class-report publication. */
 import { api, normalizePage } from '../api/client';
 import { endpoints } from '../api/endpoints';
 
 export const ResultsModel = {
-  async markPackages(query) {
-    return normalizePage(await api.get(endpoints.results.markPackages, null, query));
+  async cycles(query = {}) {
+    return normalizePage(await api.get(endpoints.results.cycles, null, query));
   },
 
-  async markPackageById(packageId) {
-    return api.get(endpoints.results.markPackageById, { packageId });
+  async reviewCycle(cycleId) {
+    return api.get(endpoints.results.cycleReview, { cycleId });
   },
 
-  /** Send a package back to the teacher (e.g. inconsistent marks). */
-  async returnPackage(packageId, body) {
-    return api.post(endpoints.results.returnPackage, { packageId }, body);
+  async returnSheet(cycleId, assignmentId, reason, version) {
+    return api.post(
+      endpoints.results.returnSheet,
+      { cycleId, assignmentId },
+      { reason: String(reason ?? '').trim() },
+      { version },
+    );
   },
 
-  /** Admin signs off a submitted/returned package — it is Approved and waits
-      for its report batch to be published. Only the admin office approves;
-      teachers only submit. */
-  async approvePackage(packageId, body) {
-    return api.post(endpoints.results.approvePackage, { packageId }, body);
+  async returnReview(cycleId, reason, version) {
+    return api.post(
+      endpoints.results.returnReview,
+      { cycleId },
+      { reason: String(reason ?? '').trim() },
+      { version },
+    );
   },
 
-  /** Decide how absences are recorded in a package. */
-  async resolveAbsences(packageId, body) {
-    return api.post(endpoints.results.absenceResolutions, { packageId }, body);
+  async publishCycle(cycleId, body, version) {
+    return api.post(
+      endpoints.results.publishCycle,
+      { cycleId },
+      {
+        principalRemark: String(body.principalRemark ?? '').trim(),
+        nextResumptionOn: body.nextResumptionOn,
+      },
+      { version },
+    );
   },
 
-  async reportBatches(query) {
-    return normalizePage(await api.get(endpoints.results.reportBatches, null, query));
-  },
-
-  async reportBatchById(batchId) {
-    return api.get(endpoints.results.reportBatchById, { batchId });
-  },
-
-  async returnBatch(batchId, body) {
-    return api.post(endpoints.results.returnBatch, { batchId }, body);
-  },
-
-  /** Draft / returned batches: the office re-checks and sends for review. */
-  async submitBatch(batchId) {
-    return api.post(endpoints.results.submitBatch, { batchId });
-  },
-
-  /** Publish → report cards appear in Student/Parent apps. */
-  async publishBatch(batchId) {
-    return api.post(endpoints.results.publishBatch, { batchId });
-  },
-
-  async reopenBatch(batchId) {
-    return api.post(endpoints.results.reopenBatch, { batchId });
-  },
-
-  async raiseReviewIssue(body) {
-    return api.post(endpoints.results.reviewIssues, null, body);
-  },
-
-  async resolveReviewIssue(issueId, body) {
-    return api.post(endpoints.results.resolveIssue, { issueId }, body);
+  async reopenCycle(cycleId, body, version) {
+    return api.post(
+      endpoints.results.reopenCycle,
+      { cycleId },
+      {
+        assignmentId: body.assignmentId ?? null,
+        reason: String(body.reason ?? '').trim(),
+        closesAt: body.closesAt,
+      },
+      { version },
+    );
   },
 };
 
