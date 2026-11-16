@@ -40,26 +40,28 @@ export function TE14ClassReportScreen() {
     [data, pupil],
   );
 
-  const load = async () => {
-    await Promise.resolve();
-    if (!classId || !cycleId) {
-      setError('Open the class-teacher report package from TE12 first.');
-      return;
-    }
-    setError('');
-    try {
-      const result = await model.classReport(context.schoolId, classId, '', '', cycleId);
-      setData(result);
-      const first = result.readiness?.[0] ?? null;
-      setPupil(first?.id ?? '');
-      setForm(formFrom(first));
-    } catch (reason) {
-      setError(reason?.message ?? 'Could not load the class report package.');
-    }
-  };
-
-  useEffect(() => { void load(); }, [model, context.schoolId, classId, cycleId]);
-
+  useEffect(() => {
+    let active = true;
+    void Promise.resolve().then(async () => {
+      if (!active) return;
+      if (!classId || !cycleId) {
+        setError('Open the class-teacher report package from TE12 first.');
+        return;
+      }
+      setError('');
+      try {
+        const result = await model.classReport(context.schoolId, classId, '', '', cycleId);
+        if (!active) return;
+        setData(result);
+        const first = result.readiness?.[0] ?? null;
+        setPupil(first?.id ?? '');
+        setForm(formFrom(first));
+      } catch (reason) {
+        if (active) setError(reason?.message ?? 'Could not load the class report package.');
+      }
+    });
+    return () => { active = false; };
+  }, [model, context.schoolId, classId, cycleId]);
   const choosePupil = (id) => {
     setPupil(id);
     setForm(formFrom(data?.readiness?.find((item) => item.id === id)));
