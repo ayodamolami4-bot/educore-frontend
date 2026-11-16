@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { File, Paths } from 'expo-file-system';
@@ -23,34 +23,37 @@ export function TE15ReportsScreen() {
   const [format, setFormat] = useState('PDF');
   const [report, setReport] = useState(null);
   const [busy, setBusy] = useState('');
-  const [error, setEr  useEffect(() => {
-    let active = true;
-    void Promise.resolve().then(async () => {
-      if (!active) return;
-      setError('');
-      try {
-        const value = await model.reports(context.schoolId);
-        if (!active) return;
-        setData(value);
-        const nextKind = value.types.includes(kindRef.current) ? kindRef.current : value.types[0] ?? '';
-        setKind(nextKind);
-        const choices = nextKind === BROADSHEET ? value.classReports : value.packages;
-        const first = choices?.[0];
-        setCycleId(first?.cycleId ?? '');
-        setAssignmentId(first?.assignmentId ?? '');
-        setReport(null);
-      } catch (reason) {
-        if (active) setError(reason?.message ?? 'Could not load the reports available to this teacher.');
-      }
-    });
-    return () => { active = false; };
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+
+  const load = useCallback(async (isActive = () => true) => {
+    setError('');
+    try {
+      const value = await model.reports(context.schoolId);
+      if (!isActive()) return;
+      setData(value);
+      const nextKind = value.types.includes(kindRef.current) ? kindRef.current : value.types[0] ?? '';
+      setKind(nextKind);
+      const choices = nextKind === BROADSHEET ? value.classReports : value.packages;
+      const first = choices?.[0];
+      setCycleId(first?.cycleId ?? '');
+      setAssignmentId(first?.assignmentId ?? '');
+      setReport(null);
+    } catch (reason) {
+      if (isActive()) setError(reason?.message ?? 'Could not load the reports available to this teacher.');
+    }
   }, [model, context.schoolId]);
 
-  useEffect(() => { void load(); }, [model, context.schoolId]);
+  useEffect(() => {
+    let active = true;
+    void Promise.resolve().then(() => load(() => active));
+    return () => { active = false; };
+  }, [load]);
 
-  const sourceItems = kind === BROADSHEET
-    ? (data?.classReports ?? [])
-    : (data?.packages ?? []);
+  const sourceItems = useMemo(
+    () => kind === BROADSHEET ? (data?.classReports ?? []) : (data?.packages ?? []),
+    [kind, data],
+  );
 
   const cycleOptions = useMemo(() => {
     const byCycle = new Map();
