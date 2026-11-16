@@ -47,7 +47,7 @@ export default function useSchoolContext() {
       alive = false;
       unsubscribe?.remove?.();
     };
-  }, [navigation]);
+  }, [navigation, activeContext.schoolName]);
 
   return context;
 }
