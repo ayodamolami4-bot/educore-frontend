@@ -41,6 +41,7 @@ export function TE14ClassReportScreen() {
   );
 
   const load = async () => {
+    await Promise.resolve();
     if (!classId || !cycleId) {
       setError('Open the class-teacher report package from TE12 first.');
       return;
