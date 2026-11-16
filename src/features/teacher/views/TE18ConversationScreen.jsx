@@ -17,23 +17,25 @@ export function TE18ConversationScreen() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
-  const load = async () => {
-    await Promise.resolve();
-    if (!threadId) {
-      setError('Open a conversation from the messages inbox first.');
-      return;
-    }
-    setError('');
-    try {
-      const value = await model.thread(context.schoolId, threadId);
-      setData(value);
-      void model.readThread(context.schoolId, threadId).catch(() => {});
-    } catch (reason) {
-      setError(reason?.message ?? 'Could not open this conversation.');
-    }
-  };
-
-  useEffect(() => { void load(); }, [model, context.schoolId, threadId]);
+  useEffect(() => {
+    let active = true;
+    Promise.resolve().then(async () => {
+      if (!threadId) {
+        if (active) setError('Open a conversation from the messages inbox first.');
+        return;
+      }
+      if (active) setError('');
+      try {
+        const value = await model.thread(context.schoolId, threadId);
+        if (!active) return;
+        setData(value);
+        void model.readThread(context.schoolId, threadId).catch(() => {});
+      } catch (reason) {
+        if (active) setError(reason?.message ?? 'Could not open this conversation.');
+      }
+    });
+    return () => { active = false; };
+  }, [model, context.schoolId, threadId]);
 
   const sendReply = async () => {
     if (!data || busy) return;
