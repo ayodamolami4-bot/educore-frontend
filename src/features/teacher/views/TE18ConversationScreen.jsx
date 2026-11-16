@@ -18,6 +18,7 @@ export function TE18ConversationScreen() {
   const [notice, setNotice] = useState('');
 
   const load = async () => {
+    await Promise.resolve();
     if (!threadId) {
       setError('Open a conversation from the messages inbox first.');
       return;
